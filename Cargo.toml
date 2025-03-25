@@ -1,0 +1,25 @@
+[package]
+name = "ComfyUI-SilentRain"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "ComfyUI_SilentRain"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24", features = ["macros", "extension-module"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+walkdir = "2.5"
+chardet = "0.2"
+encoding = "0.2"
+anyhow = "1.0"
+thiserror = "2.0"
+log = "0.4"
+
+
+[dev-dependencies]
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.1", features = [] }
