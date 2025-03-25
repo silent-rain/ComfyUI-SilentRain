@@ -22,4 +22,4 @@ log = "0.4"
 
 [dev-dependencies]
 tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.1", features = [] }
+tracing-subscriber = { version = "0.3", features = [] }

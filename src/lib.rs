@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use pyo3::{
     pyfunction, pymodule,
     types::{PyDict, PyDictMethods, PyModule, PyModuleMethods},

@@ -12,14 +12,14 @@ use encoding::DecoderTrap;
 use log::error;
 use pyo3::{
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
+    types::{PyAnyMethods, PyDict, PyModule, PyType},
+    Bound, Py, PyErr, PyResult, PyTypeInfo, Python,
 };
 use walkdir::WalkDir;
 
 use crate::error::Error;
 
-#[pyclass]
+#[pyclass(name = "FileScanner", subclass)] // 允许子类化
 pub struct FileScanner {}
 
 #[pymethods]
@@ -106,6 +106,7 @@ impl FileScanner {
     #[pyo3(name = "execute")]
     fn execute(
         &self,
+        py: Python,
         directory: String,
         recursive: String,
         encoding: String,
@@ -114,10 +115,52 @@ impl FileScanner {
             .scan_files(&directory, &recursive, &encoding)
             .map_err(|e| {
                 error!("scan files failed, {e}");
+                if let Err(e) = self.send_error(py, "FILE_READ_ERROR".to_string(), e.to_string()) {
+                    error!("send error failed, {e}");
+                    return e;
+                };
                 PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
             })?;
 
         Ok(result)
+    }
+
+    fn send_error(&self, py: Python, error_type: String, message: String) -> PyResult<()> {
+        // 初始化时获取 PromptServer 实例
+        let server = PyModule::import(py, "server")?
+            .getattr("PromptServer")?
+            .getattr("instance")?
+            .call0()?;
+
+        // 构建错误数据字典
+        let error_data = PyDict::new(py);
+        error_data.set_item("type", &error_type)?;
+        error_data.set_item("message", message)?;
+        error_data.set_item("node", self.get_class_name(py)?)?;
+
+        // 调用 Python 端方法
+        server
+            .getattr("send_sync")?
+            .call1((error_type, error_data))?;
+
+        Ok(())
+    }
+
+    fn get_class_name(&self, py: Python) -> PyResult<String> {
+        // 需要 Clone
+        // let py_self = self.as_ref().into_pyobject(py)?;
+        // py_self.getattr("__name__")?.extract()
+
+        FileScanner::type_object(py)
+            .getattr("__name__")?
+            .extract::<String>()
+    }
+}
+
+// 实现 AsRef 的核心逻辑
+impl AsRef<FileScanner> for FileScanner {
+    fn as_ref(&self) -> &FileScanner {
+        self
     }
 }
 
@@ -244,5 +287,18 @@ impl FileScanner {
 
         error!("file auto decode failed");
         Err(Error::DecodeError("file auto decode failed".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_file_with_auto_encoding() -> anyhow::Result<()> {
+        let file_scanner = FileScanner::new();
+        let content = file_scanner.read_file_with_auto_encoding(Path::new("README.md"))?;
+        println!("content: {content}");
+        Ok(())
     }
 }
