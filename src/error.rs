@@ -1,7 +1,7 @@
 //! 错误处理
-
 use std::io;
 
+#[allow(unused)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("io error, {0}")]
