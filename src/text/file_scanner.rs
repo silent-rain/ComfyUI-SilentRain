@@ -64,17 +64,19 @@ impl FileScanner {
                 )?;
                 required.set_item(
                     "recursive",
-                    (
-                        vec!["enable", "disable"],
-                        HashMap::new().insert("default", "disable"),
-                    ),
+                    (vec!["enable", "disable"], {
+                        let recursive = PyDict::new(py);
+                        recursive.set_item("default", "disable")?;
+                        recursive
+                    }),
                 )?;
                 required.set_item(
                     "encoding",
-                    (vec!["utf-8", "gbk", "AUTO"], {
+                    (vec!["utf-8", "gbk", "auto"], {
                         let mut encoding = HashMap::new();
-                        encoding.insert("default", "AUTO");
+                        encoding.insert("default", "auto");
                         encoding.insert("tooltip", "文件编码格式");
+                        encoding
                     }),
                 )?;
                 required
@@ -101,7 +103,7 @@ impl FileScanner {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain";
+    const CATEGORY: &'static str = "SilentRain/text";
 
     #[pyo3(name = "execute")]
     fn execute(
@@ -110,27 +112,28 @@ impl FileScanner {
         directory: String,
         recursive: String,
         encoding: String,
-    ) -> PyResult<(Vec<String>, Vec<String>)> {
-        let result = self
-            .scan_files(&directory, &recursive, &encoding)
-            .map_err(|e| {
-                error!("scan files failed, {e}");
-                if let Err(e) = self.send_error(py, "FILE_READ_ERROR".to_string(), e.to_string()) {
-                    error!("send error failed, {e}");
-                    return e;
-                };
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
-            })?;
+    ) -> (Vec<String>, Vec<String>) {
+        let results = self.scan_files(&directory, &recursive, &encoding);
 
-        Ok(result)
+        match results {
+            Ok(v) => v,
+            Err(e) => {
+                println!("scan files failed, {e}");
+                if let Err(e) = self.send_error(py, "FILE_READ_ERROR".to_string(), e.to_string()) {
+                    println!("send error failed, {e}");
+                    return (vec![], vec![]);
+                };
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string());
+                (vec![], vec![])
+            }
+        }
     }
 
     fn send_error(&self, py: Python, error_type: String, message: String) -> PyResult<()> {
         // 初始化时获取 PromptServer 实例
         let server = PyModule::import(py, "server")?
             .getattr("PromptServer")?
-            .getattr("instance")?
-            .call0()?;
+            .getattr("instance")?;
 
         // 构建错误数据字典
         let error_data = PyDict::new(py);
@@ -187,7 +190,7 @@ impl FileScanner {
         // 读取文件内容
         let mut contents = Vec::with_capacity(file_paths.len());
         for fp in &file_paths {
-            let content = if encoding.to_ascii_uppercase() == "AUTO" {
+            let content = if encoding.to_ascii_lowercase() == "auto" {
                 self.read_file_with_auto_encoding(&fp)?
             } else {
                 self.read_file_with_encoding(&fp, encoding)?
