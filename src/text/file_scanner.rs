@@ -26,6 +26,13 @@ pub struct FileScanner {}
 impl FileScanner {
     #[new]
     fn new() -> Self {
+        // 初始化全局日志
+        let _ = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_level(true)
+            .with_file(true)
+            .with_line_number(true)
+            .try_init();
         Self {}
     }
 
@@ -38,7 +45,7 @@ impl FileScanner {
     ///                "default": "./input",
     ///                "tooltip": "扫描目录路径"
     ///             }),
-    ///            "recursive": (["enable", "disable"], {"default": "disable"}),
+    ///            "recursive": ("BOOLEAN", {"default":,"label_on": "enabled", "label_off": "disabled"}),
     ///            "encoding": (["utf-8", "gbk", "big5", "latin1"], {
     ///               "default": "utf-8",
     ///               "tooltip": "文件编码格式"
@@ -62,11 +69,14 @@ impl FileScanner {
                         directory
                     }),
                 )?;
+                // "recursive": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
                 required.set_item(
                     "recursive",
-                    (vec!["enable", "disable"], {
+                    ("BOOLEAN", {
                         let recursive = PyDict::new(py);
-                        recursive.set_item("default", "disable")?;
+                        recursive.set_item("default", false)?;
+                        recursive.set_item("label_on", "enabled")?;
+                        recursive.set_item("label_off", "disabled")?;
                         recursive
                     }),
                 )?;
@@ -110,25 +120,31 @@ impl FileScanner {
         &self,
         py: Python,
         directory: String,
-        recursive: String,
+        recursive: bool,
         encoding: String,
-    ) -> (Vec<String>, Vec<String>) {
-        let results = self.scan_files(&directory, &recursive, &encoding);
+    ) -> PyResult<(Vec<String>, Vec<String>)> {
+        let results = self.scan_files(&directory, recursive, &encoding);
 
         match results {
-            Ok(v) => v,
+            Ok(v) => Ok(v),
             Err(e) => {
-                println!("scan files failed, {e}");
-                if let Err(e) = self.send_error(py, "FILE_READ_ERROR".to_string(), e.to_string()) {
-                    println!("send error failed, {e}");
-                    return (vec![], vec![]);
+                error!("scan files failed, {e}");
+                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                    error!("send error failed, {e}");
+                    return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                        e.to_string(),
+                    ));
                 };
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string());
-                (vec![], vec![])
+                Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    e.to_string(),
+                ))
             }
         }
     }
 
+    /// 发送日志信息到ComfyUI
+    ///
+    /// 当前案例, 当节点执行出现异常时通知前端
     fn send_error(&self, py: Python, error_type: String, message: String) -> PyResult<()> {
         // 初始化时获取 PromptServer 实例
         let server = PyModule::import(py, "server")?
@@ -138,17 +154,18 @@ impl FileScanner {
         // 构建错误数据字典
         let error_data = PyDict::new(py);
         error_data.set_item("type", &error_type)?;
-        error_data.set_item("message", message)?;
         error_data.set_item("node", self.get_class_name(py)?)?;
+        error_data.set_item("message", message)?;
 
         // 调用 Python 端方法
         server
             .getattr("send_sync")?
-            .call1((error_type, error_data))?;
+            .call1(("silentrain", error_data))?;
 
         Ok(())
     }
 
+    /// Class 名称
     fn get_class_name(&self, py: Python) -> PyResult<String> {
         // 需要 Clone
         // let py_self = self.as_ref().into_pyobject(py)?;
@@ -172,7 +189,7 @@ impl FileScanner {
     fn scan_files(
         &self,
         directory: &str,
-        recursive: &str,
+        recursive: bool,
         encoding: &str,
     ) -> Result<(Vec<String>, Vec<String>), Error> {
         let path = Path::new(directory);
@@ -181,7 +198,7 @@ impl FileScanner {
         }
 
         // 获取文件路径列表
-        let file_paths = if recursive.to_lowercase() == "enable" {
+        let file_paths = if recursive {
             self.recursive_scan(path)?
         } else {
             self.single_scan(path)?
@@ -190,10 +207,10 @@ impl FileScanner {
         // 读取文件内容
         let mut contents = Vec::with_capacity(file_paths.len());
         for fp in &file_paths {
-            let content = if encoding.to_ascii_lowercase() == "auto" {
-                self.read_file_with_auto_encoding(&fp)?
+            let content = if encoding.eq_ignore_ascii_case("auto") {
+                self.read_file_with_auto_encoding(fp)?
             } else {
-                self.read_file_with_encoding(&fp, encoding)?
+                self.read_file_with_encoding(fp, encoding)?
             };
             contents.push(content);
         }
@@ -256,14 +273,14 @@ impl FileScanner {
         if let Some(coder) = encoding_from_whatwg_label(charset2encoding(&encoding.to_string())) {
             let utf8reader = coder.decode(&bytes, DecoderTrap::Ignore).map_err(|e| {
                 error!("decode error, {e}");
-                Error::DecodeError(e.to_string())
+                Error::Decode(e.to_string())
             })?;
 
             return Ok(utf8reader);
         }
 
         error!("file auto decode failed");
-        Err(Error::DecodeError("file decode failed".to_string()))
+        Err(Error::Decode("file decode failed".to_string()))
     }
 
     /// 读取文件内容， 自动匹配文件编码
@@ -282,14 +299,14 @@ impl FileScanner {
         if let Some(coder) = encoding_from_whatwg_label(charset2encoding(&result.0)) {
             let utf8reader = coder.decode(&bytes, DecoderTrap::Ignore).map_err(|e| {
                 error!("decode error, {e}");
-                Error::DecodeError(e.to_string())
+                Error::Decode(e.to_string())
             })?;
 
             return Ok(utf8reader);
         }
 
         error!("file auto decode failed");
-        Err(Error::DecodeError("file auto decode failed".to_string()))
+        Err(Error::Decode("file auto decode failed".to_string()))
     }
 }
 

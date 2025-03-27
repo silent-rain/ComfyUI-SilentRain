@@ -8,10 +8,10 @@ pub enum Error {
     Io(io::Error),
     #[error("invalid directory, {0}")]
     InvalidDirectory(String),
-    #[error("encoding error, {0}")]
-    EncodingError(String),
+    #[error("encode error, {0}")]
+    Encode(String),
     #[error("decode error, {0}")]
-    DecodeError(String),
+    Decode(String),
 }
 
 impl From<io::Error> for Error {
