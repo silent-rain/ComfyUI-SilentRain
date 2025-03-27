@@ -1,20 +1,20 @@
 # 库导入
-import ComfyUI_SilentRain
+import comfyui_silentrain
 
 # 函数导入
-from ComfyUI_SilentRain import sum_as_string
+from comfyui_silentrain import sum_as_string
 
 # ComfyUI 注册节点导入
-from ComfyUI_SilentRain import NODE_CLASS_MAPPINGS
-from ComfyUI_SilentRain import NODE_DISPLAY_NAME_MAPPINGS
+from comfyui_silentrain import NODE_CLASS_MAPPINGS
+from comfyui_silentrain import NODE_DISPLAY_NAME_MAPPINGS
 
 
 # 子模导入, 当前仅支持该方式导入
-from ComfyUI_SilentRain import text
+from comfyui_silentrain import text
 
 
-print("ComfyUI_SilentRain:")
-print(dir(ComfyUI_SilentRain))
+print("comfyui_silentrain:")
+print(dir(comfyui_silentrain))
 
 print("\n\n")
 print("sum_as_string:")
