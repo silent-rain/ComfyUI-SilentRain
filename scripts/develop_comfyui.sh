@@ -1,6 +1,9 @@
 #!/bin/bash
+# 本脚本用于将测试环境, 可以快速将调试的包导入到本地的ComfyUI自定义节点目录下, 用于快速验证节点.
 
-APP=comfyui_silentrain
+# 项目名称, 一般不需要调整
+App=comfyui_silentrain
+# ComfyUI 部署路径
 ComfyUI=~/code/ComfyUI/custom_nodes
 
 # get dir, file path
@@ -18,18 +21,18 @@ maturin build
 cd target/wheels
 
 # 解压Python包
-echo "unzip ${APP} whl ..."
-unzip ${APP}-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
+echo "unzip ${App} whl ..."
+unzip ${App}-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
 
-# 将${APP}移动到ComfyUI的自定义节点目录下
-echo "develop ${APP} to ComfyUI path ..."
-\cp -r ./${APP} ${ComfyUI}/
+# 将 ${App} 移动到 ${ComfyUI} 的自定义节点目录下
+echo "develop ${App} to ComfyUI path ..."
+\cp -r ./${App} ${ComfyUI}/
 
 # 检查是否安装成功
 echo "print comfyui new node ..."
-tree ${ComfyUI}/${APP}
+tree ${ComfyUI}/${App}
 
 # 删除解压的文件
-rm -rf ${APP} ${APP}-*.dist-info
+rm -rf ${App} ${App}-*.dist-info
 
 echo "Done"
