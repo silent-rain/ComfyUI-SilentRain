@@ -1,5 +1,11 @@
 # 项目搭建
 
+## 安装
+
+```shell
+cargo install maturin
+```
+
 ## 初始化项目
 
 ```shell
@@ -29,3 +35,7 @@ maturin publish
 ```shell
 maturin upload
 ```
+
+## 相关文档
+
+- [maturin使用指南](https://www.maturin.rs/)
