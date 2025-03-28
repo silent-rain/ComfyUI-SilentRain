@@ -19,7 +19,7 @@ use walkdir::WalkDir;
 
 use crate::error::Error;
 
-#[pyclass(name = "FileScanner", subclass)] // 允许子类化
+#[pyclass(subclass)] // 允许子类化
 pub struct FileScanner {}
 
 #[pymethods]
@@ -174,13 +174,6 @@ impl FileScanner {
         FileScanner::type_object(py)
             .getattr("__name__")?
             .extract::<String>()
-    }
-}
-
-// 实现 AsRef 的核心逻辑
-impl AsRef<FileScanner> for FileScanner {
-    fn as_ref(&self) -> &FileScanner {
-        self
     }
 }
 
