@@ -20,7 +20,9 @@ use walkdir::WalkDir;
 use crate::error::Error;
 
 #[pyclass(subclass)] // 允许子类化
-pub struct FileScanner {}
+pub struct FileScanner {
+    file_extension: String,
+}
 
 #[pymethods]
 impl FileScanner {
@@ -33,7 +35,9 @@ impl FileScanner {
             .with_file(true)
             .with_line_number(true)
             .try_init();
-        Self {}
+        Self {
+            file_extension: "".to_string(),
+        }
     }
 
     /// 使用 #[classmethod] 实现 INPUT_TYPES
@@ -50,7 +54,11 @@ impl FileScanner {
     ///               "default": "utf-8",
     ///               "tooltip": "文件编码格式"
     ///            })
-    ///           }
+    ///            "file_extension": ("STRING", {
+    ///               "default": "txt",
+    ///               "tooltip": "过滤文件扩展名"
+    ///            }),
+    ///          }
     ///       }
     /// ```
     #[classmethod]
@@ -69,7 +77,7 @@ impl FileScanner {
                         directory
                     }),
                 )?;
-                // "recursive": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
+
                 required.set_item(
                     "recursive",
                     ("BOOLEAN", {
@@ -87,6 +95,15 @@ impl FileScanner {
                         encoding.insert("default", "auto");
                         encoding.insert("tooltip", "文件编码格式");
                         encoding
+                    }),
+                )?;
+                required.set_item(
+                    "file_extension",
+                    ("STRING", {
+                        let directory = PyDict::new(py);
+                        directory.set_item("default", "txt")?;
+                        directory.set_item("tooltip", "过滤文件扩展名")?;
+                        directory
                     }),
                 )?;
                 required
@@ -117,12 +134,15 @@ impl FileScanner {
 
     #[pyo3(name = "execute")]
     fn execute(
-        &self,
+        &mut self,
         py: Python,
         directory: String,
+        file_extension: String,
         recursive: bool,
         encoding: String,
     ) -> PyResult<(Vec<String>, Vec<String>)> {
+        self.file_extension = file_extension;
+
         let results = self.scan_files(&directory, recursive, &encoding);
 
         match results {
@@ -249,7 +269,7 @@ impl FileScanner {
     fn is_txt_file(&self, path: &Path) -> bool {
         path.extension()
             .and_then(|s| s.to_str())
-            .map(|ext| ext.eq_ignore_ascii_case("txt"))
+            .map(|ext| ext.eq_ignore_ascii_case(&self.file_extension))
             .unwrap_or(false)
     }
 
