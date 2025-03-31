@@ -115,13 +115,19 @@ impl FileScanner {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str, &'static str) {
-        ("LIST", "LIST")
+        ("STRING", "STRING")
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str, &'static str) {
         ("paths", "contents")
+    }
+
+    #[classattr]
+    #[pyo3(name = "OUTPUT_IS_LIST")]
+    fn output_is_list() -> (bool, bool) {
+        (true, true)
     }
 
     #[classattr]
