@@ -11,6 +11,8 @@ from comfyui_silentrain import NODE_DISPLAY_NAME_MAPPINGS
 
 # 子模导入, 当前仅支持该方式导入
 from comfyui_silentrain import text
+from comfyui_silentrain import logic
+from comfyui_silentrain import utils
 
 
 print("comfyui_silentrain:")
@@ -27,4 +29,11 @@ print("NODE_CLASS_MAPPINGS:", NODE_CLASS_MAPPINGS)
 
 
 print("\n\n")
-print(dir(text.FileScanner))
+print("FileScanner: ", dir(text.FileScanner))
+print("IndexAny: ", dir(logic.IndexAny))
+print("AlwaysEqualProxy: ", dir(utils.AlwaysEqualProxy))
+print("ANY_TYPE: ", dir(utils.ANY_TYPE))
+
+print("\n\n")
+print(utils.ANY_TYPE)
+

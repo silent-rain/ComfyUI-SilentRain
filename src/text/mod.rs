@@ -9,7 +9,7 @@ use pyo3::{
 pub use file_scanner::FileScanner;
 
 /// 文本模块
-pub fn text_module(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
+pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;
     submodule.add_class::<FileScanner>()?;
     Ok(submodule)

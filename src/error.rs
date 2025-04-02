@@ -12,6 +12,18 @@ pub enum Error {
     Encode(String),
     #[error("decode error, {0}")]
     Decode(String),
+    #[error("type not supported")]
+    TypeNotSupported,
+    #[error("type conversion failed, {0}")]
+    TypeConversionFailed(String),
+    #[error("type downcast failed, {0}")]
+    DowncastFailed(String),
+    #[error("the input list is empty")]
+    InputListEmpty,
+    #[error("index out of range, {0}")]
+    IndexOutOfRange(String),
+    #[error("error in obtaining list items at specified index, {0}")]
+    GetItemAtIndex(String),
 }
 
 impl From<io::Error> for Error {

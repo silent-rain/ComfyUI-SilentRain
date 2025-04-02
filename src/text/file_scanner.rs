@@ -12,17 +12,19 @@ use encoding::DecoderTrap;
 use log::error;
 use pyo3::{
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyModule, PyType},
-    Bound, Py, PyErr, PyResult, PyTypeInfo, Python,
+    types::{PyAnyMethods, PyDict, PyType},
+    Bound, Py, PyErr, PyResult, Python,
 };
 use walkdir::WalkDir;
 
-use crate::error::Error;
+use crate::{error::Error, prompt_server::PromptServer};
 
 #[pyclass(subclass)] // 允许子类化
 pub struct FileScanner {
     file_extension: String,
 }
+
+impl PromptServer for FileScanner {}
 
 #[pymethods]
 impl FileScanner {
@@ -73,7 +75,7 @@ impl FileScanner {
                     ("STRING", {
                         let directory = PyDict::new(py);
                         directory.set_item("default", "./input")?;
-                        directory.set_item("tooltip", "扫描目录路径")?;
+                        directory.set_item("tooltip", "Scan directory path")?;
                         directory
                     }),
                 )?;
@@ -93,7 +95,7 @@ impl FileScanner {
                     (vec!["utf-8", "gbk", "auto"], {
                         let mut encoding = HashMap::new();
                         encoding.insert("default", "auto");
-                        encoding.insert("tooltip", "文件编码格式");
+                        encoding.insert("tooltip", "File encoding format");
                         encoding
                     }),
                 )?;
@@ -102,7 +104,7 @@ impl FileScanner {
                     ("STRING", {
                         let directory = PyDict::new(py);
                         directory.set_item("default", "txt")?;
-                        directory.set_item("tooltip", "过滤文件扩展名")?;
+                        directory.set_item("tooltip", "Filter file extensions")?;
                         directory
                     }),
                 )?;
@@ -136,7 +138,7 @@ impl FileScanner {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/text";
+    const CATEGORY: &'static str = "SilentRain/Text";
 
     #[pyo3(name = "execute")]
     fn execute(
@@ -166,40 +168,6 @@ impl FileScanner {
                 ))
             }
         }
-    }
-
-    /// 发送日志信息到ComfyUI
-    ///
-    /// 当前案例, 当节点执行出现异常时通知前端
-    fn send_error(&self, py: Python, error_type: String, message: String) -> PyResult<()> {
-        // 初始化时获取 PromptServer 实例
-        let server = PyModule::import(py, "server")?
-            .getattr("PromptServer")?
-            .getattr("instance")?;
-
-        // 构建错误数据字典
-        let error_data = PyDict::new(py);
-        error_data.set_item("type", &error_type)?;
-        error_data.set_item("node", self.get_class_name(py)?)?;
-        error_data.set_item("message", message)?;
-
-        // 调用 Python 端方法
-        server
-            .getattr("send_sync")?
-            .call1(("silentrain", error_data))?;
-
-        Ok(())
-    }
-
-    /// Class 名称
-    fn get_class_name(&self, py: Python) -> PyResult<String> {
-        // 需要 Clone
-        // let py_self = self.as_ref().into_pyobject(py)?;
-        // py_self.getattr("__name__")?.extract()
-
-        FileScanner::type_object(py)
-            .getattr("__name__")?
-            .extract::<String>()
     }
 }
 
