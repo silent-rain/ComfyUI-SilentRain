@@ -3,7 +3,7 @@
 use std::ops::Deref;
 use std::{cmp::PartialEq, fmt};
 
-use pyo3::{pyclass, pymethods};
+use pyo3::{pyclass, pyfunction, pymethods};
 use serde::Serialize;
 
 /// 任意参数类型代理
@@ -51,19 +51,10 @@ impl From<&str> for AlwaysEqualProxy {
 }
 
 /// 任意类型
-#[macro_export]
-macro_rules! any_type {
-    () => {
-        AlwaysEqualProxy("*".to_string())
-    };
-    ($s:expr) => {
-        AlwaysEqualProxy($s.to_string())
-    };
+#[pyfunction]
+pub fn any_type() -> AlwaysEqualProxy {
+    return AlwaysEqualProxy::new("*".to_string());
 }
-
-/// 任意类型
-// pub static ANY_TYPE: LazyLock<AlwaysEqualProxy> = LazyLock::new(|| AlwaysEqualProxy::from("*"));
-// pub static ANY_TYPE: AlwaysEqualProxy = AlwaysEqualProxy::new("*".to_string());
 
 #[cfg(test)]
 mod tests {

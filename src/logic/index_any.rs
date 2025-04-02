@@ -7,7 +7,7 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
-use crate::{any_type, error::Error, prompt_server::PromptServer};
+use crate::{error::Error, prompt_server::PromptServer, utils::any_type};
 
 #[pyclass(subclass)]
 pub struct IndexAny {}
@@ -36,7 +36,7 @@ impl IndexAny {
                 let required = PyDict::new(py);
                 required.set_item(
                     "any",
-                    (any_type!(), {
+                    (any_type(), {
                         let any = PyDict::new(py);
                         any.set_item("tooltip", "Input any list")?;
                         any
@@ -62,7 +62,8 @@ impl IndexAny {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str,) {
-        (&any_type!(),)
+        let any_type = any_type();
+        (&any_type,)
     }
 
     #[classattr]
