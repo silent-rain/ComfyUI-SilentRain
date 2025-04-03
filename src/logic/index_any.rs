@@ -36,7 +36,7 @@ impl IndexAny {
                 let required = PyDict::new(py);
                 required.set_item(
                     "any",
-                    (any_type(), {
+                    (any_type(py)?, {
                         let any = PyDict::new(py);
                         any.set_item("tooltip", "Input any list")?;
                         any
@@ -61,9 +61,9 @@ impl IndexAny {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str,) {
-        let any_type = any_type();
-        (&any_type,)
+    fn return_types(py: Python) -> (Bound<'_, PyAny>,) {
+        let any_type = any_type(py).unwrap();
+        (any_type,)
     }
 
     #[classattr]
@@ -93,6 +93,7 @@ impl IndexAny {
         any: Bound<'py, PyAny>,
         index: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
+        println!("=========================: {:#?}", any);
         let results = self.get_list_index(any, index);
 
         match results {

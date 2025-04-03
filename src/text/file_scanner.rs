@@ -114,6 +114,20 @@ impl FileScanner {
         })
     }
 
+    // 可选
+    // #[classattr]
+    // #[pyo3(name = "INPUT_IS_LIST")]
+    // fn input_is_list() -> bool {
+    //     false
+    // }
+
+    // 可选
+    // #[classattr]
+    // #[pyo3(name = "OUTPUT_NODE")]
+    // fn input_is_list() -> bool {
+    //     false
+    // }
+
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str, &'static str) {

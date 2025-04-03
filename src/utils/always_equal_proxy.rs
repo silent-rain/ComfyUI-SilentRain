@@ -1,15 +1,23 @@
-//! 任意参数类型代理
+use std::{
+    collections::hash_map::DefaultHasher,
+    ffi::CString,
+    fmt,
+    hash::{Hash, Hasher},
+    ops::Deref,
+};
 
-use std::ops::Deref;
-use std::{cmp::PartialEq, fmt};
-
-use pyo3::{pyclass, pyfunction, pymethods};
+use pyo3::{
+    pyclass, pyfunction, pymethods,
+    types::{PyAnyMethods, PyDict, PyString},
+    Bound, Py, PyAny, PyResult, Python,
+};
 use serde::Serialize;
 
 /// 任意参数类型代理
-#[pyclass]
-#[pyo3(name = "AlwaysEqualProxy")]
-#[derive(Debug, Serialize)]
+///
+/// 注意: 在python端, 使用json.dumps()会报错
+#[pyclass(name = "AlwaysEqualProxy")]
+#[derive(Debug, Clone)]
 pub struct AlwaysEqualProxy(String);
 
 #[pymethods]
@@ -17,6 +25,47 @@ impl AlwaysEqualProxy {
     #[new]
     pub fn new(s: String) -> Self {
         Self(s)
+    }
+
+    fn __eq__(&self, _other: &Bound<'_, PyAny>) -> bool {
+        true
+    }
+
+    fn __ne__(&self, _other: &Bound<'_, PyAny>) -> bool {
+        false
+    }
+
+    fn __str__(&self) -> String {
+        self.0.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("'{}'", self.0)
+    }
+
+    fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.0.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[getter]
+    fn __dict__(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        dict.set_item("value", &self.0)?;
+        Ok(dict.into())
+    }
+
+    #[getter]
+    fn __json__(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        dict.set_item("value", &self.0)?;
+        Ok(dict.into())
+    }
+
+    // 代理所有方法到内部 PyAny
+    fn __getattr__<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyAny>> {
+        PyString::new(py, &self.0).getattr(name)
     }
 }
 
@@ -43,6 +92,16 @@ impl<T> PartialEq<T> for AlwaysEqualProxy {
     }
 }
 
+// 确保在序列化时被视为字符串
+impl Serialize for AlwaysEqualProxy {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
+
 // 便捷构造函数
 impl From<&str> for AlwaysEqualProxy {
     fn from(s: &str) -> Self {
@@ -51,9 +110,27 @@ impl From<&str> for AlwaysEqualProxy {
 }
 
 /// 任意类型
+// #[pyfunction]
+// pub fn any_type() -> String {
+//     "*".to_string()
+// }
 #[pyfunction]
-pub fn any_type() -> AlwaysEqualProxy {
-    return AlwaysEqualProxy::new("*".to_string());
+pub fn any_type(py: Python) -> PyResult<Bound<'_, pyo3::PyAny>> {
+    let code = CString::new(
+        r#"
+class AlwaysEqualProxy(str):
+    def __eq__(self, _):
+        return True
+    def __ne__(self, _):
+        return False
+
+any_type = AlwaysEqualProxy('*')
+        "#,
+    )
+    .expect("Failed to create CString");
+
+    py.run(&code, None, None)?;
+    py.eval(&CString::new("any_type").unwrap(), None, None)
 }
 
 #[cfg(test)]

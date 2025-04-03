@@ -1,4 +1,5 @@
 # 库导入
+from json import dumps
 import comfyui_silentrain
 
 # 函数导入
@@ -31,9 +32,35 @@ print("NODE_CLASS_MAPPINGS:", NODE_CLASS_MAPPINGS)
 print("\n\n")
 print("FileScanner: ", dir(text.FileScanner))
 print("IndexAny: ", dir(logic.IndexAny))
-print("AlwaysEqualProxy: ", dir(utils.AlwaysEqualProxy))
-print("ANY_TYPE: ", dir(utils.ANY_TYPE))
 
 print("\n\n")
-print(utils.ANY_TYPE)
+print("AlwaysEqualProxy: ", dir(utils.AlwaysEqualProxy))
+any_type = utils.AlwaysEqualProxy
+print(type(any_type),any_type)
+# print(type(any_type.__str__()),any_type.__str__())
+# print(type(any_type.__repr__()),any_type.__repr__())
+# print("__dict__: ", type(any_type.__dict__), any_type.__dict__)
+print(any_type == "*")
+print(any_type == "_*_")
+print(dumps(any_type))
 
+
+
+class AlwaysEqualProxy(str):
+    def __eq__(self, _):
+        return True
+
+    def __ne__(self, _):
+        return False
+
+    
+print("\n\n")  
+any_type = AlwaysEqualProxy("*")
+print(type(any_type))
+print(any_type)
+print(any_type.__str__())
+print(any_type.__repr__())
+print("__dict__", any_type.__dict__, type(any_type.__dict__))
+print(any_type == "*")
+print(any_type == "_*_")
+print(dumps(any_type))
