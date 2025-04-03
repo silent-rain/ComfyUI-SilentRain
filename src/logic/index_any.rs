@@ -44,7 +44,7 @@ impl IndexAny {
                 )?;
                 required.set_item(
                     "index",
-                    ("INT", {
+                    ("LIST", {
                         let index = PyDict::new(py);
                         index.set_item("default", 0)?;
                         index.set_item("min", 0)?;
@@ -57,6 +57,12 @@ impl IndexAny {
             })?;
             Ok(dict.into())
         })
+    }
+
+    #[classattr]
+    #[pyo3(name = "INPUT_IS_LIST")]
+    fn input_is_list() -> bool {
+        true
     }
 
     #[classattr]
@@ -91,10 +97,11 @@ impl IndexAny {
         &mut self,
         py: Python,
         any: Bound<'py, PyAny>,
-        index: usize,
+        index: Vec<usize>,
     ) -> PyResult<Bound<'py, PyAny>> {
         println!("=========================: {:#?}", any);
-        let results = self.get_list_index(any, index);
+        println!("=========================: {:#?}", index);
+        let results = self.get_list_index(any, index[0]);
 
         match results {
             Ok(v) => Ok(v),
