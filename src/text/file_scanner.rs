@@ -124,7 +124,28 @@ impl FileScanner {
     // 可选
     // #[classattr]
     // #[pyo3(name = "OUTPUT_NODE")]
-    // fn input_is_list() -> bool {
+    // fn output_node() -> bool {
+    //     false
+    // }
+
+    // 可选
+    // #[classattr]
+    // #[pyo3(name = "DESCRIPTION")]
+    // fn description() -> &'static str {
+    //     ""
+    // }
+
+    // 过时, 可选
+    // #[classattr]
+    // #[pyo3(name = "DEPRECATED")]
+    // fn deprecated() -> bool {
+    //     false
+    // }
+
+    // 实验性的, 可选
+    // #[classattr]
+    // #[pyo3(name = "EXPERIMENTAL")]
+    // fn experimental() -> bool {
     //     false
     // }
 
