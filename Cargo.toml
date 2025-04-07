@@ -8,6 +8,7 @@ edition = "2021"
 name = "comfyui_silentrain"
 crate-type = ["cdylib"]
 
+
 [dependencies]
 pyo3 = { version = "0.24", features = ["macros", "extension-module"] }
 serde = { version = "1.0", features = ["derive"] }

@@ -22,8 +22,8 @@ pub enum Error {
     InputListEmpty,
     #[error("index out of range, {0}")]
     IndexOutOfRange(String),
-    #[error("error in obtaining list items at specified index, {0}")]
-    GetItemAtIndex(String),
+    #[error("error in obtaining list items at specified index")]
+    GetListIndex,
 }
 
 impl From<io::Error> for Error {

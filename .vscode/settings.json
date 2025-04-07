@@ -1,4 +1,7 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "rust-analyzer.cargo.extraEnv": {
+        "PYO3_PYTHON":"/home/one/code/comfyui-silentrain/.venv/bin/python"
+    },
 }
