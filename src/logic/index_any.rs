@@ -7,7 +7,7 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
-use crate::{error::Error, prompt_server::PromptServer, utils::any_type};
+use crate::{core::any_type, core::PromptServer, error::Error};
 
 #[pyclass(subclass)]
 pub struct IndexAny {}

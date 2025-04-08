@@ -17,7 +17,7 @@ use pyo3::{
 };
 use walkdir::WalkDir;
 
-use crate::{error::Error, prompt_server::PromptServer};
+use crate::{core::PromptServer, error::Error};
 
 #[pyclass(subclass)] // 允许子类化
 pub struct FileScanner {
