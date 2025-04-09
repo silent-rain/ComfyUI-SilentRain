@@ -1,23 +1,11 @@
 //! 类型定义
 
-use std::fmt;
+pub use super::always_equal_proxy::{any_type, AlwaysEqualProxy};
 
-/// 节点类型
-#[derive(Debug)]
-pub enum NodeType {
-    STRING,
-    BOOLEAN,
-    LIST,
-    ANY,
-}
-
-impl fmt::Display for NodeType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            NodeType::STRING => write!(f, "STRING"),
-            NodeType::BOOLEAN => write!(f, "BOOLEAN"),
-            NodeType::LIST => write!(f, "LIST"),
-            NodeType::ANY => write!(f, "ANY"),
-        }
-    }
-}
+pub const NODE_INT: &str = "INT";
+pub const NODE_FLOAT: &str = "FLOAT";
+pub const NODE_STRING: &str = "STRING";
+pub const NODE_BOOLEAN: &str = "BOOLEAN";
+pub const NODE_LIST: &str = "LIST";
+pub const NODE_JSON: &str = "JSON";
+pub const NODE_METADATA_RAW: &str = "METADATA_RAW";

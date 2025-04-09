@@ -6,11 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "comfyui_silentrain"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["macros", "extension-module"] }
+pyo3 = { version = "0.24", features = [
+    "extension-module",
+    # "macros",
+    # "auto-initialize",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 walkdir = "2.5"
@@ -22,7 +26,6 @@ log = "0.4"
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = [] }
 env_logger = "0.11"
-
 
 candle-core = "0.8"
 candle-nn = "0.8"

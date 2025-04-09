@@ -7,7 +7,13 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
-use crate::{core::any_type, core::PromptServer, error::Error};
+use crate::{
+    core::{
+        types::{any_type, NODE_INT},
+        PromptServer,
+    },
+    error::Error,
+};
 
 #[pyclass(subclass)]
 pub struct IndexAny {}
@@ -44,7 +50,7 @@ impl IndexAny {
                 )?;
                 required.set_item(
                     "index",
-                    ("INT", {
+                    (NODE_INT, {
                         let index = PyDict::new(py);
                         index.set_item("default", 0)?;
                         index.set_item("min", 0)?;
@@ -69,7 +75,7 @@ impl IndexAny {
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types(py: Python) -> (Bound<'_, PyAny>, &'static str) {
         let any_type = any_type(py).unwrap();
-        (any_type, "INT")
+        (any_type, NODE_INT)
     }
 
     #[classattr]

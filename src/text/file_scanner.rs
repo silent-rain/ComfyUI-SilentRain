@@ -17,7 +17,13 @@ use pyo3::{
 };
 use walkdir::WalkDir;
 
-use crate::{core::PromptServer, error::Error};
+use crate::{
+    core::{
+        types::{NODE_BOOLEAN, NODE_STRING},
+        PromptServer,
+    },
+    error::Error,
+};
 
 #[pyclass(subclass)] // 允许子类化
 pub struct FileScanner {
@@ -72,7 +78,7 @@ impl FileScanner {
                 let required = PyDict::new(py);
                 required.set_item(
                     "directory",
-                    ("STRING", {
+                    (NODE_STRING, {
                         let directory = PyDict::new(py);
                         directory.set_item("default", "./input")?;
                         directory.set_item("tooltip", "Scan directory path")?;
@@ -82,7 +88,7 @@ impl FileScanner {
 
                 required.set_item(
                     "recursive",
-                    ("BOOLEAN", {
+                    (NODE_BOOLEAN, {
                         let recursive = PyDict::new(py);
                         recursive.set_item("default", false)?;
                         recursive.set_item("label_on", "enabled")?;
@@ -101,7 +107,7 @@ impl FileScanner {
                 )?;
                 required.set_item(
                     "file_extension",
-                    ("STRING", {
+                    (NODE_STRING, {
                         let directory = PyDict::new(py);
                         directory.set_item("default", "txt")?;
                         directory.set_item("tooltip", "Filter file extensions")?;
@@ -152,7 +158,7 @@ impl FileScanner {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str, &'static str) {
-        ("STRING", "STRING")
+        (NODE_STRING, NODE_STRING)
     }
 
     #[classattr]

@@ -1,0 +1,12 @@
+[build]
+target = 'x86_64-unknown-linux-gnu'
+# 加快编译速度 +nightly
+# rustflags = ["-Z", "threads=8"]
+
+# 并行化加载来提高链接器性
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
+
+[alias]
+t = "test -- --nocapture" # 单元测试显示println!宏的打印信息
