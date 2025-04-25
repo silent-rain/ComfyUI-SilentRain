@@ -11,6 +11,9 @@ pub use file_scanner::FileScanner;
 mod text_box;
 pub use text_box::TextBox;
 
+mod text_to_list;
+pub use text_to_list::TextToList;
+
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;

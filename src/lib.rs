@@ -12,7 +12,7 @@ use pyo3::{
 };
 
 use logic::{IndexAnything, ListCount};
-use text::{FileScanner, TextBox};
+use text::{FileScanner, TextBox, TextToList};
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -36,12 +36,14 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     let node_mapping = PyDict::new(py);
     node_mapping.set_item("FileScanner", py.get_type::<FileScanner>())?;
     node_mapping.set_item("TextBox", py.get_type::<TextBox>())?;
+    node_mapping.set_item("TextToList", py.get_type::<TextToList>())?;
     node_mapping.set_item("IndexAnything", py.get_type::<IndexAnything>())?;
     node_mapping.set_item("ListCount", py.get_type::<ListCount>())?;
 
     let name_mapping = PyDict::new(py);
     name_mapping.set_item("FileScanner", "Sr File Scanner")?;
     name_mapping.set_item("TextBox", "Sr Text Box")?;
+    name_mapping.set_item("TextToList", "Sr Text To List")?;
     name_mapping.set_item("IndexAnything", "Sr Index Anything")?;
     name_mapping.set_item("ListCount", "Sr List Count")?;
 
