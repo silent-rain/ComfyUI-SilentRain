@@ -44,12 +44,12 @@ impl TextBox {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "string",
+                    "text",
                     (NODE_STRING, {
-                        let string = PyDict::new(py);
-                        string.set_item("default", "")?;
-                        string.set_item("multiline", true)?;
-                        string
+                        let text = PyDict::new(py);
+                        text.set_item("default", "")?;
+                        text.set_item("multiline", true)?;
+                        text
                     }),
                 )?;
                 required.set_item(
@@ -81,7 +81,7 @@ impl TextBox {
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str,) {
-        ("string",)
+        ("text",)
     }
 
     #[classattr]
@@ -99,8 +99,8 @@ impl TextBox {
     const CATEGORY: &'static str = "SilentRain/Text";
 
     #[pyo3(name = "execute")]
-    fn execute(&mut self, py: Python, string: &str, strip_newlines: bool) -> PyResult<(String,)> {
-        let result = self.stringify(string, strip_newlines);
+    fn execute(&mut self, py: Python, text: &str, strip_newlines: bool) -> PyResult<(String,)> {
+        let result = self.stringify(text, strip_newlines);
 
         match result {
             Ok(v) => Ok((v,)),
@@ -121,9 +121,9 @@ impl TextBox {
 }
 
 impl TextBox {
-    fn stringify(&self, string: &str, strip_newlines: bool) -> Result<String, Error> {
+    fn stringify(&self, text: &str, strip_newlines: bool) -> Result<String, Error> {
         let mut new_string: Vec<String> = Vec::new();
-        let reader = io::Cursor::new(string);
+        let reader = io::Cursor::new(text);
         for line in reader.lines() {
             let line = line?;
             if !line.starts_with('\n') && strip_newlines {
