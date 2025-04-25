@@ -9,6 +9,7 @@ use pyo3::{
 
 use crate::{
     core::{
+        category::CATEGORY_UTILS,
         types::{any_type, NODE_INT},
         PromptServer,
     },
@@ -97,7 +98,7 @@ impl IndexAnything {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Utils";
+    const CATEGORY: &'static str = CATEGORY_UTILS;
 
     #[pyo3(name = "execute")]
     fn execute<'py>(

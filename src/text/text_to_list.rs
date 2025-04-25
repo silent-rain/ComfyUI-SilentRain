@@ -7,6 +7,7 @@ use pyo3::{
 };
 
 use crate::core::{
+    category::CATEGORY_TEXT,
     types::{NODE_INT, NODE_STRING},
     PromptServer,
 };
@@ -104,7 +105,7 @@ impl TextToList {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Text";
+    const CATEGORY: &'static str = CATEGORY_TEXT;
 
     #[pyo3(name = "execute")]
     fn execute(

@@ -6,7 +6,7 @@ use pyo3::{
     Bound, Py, PyResult, Python,
 };
 
-use crate::core::{types::NODE_STRING, PromptServer};
+use crate::core::{category::CATEGORY_TEXT, types::NODE_STRING, PromptServer};
 
 /// 文本转列表
 #[pyclass(subclass)]
@@ -63,7 +63,7 @@ impl StringListToSting {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Text";
+    const CATEGORY: &'static str = CATEGORY_TEXT;
 
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]

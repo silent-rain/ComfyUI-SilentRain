@@ -19,6 +19,7 @@ use walkdir::WalkDir;
 
 use crate::{
     core::{
+        category::CATEGORY_UTILS,
         types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
     },
@@ -185,7 +186,7 @@ impl FileScanner {
     // 节点分类
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Utils";
+    const CATEGORY: &'static str = CATEGORY_UTILS;
 
     #[pyo3(name = "execute")]
     fn execute(
