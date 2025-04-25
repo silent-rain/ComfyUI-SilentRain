@@ -11,8 +11,8 @@ use pyo3::{
     wrap_pyfunction, Bound, PyResult, Python,
 };
 
-use logic::{IndexAnything, ListCount};
 use text::{FileScanner, TextBox, TextToList};
+use utils::{IndexAnything, ListCount};
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]

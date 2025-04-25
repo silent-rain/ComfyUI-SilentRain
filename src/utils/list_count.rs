@@ -81,7 +81,7 @@ impl ListCount {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Logic";
+    const CATEGORY: &'static str = "SilentRain/Utils";
 
     #[pyo3(name = "execute")]
     fn execute(&mut self, any: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
