@@ -17,12 +17,12 @@ use crate::{
 
 /// 任意索引
 #[pyclass(subclass)]
-pub struct IndexAny {}
+pub struct IndexAnything {}
 
-impl PromptServer for IndexAny {}
+impl PromptServer for IndexAnything {}
 
 #[pymethods]
-impl IndexAny {
+impl IndexAnything {
     #[new]
     fn new() -> Self {
         let _ = tracing_subscriber::fmt()
@@ -127,7 +127,7 @@ impl IndexAny {
     }
 }
 
-impl IndexAny {
+impl IndexAnything {
     /// 获取列表指定索引的数据
     fn get_list_index<'py>(
         &self,
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn test_get_valid_index() -> anyhow::Result<()> {
         Python::with_gil(|py| {
-            let index_any = IndexAny::new();
+            let index_any = IndexAnything::new();
 
             // 创建包含Python对象的列表
             let elem1 = PyString::new(py, "1").into_any();
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn test_index_out_of_range() {
         Python::with_gil(|py| {
-            let index_any = IndexAny::new();
+            let index_any = IndexAnything::new();
             let elem = PyString::new(py, "test").into_any();
             let anys = vec![elem];
 
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_empty_list() {
-        let index_any = IndexAny::new();
+        let index_any = IndexAnything::new();
         let err = index_any
             .get_list_index(vec![], 0)
             .expect_err("Should return empty list error");
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn test_mixed_types() -> anyhow::Result<()> {
         Python::with_gil(|py| {
-            let index_any = IndexAny::new();
+            let index_any = IndexAnything::new();
 
             // 创建包含不同类型元素的列表
             let elements = vec![
