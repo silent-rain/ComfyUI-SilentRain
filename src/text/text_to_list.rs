@@ -40,10 +40,10 @@ impl TextToList {
                 required.set_item(
                     "text",
                     (NODE_STRING, {
-                        let string = PyDict::new(py);
-                        string.set_item("default", "")?;
-                        string.set_item("multiline", true)?;
-                        string
+                        let text = PyDict::new(py);
+                        text.set_item("default", "")?;
+                        text.set_item("multiline", true)?;
+                        text
                     }),
                 )?;
                 required.set_item(
