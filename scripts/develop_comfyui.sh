@@ -32,6 +32,9 @@ echo "develop ${App} to ComfyUI path ..."
 echo "print comfyui new node ..."
 tree ${ComfyUI}/${App}
 
+echo "print comfyui node dir list ..."
+ls -hl ${ComfyUI}/${App}
+
 # 删除解压的文件
 rm -rf ${App} ${App}-*.dist-info
 
