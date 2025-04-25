@@ -1,12 +1,15 @@
 //! 文本相关的节点
-pub mod file_scanner;
 
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
 };
 
+mod file_scanner;
 pub use file_scanner::FileScanner;
+
+mod text_box;
+pub use text_box::TextBox;
 
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
