@@ -15,5 +15,8 @@ cd ${ComfyUI}
 echo "switch venv ..."
 source .venv/bin/activate
 
+# 更新 comfyui-frontend-package
+# pip install --upgrade comfyui-frontend-package
+
 # run server
 python main.py --cpu --cpu-va
