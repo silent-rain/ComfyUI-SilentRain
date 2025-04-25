@@ -46,18 +46,18 @@ impl TextBox {
                 required.set_item(
                     "string",
                     (NODE_STRING, {
-                        let any = PyDict::new(py);
-                        any.set_item("default", "")?;
-                        any.set_item("multiline", true)?;
-                        any
+                        let string = PyDict::new(py);
+                        string.set_item("default", "")?;
+                        string.set_item("multiline", true)?;
+                        string
                     }),
                 )?;
                 required.set_item(
                     "strip_newlines",
                     (NODE_BOOLEAN, {
-                        let any = PyDict::new(py);
-                        any.set_item("default", true)?;
-                        any
+                        let strip_newlines = PyDict::new(py);
+                        strip_newlines.set_item("default", true)?;
+                        strip_newlines
                     }),
                 )?;
                 required
