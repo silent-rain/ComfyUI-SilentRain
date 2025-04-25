@@ -185,7 +185,7 @@ impl FileScanner {
     // 节点分类
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = "SilentRain/Text";
+    const CATEGORY: &'static str = "SilentRain/Utils";
 
     #[pyo3(name = "execute")]
     fn execute(
