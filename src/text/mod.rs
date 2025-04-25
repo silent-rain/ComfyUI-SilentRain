@@ -5,9 +5,6 @@ use pyo3::{
     Bound, PyResult, Python,
 };
 
-mod file_scanner;
-pub use file_scanner::FileScanner;
-
 mod text_box;
 pub use text_box::TextBox;
 
@@ -20,6 +17,6 @@ pub use string_list_to_sting::StringListToSting;
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;
-    submodule.add_class::<FileScanner>()?;
+    submodule.add_class::<TextToList>()?;
     Ok(submodule)
 }

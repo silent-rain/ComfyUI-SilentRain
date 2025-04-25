@@ -5,6 +5,9 @@ use pyo3::{
     Bound, PyResult, Python,
 };
 
+mod file_scanner;
+pub use file_scanner::FileScanner;
+
 mod index_anything;
 pub use index_anything::IndexAnything;
 
