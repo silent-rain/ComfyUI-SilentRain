@@ -25,6 +25,7 @@ use crate::{
     error::Error,
 };
 
+/// 文件扫描器
 #[pyclass(subclass)] // 允许子类化
 pub struct FileScanner {
     file_extension: String,

@@ -15,6 +15,7 @@ use crate::{
     error::Error,
 };
 
+/// 任意索引
 #[pyclass(subclass)]
 pub struct IndexAny {}
 
