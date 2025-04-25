@@ -11,7 +11,7 @@ use crate::core::{
     PromptServer,
 };
 
-/// 列表计算
+/// 列表计数
 #[pyclass(subclass)]
 pub struct ListCount {}
 

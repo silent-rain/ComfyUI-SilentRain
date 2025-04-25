@@ -1,14 +1,14 @@
 //! 逻辑
 
-pub mod index_anything;
-pub mod list_count;
-
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
 };
 
+mod index_anything;
 pub use index_anything::IndexAnything;
+
+mod list_count;
 pub use list_count::ListCount;
 
 /// 逻辑模块
