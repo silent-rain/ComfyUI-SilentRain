@@ -26,11 +26,13 @@ log = "0.4"
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = [] }
 env_logger = "0.11"
+rand = "0.9"
+rand_chacha = "0.9"
 
-candle-core = "0.8"
-candle-nn = "0.8"
-candle-onnx = "0.8"
-candle-transformers = "0.8"
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-onnx = "0.9"
+candle-transformers = "0.9"
 hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.21"         # 标记文本
-parquet = "54.1"            # 列式存储数据文件格式
+parquet = "55.0"            # 列式存储数据文件格式
