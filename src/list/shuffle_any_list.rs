@@ -8,7 +8,7 @@ use pyo3::{
 use rand::{Rng, SeedableRng};
 
 use crate::core::{
-    category::CATEGORY_UTILS,
+    category::CATEGORY_LIST,
     types::{any_type, NODE_INT},
     PromptServer,
 };
@@ -59,7 +59,7 @@ impl ShuffleAnyList {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_UTILS;
+    const CATEGORY: &'static str = CATEGORY_LIST;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]

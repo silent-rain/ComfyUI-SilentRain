@@ -2,6 +2,7 @@ pub mod core;
 pub mod error;
 pub mod node_register;
 
+pub mod list;
 pub mod logic;
 pub mod text;
 pub mod utils;
