@@ -1,6 +1,6 @@
 pub mod core;
 pub mod error;
-pub mod node_register;
+pub mod register;
 
 pub mod list;
 pub mod logic;
@@ -13,7 +13,7 @@ use pyo3::{
     wrap_pyfunction, Bound, PyResult, Python,
 };
 
-use crate::node_register::node_register;
+use crate::register::node_register;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
