@@ -109,6 +109,9 @@ impl ShuffleAnyList {
         any: Vec<Bound<'py, PyAny>>,
         seed: Vec<u64>,
     ) -> PyResult<(Vec<Bound<'py, PyAny>>, usize)> {
+        if any.is_empty() {
+            return Ok((any, 0));
+        }
         let (results, total) = self.shuffle(any, seed[0]);
         Ok((results, total))
     }
