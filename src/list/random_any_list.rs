@@ -9,7 +9,7 @@ use rand::{Rng, SeedableRng};
 
 use crate::core::{
     category::CATEGORY_LIST,
-    types::{any_type, NODE_INT},
+    types::{any_type, NODE_INT, NODE_SEED_MAX},
     PromptServer,
 };
 
@@ -92,7 +92,7 @@ impl RandomAnyList {
                         let seed = PyDict::new(py);
                         seed.set_item("default", 1024)?;
                         seed.set_item("min", 0)?;
-                        seed.set_item("max", 0xffffffffffffffffu64)?;
+                        seed.set_item("max", NODE_SEED_MAX)?;
                         seed.set_item("step", 1)?;
                         seed
                     }),

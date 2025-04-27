@@ -92,12 +92,18 @@ impl TextBox {
     }
 
     #[classattr]
-    #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
-
-    #[classattr]
     #[pyo3(name = "CATEGORY")]
     const CATEGORY: &'static str = CATEGORY_TEXT;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "This is a multi line text box node."
+    }
+
+    #[classattr]
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
 
     #[pyo3(name = "execute")]
     fn execute(&mut self, py: Python, text: &str, strip_newlines: bool) -> PyResult<(String,)> {

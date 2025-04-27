@@ -50,6 +50,72 @@ impl FileScanner {
         }
     }
 
+    // 输入列表, 可选
+    // #[classattr]
+    // #[pyo3(name = "INPUT_IS_LIST")]
+    // fn input_is_list() -> bool {
+    //     false
+    // }
+
+    // 输出节点, 可选
+    // #[classattr]
+    // #[pyo3(name = "OUTPUT_NODE")]
+    // fn output_node() -> bool {
+    //     false
+    // }
+
+    // 过时标记, 可选
+    // #[classattr]
+    // #[pyo3(name = "DEPRECATED")]
+    // fn deprecated() -> bool {
+    //     false
+    // }
+
+    // 实验性的, 可选
+    // #[classattr]
+    // #[pyo3(name = "EXPERIMENTAL")]
+    // fn experimental() -> bool {
+    //     false
+    // }
+
+    // 返回参数类型
+    #[classattr]
+    #[pyo3(name = "RETURN_TYPES")]
+    fn return_types() -> (&'static str, &'static str) {
+        (NODE_STRING, NODE_STRING)
+    }
+
+    // 返回参数名称
+    #[classattr]
+    #[pyo3(name = "RETURN_NAMES")]
+    fn return_names() -> (&'static str, &'static str) {
+        ("paths", "contents")
+    }
+
+    // 输出列表, 可选
+    #[classattr]
+    #[pyo3(name = "OUTPUT_IS_LIST")]
+    fn output_is_list() -> (bool, bool) {
+        (true, true)
+    }
+
+    // 节点分类
+    #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_UTILS;
+
+    // 节点描述, 可选
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "Scan all files in the specified directory."
+    }
+
+    // 调研方法函数名称
+    #[classattr]
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
+
     /// 使用 #[classmethod] 实现 INPUT_TYPES
     /// ```py
     /// def INPUT_TYPES(cls):
@@ -121,72 +187,6 @@ impl FileScanner {
             Ok(dict.into())
         })
     }
-
-    // 输入列表, 可选
-    // #[classattr]
-    // #[pyo3(name = "INPUT_IS_LIST")]
-    // fn input_is_list() -> bool {
-    //     false
-    // }
-
-    // 输出节点, 可选
-    // #[classattr]
-    // #[pyo3(name = "OUTPUT_NODE")]
-    // fn output_node() -> bool {
-    //     false
-    // }
-
-    // 节点描述, 可选
-    // #[classattr]
-    // #[pyo3(name = "DESCRIPTION")]
-    // fn description() -> &'static str {
-    //     ""
-    // }
-
-    // 过时标记, 可选
-    // #[classattr]
-    // #[pyo3(name = "DEPRECATED")]
-    // fn deprecated() -> bool {
-    //     false
-    // }
-
-    // 实验性的, 可选
-    // #[classattr]
-    // #[pyo3(name = "EXPERIMENTAL")]
-    // fn experimental() -> bool {
-    //     false
-    // }
-
-    // 返回参数类型
-    #[classattr]
-    #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str) {
-        (NODE_STRING, NODE_STRING)
-    }
-
-    // 返回参数名称
-    #[classattr]
-    #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str) {
-        ("paths", "contents")
-    }
-
-    // 输出列表, 可选
-    #[classattr]
-    #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool) {
-        (true, true)
-    }
-
-    // 调研方法函数名称
-    #[classattr]
-    #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
-
-    // 节点分类
-    #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_UTILS;
 
     #[pyo3(name = "execute")]
     fn execute(

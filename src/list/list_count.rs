@@ -31,27 +31,6 @@ impl ListCount {
         Self {}
     }
 
-    #[classmethod]
-    #[pyo3(name = "INPUT_TYPES")]
-    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-                required.set_item(
-                    "any",
-                    (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
-                    }),
-                )?;
-                required
-            })?;
-            Ok(dict.into())
-        })
-    }
-
     #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
     fn input_is_list() -> bool {
@@ -77,12 +56,39 @@ impl ListCount {
     }
 
     #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_LIST;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "Count the number of elements in the list."
+    }
+
+    #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
 
-    #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_LIST;
+    #[classmethod]
+    #[pyo3(name = "INPUT_TYPES")]
+    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("required", {
+                let required = PyDict::new(py);
+                required.set_item(
+                    "any",
+                    (any_type(py)?, {
+                        let any = PyDict::new(py);
+                        any.set_item("tooltip", "Input any list")?;
+                        any
+                    }),
+                )?;
+                required
+            })?;
+            Ok(dict.into())
+        })
+    }
 
     #[pyo3(name = "execute")]
     fn execute(&mut self, any: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
