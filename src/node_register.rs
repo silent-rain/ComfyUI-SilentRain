@@ -4,7 +4,7 @@ use pyo3::{PyResult, Python};
 
 use crate::{
     core::node::NodeRegister,
-    list::{IndexAnything, ListCount, ShuffleAnyList},
+    list::{IndexAnything, ListCount, RandomAnyList, ShuffleAnyList},
     text::{StringListToSting, TextBox, TextToList},
     utils::FileScanner,
 };
@@ -36,6 +36,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ShuffleAnyList",
             py.get_type::<ShuffleAnyList>(),
             "Sr Shuffle Any List",
+        ),
+        NodeRegister(
+            "RandomAnyList",
+            py.get_type::<RandomAnyList>(),
+            "Sr Random Any List",
         ),
         // logic
     ];
