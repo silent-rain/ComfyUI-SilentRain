@@ -1,11 +1,16 @@
 //! 字符串列表
 //!
 //! 尚未实现前端动态添加参数量的效果, 当前需要结合js进行动态处理。
+//!
+//! 使用：
+//! - 先点击执行, 使参数生效
+//! - 编辑-刷新节点定义
+//! - 右键-刷新
 
 use log::error;
 use pyo3::{
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
+    types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
     Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
@@ -96,7 +101,7 @@ impl StringList {
                     (NODE_INT, {
                         let index = PyDict::new(py);
                         index.set_item("default", unsafe { MAX_STRING_NUM })?;
-                        index.set_item("min", unsafe { MAX_STRING_NUM })?;
+                        index.set_item("min", 2)?;
                         index.set_item("max", NODE_INT_MAX)?;
                         index.set_item("step", 1)?;
                         index.set_item("lazy", true)?;
@@ -257,10 +262,10 @@ impl StringList {
         if let Some(kwargs) = kwargs {
             // 指定获取key、value
             for i in 1..=string_num {
-                let any_value = kwargs.get_item(format!("string_{}", i))?;
-                if any_value.is_none() {
-                    continue;
-                }
+                let any_value = match kwargs.get_item(format!("string_{}", i))? {
+                    Some(v) => v,
+                    None => continue,
+                };
                 // 多类型兼容处理
                 let str_list: Vec<String> = match any_value.extract() {
                     Ok(list) => list,
