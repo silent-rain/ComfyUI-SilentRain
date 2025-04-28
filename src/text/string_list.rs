@@ -12,13 +12,13 @@ use pyo3::{
 use crate::{
     core::{
         category::CATEGORY_TEXT,
-        types::{any_type, NODE_INT, NODE_STRING},
+        types::{any_type, NODE_INT, NODE_INT_MAX, NODE_STRING},
         PromptServer,
     },
     error::Error,
 };
 
-const MAX_STRING_NUM: i32 = 10;
+static mut MAX_STRING_NUM: u64 = 2;
 
 /// 字符串列表
 #[pyclass(subclass)]
@@ -73,6 +73,13 @@ impl StringList {
         "Return a list of strings and the merged strings."
     }
 
+    // 实验性的, 可选
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
+    }
+
     #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
@@ -84,18 +91,18 @@ impl StringList {
             let dict = PyDict::new(py);
             dict.set_item("required", {
                 let required = PyDict::new(py);
-                // required.set_item(
-                //     "string_num",
-                //     (NODE_INT, {
-                //         let index = PyDict::new(py);
-                //         index.set_item("default", 1)?;
-                //         index.set_item("min", 1)?;
-                //         index.set_item("max", MAX_STRING_NUM)?;
-                //         index.set_item("step", 1)?;
-                //         index.set_item("lazy", true)?;
-                //         index
-                //     }),
-                // )?;
+                required.set_item(
+                    "string_num",
+                    (NODE_INT, {
+                        let index = PyDict::new(py);
+                        index.set_item("default", unsafe { MAX_STRING_NUM })?;
+                        index.set_item("min", unsafe { MAX_STRING_NUM })?;
+                        index.set_item("max", NODE_INT_MAX)?;
+                        index.set_item("step", 1)?;
+                        index.set_item("lazy", true)?;
+                        index
+                    }),
+                )?;
                 required.set_item(
                     "delimiter",
                     (NODE_STRING, {
@@ -120,13 +127,12 @@ impl StringList {
                 )?;
 
                 // 动态输入
-                for i in 1..=MAX_STRING_NUM {
+                for i in 1..=unsafe { MAX_STRING_NUM } {
                     optional.set_item(
                         format!("string_{}", i),
                         (NODE_STRING, {
                             let string = PyDict::new(py);
-                            string.set_item("lazy", true)?;
-                            string.set_item("forceInput", false)?;
+                            // string.set_item("forceInput", false)?;
                             string.set_item("default", "")?;
                             string
                         }),
@@ -136,24 +142,44 @@ impl StringList {
                 optional
             })?;
 
+            // dict.set_item("hidden", {
+            //     let hidden = PyDict::new(py);
+            //     hidden.set_item("prompt", "PROMPT")?;
+            //     hidden.set_item("dynprompt", "DYNPROMPT")?;
+            //     hidden.set_item("extra_pnginfo", "EXTRA_PNGINFO")?;
+            //     // UNIQUE_ID is the unique identifier of the node, and matches the id property of the node on the client side.
+            //     // It is commonly used in client-server communications (see messages).
+            //     hidden.set_item("node_id", "UNIQUE_ID")?;
+            //     hidden.set_item("unique_id", "UNIQUE_ID")?;
+            //     hidden.set_item("my_unique_id", "UNIQUE_ID")?;
+
+            //     hidden
+            // })?;
+
             Ok(dict.into())
         })
     }
 
-    #[pyo3(name = "execute", signature = (delimiter, optional_string_list=None, **kwargs))]
+    #[pyo3(name = "execute", signature = (string_num, delimiter, optional_string_list=None, **kwargs))]
     fn execute(
         &mut self,
         py: Python,
+        string_num: u64,
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
-        let result = self.list_to_strings(delimiter, optional_string_list, kwargs);
+        error!(
+            "execute: {:?}  ==== {:?} ==== {:?} ==== {:?}",
+            string_num, delimiter, optional_string_list, kwargs
+        );
+
+        let result = self.list_to_strings(string_num, delimiter, optional_string_list, kwargs);
 
         match result {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("scan files failed, {e}");
+                error!("list to strings failed, {e}");
                 if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
@@ -166,6 +192,43 @@ impl StringList {
             }
         }
     }
+
+    /// 返回需要评估的输入名称列表。
+    ///
+    /// 需要搭配 lazy 属性实用
+    /// 如果有任何懒加载输入（lazy inputs）尚未被评估，当请求的字段值可用时，这个函数将被调用。
+    /// 评估过的输入会作为参数传递给此函数，未评估的输入会传入值为 None。
+    #[pyo3(name = "check_lazy_status", signature = (string_num, delimiter, optional_string_list=None, **kwargs))]
+    fn check_lazy_status(
+        &mut self,
+        string_num: u64,
+        delimiter: String,
+        optional_string_list: Option<Bound<'_, PyAny>>,
+        kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Vec<String>> {
+        error!(
+            "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
+            string_num, delimiter, optional_string_list, kwargs
+        );
+
+        // 更新可变参数
+        unsafe {
+            MAX_STRING_NUM = string_num;
+        }
+
+        // 打印 kwargs
+        // let mut strs = Vec::new();
+        // if let Some(kwargs) = kwargs {
+        //     for (key, value) in kwargs.into_iter() {
+        //         let key_str: String = key.extract()?;
+        //         println!("Key: {}, Value: {:?}", key_str, value);
+        //         strs.push(value.to_string());
+        //     }
+        // }
+
+        // 返回需要评估的输入名称列表
+        Ok(vec![])
+    }
 }
 
 impl StringList {
@@ -174,6 +237,7 @@ impl StringList {
     /// 输入为列表时: kwargs: Some({'string_1': ['0'], 'string_2': ['1']})  
     fn list_to_strings(
         &self,
+        string_num: u64,
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
@@ -192,8 +256,11 @@ impl StringList {
 
         if let Some(kwargs) = kwargs {
             // 指定获取key、value
-            for i in 1..=MAX_STRING_NUM {
+            for i in 1..=string_num {
                 let any_value = kwargs.get_item(format!("string_{}", i))?;
+                if any_value.is_none() {
+                    continue;
+                }
                 // 多类型兼容处理
                 let str_list: Vec<String> = match any_value.extract() {
                     Ok(list) => list,
