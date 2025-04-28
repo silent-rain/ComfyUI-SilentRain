@@ -6,7 +6,7 @@ use log::error;
 use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
+    Bound, Py, PyErr, PyResult, Python,
 };
 
 use crate::{
@@ -42,25 +42,25 @@ impl StringList {
     #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
     fn input_is_list() -> bool {
-        false
+        true
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str, &'static str, &'static str) {
-        (NODE_STRING, NODE_STRING, NODE_STRING, NODE_INT)
+    fn return_types() -> (&'static str, &'static str, &'static str) {
+        (NODE_STRING, NODE_STRING, NODE_INT)
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str, &'static str, &'static str) {
-        ("string_list", "prompt_strings", "strings", "total")
+    fn return_names() -> (&'static str, &'static str, &'static str) {
+        ("string_list", "strings", "total")
     }
 
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool, bool, bool) {
-        (false, true, false, false)
+    fn output_is_list() -> (bool, bool, bool) {
+        (true, false, false)
     }
 
     #[classattr]
@@ -140,14 +140,15 @@ impl StringList {
         })
     }
 
-    #[pyo3(name = "execute", signature = (delimiter, optional_string_list=None, **kwargs))]
+    #[pyo3(name = "execute", signature = (delimiter, optional_string_list=[].to_vec(), **kwargs))]
     fn execute(
         &mut self,
         py: Python,
-        delimiter: String,
-        optional_string_list: Option<Bound<'_, PyAny>>,
+        delimiter: Vec<String>,
+        optional_string_list: Vec<String>,
         kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
+    ) -> PyResult<(Vec<String>, String, usize)> {
+        let delimiter = delimiter[0].clone();
         let result = self.list_to_strings(delimiter, optional_string_list, kwargs);
 
         match result {
@@ -166,6 +167,28 @@ impl StringList {
             }
         }
     }
+
+    // /// 返回需要评估的输入名称列表。
+    // ///
+    // /// 需要搭配 lazy 属性实用
+    // /// 如果有任何懒加载输入（lazy inputs）尚未被评估，当请求的字段值可用时，这个函数将被调用。
+    // /// 评估过的输入会作为参数传递给此函数，未评估的输入会传入值为 None。
+    // #[pyo3(name = "check_lazy_status", signature = (**kwargs))]
+    // fn check_lazy_status(
+    //     &mut self,
+    //     kwargs: Option<Bound<'_, PyDict>>,
+    // ) -> PyResult<Vec<String>> {
+    //     let mut strs = Vec::new();
+    //     if let Some(kwargs) = kwargs {
+    //         for (key, value) in kwargs.into_iter() {
+    //             let key_str: String = key.extract()?;
+    //             println!("Key: {}, Value: {:?}", key_str, value);
+    //             strs.push(value.to_string());
+    //         }
+    //     }
+
+    //     Ok(vec![])
+    // }
 }
 
 impl StringList {
@@ -175,22 +198,21 @@ impl StringList {
     fn list_to_strings(
         &self,
         delimiter: String,
-        optional_string_list: Option<Bound<'_, PyAny>>,
+        optional_string_list: Vec<String>,
         kwargs: Option<Bound<'_, PyDict>>,
-    ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
+    ) -> Result<(Vec<String>, String, usize), Error> {
         let mut new_strings: Vec<String> = Vec::new();
-
-        if let Some(optional_string_list) = optional_string_list {
-            let string_list: Vec<String> = match optional_string_list.extract() {
-                Ok(list) => list,
-                Err(_) => vec![optional_string_list.extract()?],
-            };
-            if !string_list.is_empty() {
-                new_strings.extend(string_list);
-            }
+        if !optional_string_list.is_empty() {
+            new_strings.extend(optional_string_list);
         }
 
         if let Some(kwargs) = kwargs {
+            // 打印所有的 key、value
+            // for (key, value) in kwargs.into_iter() {
+            //     let key_str: String = key.extract()?;
+            //     println!("Key: {}, Value: {:?}", key_str, value);
+            // }
+
             // 指定获取key、value
             for i in 1..=MAX_STRING_NUM {
                 let any_value = kwargs.get_item(format!("string_{}", i))?;
@@ -213,6 +235,6 @@ impl StringList {
         let total = new_strings.len();
         let strings = new_strings.join(&delimiter);
 
-        Ok((new_strings.clone(), new_strings, strings, total))
+        Ok((new_strings, strings, total))
     }
 }
