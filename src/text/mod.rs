@@ -14,6 +14,9 @@ pub use text_to_list::TextToList;
 mod string_list_to_sting;
 pub use string_list_to_sting::StringListToSting;
 
+mod string_list;
+pub use string_list::StringList;
+
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;

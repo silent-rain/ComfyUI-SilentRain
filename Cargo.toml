@@ -12,7 +12,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 pyo3 = { version = "0.24", features = [
     "extension-module",
-    # "macros",
+    # "multiple-pymethods",
+    "macros",
     # "auto-initialize",
 ] }
 serde = { version = "1.0", features = ["derive"] }
