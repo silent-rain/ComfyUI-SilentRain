@@ -51,11 +51,11 @@ impl FileScanner {
     }
 
     // 输入列表, 可选
-    // #[classattr]
-    // #[pyo3(name = "INPUT_IS_LIST")]
-    // fn input_is_list() -> bool {
-    //     false
-    // }
+    #[classattr]
+    #[pyo3(name = "INPUT_IS_LIST")]
+    fn input_is_list() -> bool {
+        false
+    }
 
     // 输出节点, 可选
     // #[classattr]
@@ -90,6 +90,13 @@ impl FileScanner {
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str, &'static str) {
         ("paths", "contents")
+    }
+
+    // 返回参数提示
+    #[classattr]
+    #[pyo3(name = "OUTPUT_TOOLTIPS")]
+    fn output_tooltips() -> (&'static str, &'static str) {
+        ("List of file paths", "List of file contents.")
     }
 
     // 输出列表, 可选
