@@ -1,4 +1,6 @@
 //! 公共库
+//!
+//! 相关节点定义: ComfyUI/comfy/comfy_types/node_typing.py
 
 mod always_equal_proxy;
 
@@ -8,3 +10,4 @@ pub use prompt_server::PromptServer;
 pub mod types;
 
 pub mod category;
+pub mod node;

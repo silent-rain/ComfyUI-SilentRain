@@ -9,8 +9,8 @@ use pyo3::{
 
 use crate::{
     core::{
-        category::CATEGORY_UTILS,
-        types::{any_type, NODE_INT},
+        category::CATEGORY_LIST,
+        types::{any_type, NODE_INT, NODE_INT_MAX},
         PromptServer,
     },
     error::Error,
@@ -33,38 +33,6 @@ impl IndexAnything {
             .with_line_number(true)
             .try_init();
         Self {}
-    }
-
-    #[classmethod]
-    #[pyo3(name = "INPUT_TYPES")]
-    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-                required.set_item(
-                    "any",
-                    (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
-                    }),
-                )?;
-                required.set_item(
-                    "index",
-                    (NODE_INT, {
-                        let index = PyDict::new(py);
-                        index.set_item("default", 0)?;
-                        index.set_item("min", 0)?;
-                        index.set_item("max", 1000000)?;
-                        index.set_item("step", 1)?;
-                        index
-                    }),
-                )?;
-                required
-            })?;
-            Ok(dict.into())
-        })
     }
 
     #[classattr]
@@ -93,12 +61,50 @@ impl IndexAnything {
     }
 
     #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_LIST;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "Retrieve elements from a list by specifying an index."
+    }
+
+    #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
 
-    #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_UTILS;
+    #[classmethod]
+    #[pyo3(name = "INPUT_TYPES")]
+    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("required", {
+                let required = PyDict::new(py);
+                required.set_item(
+                    "any",
+                    (any_type(py)?, {
+                        let any = PyDict::new(py);
+                        any.set_item("tooltip", "Input any list")?;
+                        any
+                    }),
+                )?;
+                required.set_item(
+                    "index",
+                    (NODE_INT, {
+                        let index = PyDict::new(py);
+                        index.set_item("default", 0)?;
+                        index.set_item("min", 0)?;
+                        index.set_item("max", NODE_INT_MAX)?;
+                        index.set_item("step", 1)?;
+                        index
+                    }),
+                )?;
+                required
+            })?;
+            Ok(dict.into())
+        })
+    }
 
     #[pyo3(name = "execute")]
     fn execute<'py>(

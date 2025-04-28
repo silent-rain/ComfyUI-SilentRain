@@ -7,7 +7,7 @@ use pyo3::{
 };
 
 use crate::core::{
-    category::CATEGORY_UTILS,
+    category::CATEGORY_LIST,
     types::{any_type, NODE_INT},
     PromptServer,
 };
@@ -29,27 +29,6 @@ impl ListCount {
             .with_line_number(true)
             .try_init();
         Self {}
-    }
-
-    #[classmethod]
-    #[pyo3(name = "INPUT_TYPES")]
-    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-                required.set_item(
-                    "any",
-                    (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
-                    }),
-                )?;
-                required
-            })?;
-            Ok(dict.into())
-        })
     }
 
     #[classattr]
@@ -77,12 +56,39 @@ impl ListCount {
     }
 
     #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_LIST;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "Count the number of elements in the list."
+    }
+
+    #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
 
-    #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_UTILS;
+    #[classmethod]
+    #[pyo3(name = "INPUT_TYPES")]
+    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("required", {
+                let required = PyDict::new(py);
+                required.set_item(
+                    "any",
+                    (any_type(py)?, {
+                        let any = PyDict::new(py);
+                        any.set_item("tooltip", "Input any list")?;
+                        any
+                    }),
+                )?;
+                required
+            })?;
+            Ok(dict.into())
+        })
+    }
 
     #[pyo3(name = "execute")]
     fn execute(&mut self, any: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {

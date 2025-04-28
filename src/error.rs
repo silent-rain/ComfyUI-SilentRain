@@ -24,6 +24,8 @@ pub enum Error {
     IndexOutOfRange(String),
     #[error("error in obtaining list items at specified index")]
     GetListIndex,
+    #[error("py error, {0}")]
+    PyErr(#[from] pyo3::PyErr),
 }
 
 impl From<io::Error> for Error {

@@ -1,6 +1,8 @@
 pub mod core;
 pub mod error;
+pub mod register;
 
+pub mod list;
 pub mod logic;
 pub mod text;
 pub mod utils;
@@ -11,8 +13,7 @@ use pyo3::{
     wrap_pyfunction, Bound, PyResult, Python,
 };
 
-use text::{StringListToSting, TextBox, TextToList};
-use utils::{FileScanner, IndexAnything, ListCount};
+use crate::register::node_register;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -34,22 +35,17 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // 注册 ComfyUI NODE_CLASS_MAPPINGS/NODE_DISPLAY_NAME_MAPPINGS
     let node_mapping = PyDict::new(py);
-    node_mapping.set_item("FileScanner", py.get_type::<FileScanner>())?;
-    node_mapping.set_item("IndexAnything", py.get_type::<IndexAnything>())?;
-    node_mapping.set_item("ListCount", py.get_type::<ListCount>())?;
-
-    node_mapping.set_item("TextBox", py.get_type::<TextBox>())?;
-    node_mapping.set_item("TextToList", py.get_type::<TextToList>())?;
-    node_mapping.set_item("StringListToSting", py.get_type::<StringListToSting>())?;
-
     let name_mapping = PyDict::new(py);
-    name_mapping.set_item("FileScanner", "Sr File Scanner")?;
-    name_mapping.set_item("IndexAnything", "Sr Index Anything")?;
-    name_mapping.set_item("ListCount", "Sr List Count")?;
+    // 注册单个节点
+    // node_mapping.set_item("FileScanner", py.get_type::<FileScanner>())?;
+    // name_mapping.set_item("FileScanner", "Sr File Scanner")?;
 
-    name_mapping.set_item("TextBox", "Sr Text Box")?;
-    name_mapping.set_item("TextToList", "Sr Text To List")?;
-    name_mapping.set_item("StringListToSting", "Sr String List To Sting")?;
+    // 批量注册节点, 简化注册流程
+    let nodes = node_register(py)?;
+    for node in nodes {
+        node_mapping.set_item(node.0, node.1)?;
+        name_mapping.set_item(node.0, node.2)?;
+    }
 
     m.add("NODE_CLASS_MAPPINGS", node_mapping)?;
     m.add("NODE_DISPLAY_NAME_MAPPINGS", name_mapping)?;

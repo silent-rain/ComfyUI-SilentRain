@@ -31,6 +31,38 @@ impl TextToList {
         Self {}
     }
 
+    #[classattr]
+    #[pyo3(name = "RETURN_TYPES")]
+    fn return_types() -> (&'static str, &'static str) {
+        (NODE_STRING, NODE_INT)
+    }
+
+    #[classattr]
+    #[pyo3(name = "RETURN_NAMES")]
+    fn return_names() -> (&'static str, &'static str) {
+        ("string", "total")
+    }
+
+    #[classattr]
+    #[pyo3(name = "OUTPUT_IS_LIST")]
+    fn output_is_list() -> (bool, bool) {
+        (true, false)
+    }
+
+    #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_TEXT;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "Convert text into a string list based on line breaks."
+    }
+
+    #[classattr]
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
+
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
@@ -74,38 +106,6 @@ impl TextToList {
             Ok(dict.into())
         })
     }
-
-    #[classattr]
-    #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str) {
-        (NODE_STRING, NODE_INT)
-    }
-
-    #[classattr]
-    #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str) {
-        ("string", "total")
-    }
-
-    #[classattr]
-    #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool) {
-        (true, false)
-    }
-
-    #[classattr]
-    #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
-
-    #[classattr]
-    #[pyo3(name = "DESCRIPTION")]
-    fn description() -> &'static str {
-        "Convert text into a string list based on line breaks."
-    }
-
-    #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_TEXT;
 
     #[pyo3(name = "execute")]
     fn execute(

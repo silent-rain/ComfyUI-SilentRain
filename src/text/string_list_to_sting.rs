@@ -52,8 +52,8 @@ impl StringListToSting {
     }
 
     #[classattr]
-    #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_TEXT;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
@@ -62,8 +62,8 @@ impl StringListToSting {
     }
 
     #[classattr]
-    #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_TEXT;
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
 
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]

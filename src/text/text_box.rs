@@ -92,12 +92,18 @@ impl TextBox {
     }
 
     #[classattr]
-    #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
-
-    #[classattr]
     #[pyo3(name = "CATEGORY")]
     const CATEGORY: &'static str = CATEGORY_TEXT;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "This is a multi line text box node."
+    }
+
+    #[classattr]
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
 
     #[pyo3(name = "execute")]
     fn execute(&mut self, py: Python, text: &str, strip_newlines: bool) -> PyResult<(String,)> {
@@ -106,7 +112,7 @@ impl TextBox {
         match result {
             Ok(v) => Ok((v,)),
             Err(e) => {
-                error!("scan files failed, {e}");
+                error!("string processing failed failed, {e}");
                 if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
