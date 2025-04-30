@@ -4,9 +4,9 @@ use pyo3::{PyResult, Python};
 
 use crate::{
     core::node::NodeRegister,
-    list::{IndexAnything, ListCount, RandomAnyList, ShuffleAnyList},
+    list::{IndexAnything, ListBridge, ListCount, RandomAnyList, ShuffleAnyList},
     text::{StringList, StringListToSting, TextBox, TextToList},
-    utils::FileScanner,
+    utils::{BridgeAnything, FileScanner},
 };
 
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
@@ -16,6 +16,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "FileScanner",
             py.get_type::<FileScanner>(),
             "Sr File Scanner",
+        ),
+        NodeRegister(
+            "BridgeAnything",
+            py.get_type::<BridgeAnything>(),
+            "Sr Bridge Anything",
         ),
         // text
         NodeRegister("TextBox", py.get_type::<TextBox>(), "Sr Text Box"),
@@ -43,6 +48,7 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<RandomAnyList>(),
             "Sr Random Any List",
         ),
+        NodeRegister("ListBridge", py.get_type::<ListBridge>(), "Sr List Bridge"),
         // logic
     ];
     Ok(nodes)

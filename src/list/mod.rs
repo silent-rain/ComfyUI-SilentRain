@@ -17,6 +17,9 @@ pub use shuffle_any_list::ShuffleAnyList;
 mod random_any_list;
 pub use random_any_list::RandomAnyList;
 
+mod list_bridge;
+pub use list_bridge::ListBridge;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "list")?;

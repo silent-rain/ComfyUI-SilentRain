@@ -8,6 +8,9 @@ use pyo3::{
 mod file_scanner;
 pub use file_scanner::FileScanner;
 
+mod bridge_anything;
+pub use bridge_anything::BridgeAnything;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "utils")?;
