@@ -6,7 +6,7 @@ use pyo3::{
     Bound, Py, PyAny, PyResult, Python,
 };
 
-use crate::core::{category::CATEGORY_LIST, types::any_type, PromptServer};
+use crate::core::{category::CATEGORY_UTILS, types::any_type, PromptServer};
 
 /// 任意节点桥接
 #[pyclass(subclass)]
@@ -54,7 +54,7 @@ impl BridgeAnything {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_LIST;
+    const CATEGORY: &'static str = CATEGORY_UTILS;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
