@@ -4,7 +4,10 @@ use pyo3::{PyResult, Python};
 
 use crate::{
     core::node::NodeRegister,
-    list::{IndexAnything, ListBridge, ListCount, RandomAnyList, ShuffleAnyList},
+    list::{
+        BatchToList, IndexAnything, ListBridge, ListCount, ListToBatch, RandomAnyList,
+        ShuffleAnyList,
+    },
     text::{StringList, StringListToSting, TextBox, TextToList},
     utils::{BridgeAnything, FileScanner},
 };
@@ -49,6 +52,16 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr Random Any List",
         ),
         NodeRegister("ListBridge", py.get_type::<ListBridge>(), "Sr List Bridge"),
+        NodeRegister(
+            "ListToBatch",
+            py.get_type::<ListToBatch>(),
+            "Sr List To Batch",
+        ),
+        NodeRegister(
+            "BatchToList",
+            py.get_type::<BatchToList>(),
+            "Sr Batch To List",
+        ),
         // logic
     ];
     Ok(nodes)

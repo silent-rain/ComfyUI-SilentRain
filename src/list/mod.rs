@@ -20,6 +20,12 @@ pub use random_any_list::RandomAnyList;
 mod list_bridge;
 pub use list_bridge::ListBridge;
 
+mod list_to_batch;
+pub use list_to_batch::ListToBatch;
+
+mod batch_to_list;
+pub use batch_to_list::BatchToList;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "list")?;
