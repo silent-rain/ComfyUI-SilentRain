@@ -75,7 +75,12 @@ impl StringList {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Return a list of strings and the merged strings."
+        "Return a list of strings and the merged strings.
+        use:
+            - Click 'Execute' first to make the parameters take effect
+            - Edit - Refresh Node Definition
+            - Right click - Refresh
+        "
     }
 
     // 实验性的, 可选
