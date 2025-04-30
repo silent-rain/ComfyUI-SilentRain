@@ -8,3 +8,5 @@ pub const CATEGORY_LOGIC: &str = "SilentRain/Logic";
 pub const CATEGORY_UTILS: &str = "SilentRain/Utils";
 /// 列表
 pub const CATEGORY_LIST: &str = "SilentRain/List";
+/// 图片
+pub const CATEGORY_IMAGE: &str = "SilentRain/Image";

@@ -7,6 +7,7 @@ mod always_equal_proxy;
 mod prompt_server;
 pub use prompt_server::PromptServer;
 
+pub mod py_wrapper;
 pub mod types;
 
 pub mod category;

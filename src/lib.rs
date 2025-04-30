@@ -2,6 +2,7 @@ pub mod core;
 pub mod error;
 pub mod register;
 
+pub mod image;
 pub mod list;
 pub mod logic;
 pub mod text;

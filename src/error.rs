@@ -26,6 +26,8 @@ pub enum Error {
     GetListIndex,
     #[error("py error, {0}")]
     PyErr(#[from] pyo3::PyErr),
+    #[error("tensor error, {0}")]
+    TensorErr(#[from] candle_core::Error),
 }
 
 impl From<io::Error> for Error {
