@@ -1,4 +1,5 @@
 //! 类型定义
+//! 相关节点定义: ComfyUI/comfy/comfy_types/node_typing.py
 
 /*
 常见输入类型：
