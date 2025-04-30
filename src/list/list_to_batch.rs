@@ -74,11 +74,11 @@ impl ListToBatch {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any_list",
+                    "list",
                     (any_type(py)?, {
-                        let any_list = PyDict::new(py);
-                        any_list.set_item("tooltip", "Input any list")?;
-                        any_list
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required
@@ -90,8 +90,8 @@ impl ListToBatch {
     #[pyo3(name = "execute")]
     fn execute<'py>(
         &mut self,
-        any_list: Vec<Bound<'py, PyAny>>,
+        list: Vec<Bound<'py, PyAny>>,
     ) -> PyResult<(Vec<Bound<'py, PyAny>>,)> {
-        Ok((any_list,))
+        Ok((list,))
     }
 }

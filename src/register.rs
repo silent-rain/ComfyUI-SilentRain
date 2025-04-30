@@ -5,7 +5,7 @@ use pyo3::{PyResult, Python};
 use crate::{
     core::node::NodeRegister,
     list::{
-        BatchToList, IndexAnything, ListBridge, ListCount, ListToBatch, RandomAnyList,
+        BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
         ShuffleAnyList,
     },
     text::{StringList, StringListToSting, TextBox, TextToList},
@@ -36,9 +36,9 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
         NodeRegister("StringList", py.get_type::<StringList>(), "Sr String List"),
         // list
         NodeRegister(
-            "IndexAnything",
-            py.get_type::<IndexAnything>(),
-            "Sr Index Anything",
+            "IndexFromAnyList",
+            py.get_type::<IndexFromAnyList>(),
+            "Sr Index From Any List",
         ),
         NodeRegister("ListCount", py.get_type::<ListCount>(), "Sr List Count"),
         NodeRegister(

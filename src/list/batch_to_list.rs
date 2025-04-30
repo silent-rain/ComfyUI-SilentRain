@@ -74,11 +74,11 @@ impl BatchToList {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any_batch",
+                    "batch",
                     (any_type(py)?, {
-                        let any_batch = PyDict::new(py);
-                        any_batch.set_item("tooltip", "Input any batch")?;
-                        any_batch
+                        let batch = PyDict::new(py);
+                        batch.set_item("tooltip", "Input any batch")?;
+                        batch
                     }),
                 )?;
                 required
@@ -88,7 +88,7 @@ impl BatchToList {
     }
 
     #[pyo3(name = "execute")]
-    fn execute<'py>(&mut self, any_batch: Bound<'py, PyAny>) -> PyResult<(Bound<'py, PyAny>,)> {
-        Ok((any_batch,))
+    fn execute<'py>(&mut self, batch: Bound<'py, PyAny>) -> PyResult<(Bound<'py, PyAny>,)> {
+        Ok((batch,))
     }
 }

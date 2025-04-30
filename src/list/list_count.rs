@@ -77,11 +77,11 @@ impl ListCount {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any",
+                    "list",
                     (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required
@@ -91,8 +91,8 @@ impl ListCount {
     }
 
     #[pyo3(name = "execute")]
-    fn execute(&mut self, any: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
-        let total = any.len();
+    fn execute(&mut self, list: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
+        let total = list.len();
 
         Ok((total,))
     }

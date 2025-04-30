@@ -5,8 +5,8 @@ use pyo3::{
     Bound, PyResult, Python,
 };
 
-mod index_anything;
-pub use index_anything::IndexAnything;
+mod index_from_any_list;
+pub use index_from_any_list::IndexFromAnyList;
 
 mod list_count;
 pub use list_count::ListCount;
@@ -29,6 +29,6 @@ pub use batch_to_list::BatchToList;
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "list")?;
-    submodule.add_class::<IndexAnything>()?;
+    submodule.add_class::<IndexFromAnyList>()?;
     Ok(submodule)
 }

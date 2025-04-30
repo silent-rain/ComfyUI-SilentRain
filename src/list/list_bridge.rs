@@ -43,7 +43,7 @@ impl ListBridge {
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str,) {
-        ("out",)
+        ("list",)
     }
 
     #[classattr]
@@ -74,11 +74,11 @@ impl ListBridge {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any",
+                    "list",
                     (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required
@@ -88,7 +88,10 @@ impl ListBridge {
     }
 
     #[pyo3(name = "execute")]
-    fn execute<'py>(&mut self, any: Vec<Bound<'py, PyAny>>) -> PyResult<(Vec<Bound<'py, PyAny>>,)> {
-        Ok((any,))
+    fn execute<'py>(
+        &mut self,
+        list: Vec<Bound<'py, PyAny>>,
+    ) -> PyResult<(Vec<Bound<'py, PyAny>>,)> {
+        Ok((list,))
     }
 }
