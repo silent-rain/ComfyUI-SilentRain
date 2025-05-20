@@ -1,12 +1,12 @@
 use std::{
     collections::hash_map::DefaultHasher,
-    ffi::CString,
     fmt,
     hash::{Hash, Hasher},
     ops::Deref,
 };
 
 use pyo3::{
+    ffi::c_str,
     pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyDict, PyString},
     Bound, Py, PyAny, PyResult, Python,
@@ -110,13 +110,9 @@ impl From<&str> for AlwaysEqualProxy {
 }
 
 /// 任意类型
-// #[pyfunction]
-// pub fn any_type() -> String {
-//     "*".to_string()
-// }
 #[pyfunction]
 pub fn any_type(py: Python) -> PyResult<Bound<'_, pyo3::PyAny>> {
-    let code = CString::new(
+    let code = c_str!(
         r#"
 class AlwaysEqualProxy(str):
     def __eq__(self, _):
@@ -124,13 +120,12 @@ class AlwaysEqualProxy(str):
     def __ne__(self, _):
         return False
 
-any_type = AlwaysEqualProxy('*')
-        "#,
-    )
-    .expect("Failed to create CString");
+# any_type = AlwaysEqualProxy('*')
+        "#
+    );
 
-    py.run(&code, None, None)?;
-    py.eval(&CString::new("any_type").unwrap(), None, None)
+    py.run(code, None, None)?;
+    py.eval(c_str!("AlwaysEqualProxy('*')"), None, None)
 }
 
 #[cfg(test)]

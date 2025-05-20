@@ -179,11 +179,6 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
-        error!(
-            "execute: {:?}  ==== {:?} ==== {:?} ==== {:?}",
-            string_num, delimiter, optional_string_list, kwargs
-        );
-
         let result = self.list_to_strings(string_num, delimiter, optional_string_list, kwargs);
 
         match result {
@@ -216,10 +211,12 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
-        error!(
-            "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
-            string_num, delimiter, optional_string_list, kwargs
-        );
+        if false {
+            error!(
+                "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
+                string_num, delimiter, optional_string_list, kwargs
+            );
+        }
 
         // 更新可变参数
         unsafe {
