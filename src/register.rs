@@ -4,6 +4,7 @@ use pyo3::{PyResult, Python};
 
 use crate::{
     core::node::NodeRegister,
+    image::ImageResolution,
     list::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
         ShuffleAnyList,
@@ -63,6 +64,12 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr Batch To List",
         ),
         // logic
+        // image
+        NodeRegister(
+            "ImageResolution",
+            py.get_type::<ImageResolution>(),
+            "Sr Image Resolution",
+        ),
     ];
     Ok(nodes)
 }

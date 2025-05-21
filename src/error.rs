@@ -28,6 +28,10 @@ pub enum Error {
     PyErr(#[from] pyo3::PyErr),
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),
+    #[error("numpy error, {0}")]
+    NotContiguousError(#[from] numpy::NotContiguousError),
+    #[error("strum error, {0}")]
+    ParseEnumString(String),
 }
 
 impl From<io::Error> for Error {
