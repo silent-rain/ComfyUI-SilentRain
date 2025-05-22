@@ -30,6 +30,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
 
     // 添加子模块
+    m.add_submodule(&core::submodule(py)?)?;
     m.add_submodule(&text::submodule(py)?)?;
     m.add_submodule(&logic::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;
@@ -37,6 +38,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 注册 ComfyUI NODE_CLASS_MAPPINGS/NODE_DISPLAY_NAME_MAPPINGS
     let node_mapping = PyDict::new(py);
     let name_mapping = PyDict::new(py);
+
     // 注册单个节点
     // node_mapping.set_item("FileScanner", py.get_type::<FileScanner>())?;
     // name_mapping.set_item("FileScanner", "Sr File Scanner")?;
