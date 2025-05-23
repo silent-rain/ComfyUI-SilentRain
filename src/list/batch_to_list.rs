@@ -1,16 +1,29 @@
 //! 批次转列表
+//!
+//! 依赖:
+//! - python: torch
 
+use candle_core::{Device, IndexOp};
 use pyo3::{
+    exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyResult, Python,
+    types::{PyAnyMethods, PyDict, PyList, PyType},
+    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
-use crate::core::{category::CATEGORY_LIST, types::any_type, PromptServer};
+use crate::{
+    core::{
+        category::CATEGORY_LIST, isinstance, tensor_wrapper::TensorWrapper, types::any_type,
+        PromptServer,
+    },
+    error::Error,
+};
 
 /// 批次转列表
 #[pyclass(subclass)]
-pub struct BatchToList {}
+pub struct BatchToList {
+    device: Device,
+}
 
 impl PromptServer for BatchToList {}
 
@@ -24,7 +37,9 @@ impl BatchToList {
             .with_file(true)
             .with_line_number(true)
             .try_init();
-        Self {}
+        Self {
+            device: Device::Cpu,
+        }
     }
 
     #[classattr]
@@ -87,8 +102,67 @@ impl BatchToList {
         })
     }
 
-    #[pyo3(name = "execute")]
-    fn execute<'py>(&mut self, batch: Bound<'py, PyAny>) -> PyResult<(Bound<'py, PyAny>,)> {
-        Ok((batch,))
+    fn execute<'py>(
+        &mut self,
+        py: Python<'py>,
+        batch: Bound<'py, PyAny>,
+    ) -> PyResult<(Bound<'py, PyAny>,)> {
+        // 变量重命名
+        let images = batch;
+
+        // 图片
+        if isinstance(py, &images, "torch.Tensor")? {
+            let image_list = self
+                .image_batch_to_list(py, &images)
+                .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
+            return Ok((image_list,));
+        }
+
+        Ok((images,))
+    }
+}
+
+impl BatchToList {
+    pub fn image_batch_to_list<'py>(
+        &self,
+        py: Python<'py>,
+        images: &Bound<'py, PyAny>,
+    ) -> Result<Bound<'py, PyAny>, Error> {
+        // 1. 将Python对象转换为Candle张量
+        let images_tensor: candle_core::Tensor =
+            TensorWrapper::new::<f32>(images, &self.device)?.into_tensor();
+
+        // 2. 检查张量维度，确保是批量数据 (B, C, H, W)
+        if images_tensor.dims().len() != 4 {
+            return Err(Error::TensorErr(candle_core::Error::msg(
+                "Expected 4D tensor (batch, channels, height, width)",
+            )));
+        }
+
+        // 3. 获取批量大小
+        let batch_size = images_tensor.dim(0)?;
+
+        // 4. 准备返回的结果列表
+        let mut results = Vec::with_capacity(batch_size);
+
+        // 5. 处理批量中的每个图像
+        for i in 0..batch_size {
+            // 5.1 提取单张图像
+            let single_image = images_tensor.i(i)?;
+
+            // 5.2 添加批次维度 [H, W, C] -> [1, H, W, C]
+            let single_image = single_image.unsqueeze(0)?;
+
+            // 5.23 将张量转换回Python对象
+            let tensor_wrapper: TensorWrapper = single_image.into();
+            let py_tensor = tensor_wrapper.to_py_tensor(py)?;
+
+            // 5.4 添加到结果列表
+            results.push(py_tensor);
+        }
+
+        let results = PyList::new(py, &results)?.into_any();
+
+        Ok(results)
     }
 }
