@@ -1,4 +1,6 @@
 //! Convert to Python object wrapper
+//! 依赖:
+//! - python: torch
 
 use candle_core::{Device, Tensor, WithDType};
 use numpy::{
