@@ -19,14 +19,20 @@ use crate::{
     error::Error,
 };
 
-/// 缩放模式枚举
+/// 图像缩放模式枚举
 #[pyclass]
-#[derive(Debug, Clone, EnumString, Display)]
-enum ResizeMode {
+#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
+#[strum(serialize_all = "kebab-case")]
+pub enum ResizeMode {
+    /// 简单调整大小 (可能改变宽高比)
     #[strum(to_string = "Just Resize")]
     Resize,
+
+    /// 裁剪并调整大小 (保持宽高比，裁剪超出部分)
     #[strum(to_string = "Crop and Resize")]
     InnerFit,
+
+    /// 调整大小并填充 (保持宽高比，填充不足部分)
     #[strum(to_string = "Resize and Fill")]
     OuterFit,
 }

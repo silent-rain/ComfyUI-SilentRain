@@ -121,7 +121,7 @@ impl ImageResolution {
 impl ImageResolution {
     /// 获取图片分辨率
     fn resolution(&self, image: &Tensor) -> Result<(usize, usize, usize, usize), Error> {
-        let (batch, width, height, _channels) = image.dims4()?; // NHWC格式
+        let (batch, height, width, _channels) = image.dims4()?; // NHWC格式
 
         // 分辨率计算逻辑
         // 对齐至8的倍数（四舍五入）
