@@ -1,4 +1,6 @@
 //! 图片分辨率
+//! 依赖:
+//! - python: torch
 
 use candle_core::{Device, Tensor};
 use pyo3::{
