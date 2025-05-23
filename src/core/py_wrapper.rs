@@ -16,7 +16,25 @@ pub fn isinstance<'py>(
     py_type: &str,
 ) -> PyResult<bool> {
     let code = CString::new(format!("isinstance({:?}, {})", py_any, py_type)).unwrap();
-    let res = py.eval(&code, None, None)?;
+    let res = if py_type.starts_with("torch") {
+        //         let code = c_str!(
+        //             "
+        // import torch
+
+        // tensor = torch.Tensor
+        //             "
+        //         );
+        //         py.run(code, None, None)?;
+
+        //         let code = CString::new(format!("isinstance({:?}, {})", py_any, "tensor")).unwrap();
+        //         py.eval(&code, None, None)?
+
+        let torch_module = py.import("torch")?;
+        let tensor = torch_module.getattr("Tensor")?;
+        return isinstance2(py, py_any, &tensor);
+    } else {
+        py.eval(&code, None, None)?
+    };
 
     res.extract()
 }
