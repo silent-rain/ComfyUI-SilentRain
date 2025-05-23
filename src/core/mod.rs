@@ -15,6 +15,7 @@ pub mod tensor_wrapper;
 pub use py_wrapper::isinstance;
 pub use py_wrapper::isinstance2;
 
+pub mod interpolation;
 pub mod types;
 
 pub mod category;
