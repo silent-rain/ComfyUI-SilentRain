@@ -9,12 +9,12 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_IMAGE,
-        tensor_wrapper::TensorWrapper,
-        types::{NODE_IMAGE, NODE_INT},
-    },
+    core::category::CATEGORY_IMAGE,
     error::Error,
+    wrapper::{
+        comfyui::types::{NODE_IMAGE, NODE_INT},
+        torch::tensor::TensorWrapper,
+    },
 };
 
 // 图片分辨率

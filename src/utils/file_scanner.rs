@@ -18,12 +18,12 @@ use pyo3::{
 use walkdir::WalkDir;
 
 use crate::{
-    core::{
-        category::CATEGORY_UTILS,
+    core::category::CATEGORY_UTILS,
+    error::Error,
+    wrapper::comfyui::{
         types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
 /// 文件扫描器

@@ -15,12 +15,12 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_TEXT,
+    core::category::CATEGORY_TEXT,
+    error::Error,
+    wrapper::comfyui::{
         types::{any_type, NODE_INT, NODE_INT_MAX, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
 static mut MAX_STRING_NUM: u64 = 2;

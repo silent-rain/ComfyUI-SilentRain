@@ -7,10 +7,12 @@ use pyo3::{
 };
 use rand::{Rng, SeedableRng};
 
-use crate::core::{
-    category::CATEGORY_LIST,
-    types::{any_type, NODE_INT, NODE_SEED_MAX},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_LIST,
+    wrapper::comfyui::{
+        types::{any_type, NODE_INT, NODE_SEED_MAX},
+        PromptServer,
+    },
 };
 
 /// 从任意列表随机一个元素

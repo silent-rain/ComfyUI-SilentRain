@@ -6,8 +6,7 @@ use image::{imageops::FilterType, DynamicImage, ImageBuffer, Rgb};
 use pyo3::{pyclass, types::PyAnyMethods, IntoPyObject, Python};
 use strum_macros::{Display, EnumString};
 
-use super::tensor_wrapper::TensorWrapper;
-use crate::error::Error;
+use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};
 
 /// 图像插值方法枚举
 ///
@@ -79,12 +78,9 @@ impl Interpolation {
         width: usize,
         height: usize,
     ) -> Result<Tensor, Error> {
-        // [N,H,W,C] -> [N,C,H,W]
-        let tensor = tensor.permute((0, 3, 1, 2))?;
-
         let outputs = py_interpolate(
             py,
-            &tensor,
+            tensor,
             Some((width, height)),
             None::<f32>,
             InterpolationMode::Bilinear,
@@ -103,12 +99,9 @@ impl Interpolation {
         width: usize,
         height: usize,
     ) -> Result<Tensor, Error> {
-        // [N,H,W,C] -> [N,C,H,W]
-        let tensor = tensor.permute((0, 3, 1, 2))?;
-
         let outputs = py_interpolate(
             py,
-            &tensor,
+            tensor,
             Some((width, height)),
             None::<f32>,
             InterpolationMode::Bicubic,
@@ -127,12 +120,9 @@ impl Interpolation {
         width: usize,
         height: usize,
     ) -> Result<Tensor, Error> {
-        // [N,H,W,C] -> [N,C,H,W]
-        let tensor = tensor.permute((0, 3, 1, 2))?;
-
         let outputs = py_interpolate(
             py,
-            &tensor,
+            tensor,
             Some((width, height)),
             None::<f32>,
             InterpolationMode::Area,
@@ -151,12 +141,9 @@ impl Interpolation {
         width: usize,
         height: usize,
     ) -> Result<Tensor, Error> {
-        // [N,H,W,C] -> [N,C,H,W]
-        let tensor = tensor.permute((0, 3, 1, 2))?;
-
         let outputs = py_interpolate(
             py,
-            &tensor,
+            tensor,
             Some((width, height)),
             None::<f32>,
             InterpolationMode::NearestExact,

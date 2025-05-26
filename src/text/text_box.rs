@@ -10,12 +10,12 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_TEXT,
+    core::category::CATEGORY_TEXT,
+    error::Error,
+    wrapper::comfyui::{
         types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
 /// 文本框

@@ -6,10 +6,12 @@ use pyo3::{
     Bound, Py, PyAny, PyResult, Python,
 };
 
-use crate::core::{
-    category::CATEGORY_LIST,
-    types::{any_type, NODE_INT},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_LIST,
+    wrapper::comfyui::{
+        types::{any_type, NODE_INT},
+        PromptServer,
+    },
 };
 
 /// 列表计数

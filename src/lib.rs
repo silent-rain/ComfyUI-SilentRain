@@ -1,6 +1,7 @@
 pub mod core;
 pub mod error;
 pub mod register;
+pub mod wrapper;
 
 pub mod image;
 pub mod list;
@@ -30,7 +31,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
 
     // 添加子模块
-    m.add_submodule(&core::submodule(py)?)?;
+    m.add_submodule(&wrapper::python::submodule(py)?)?;
     m.add_submodule(&text::submodule(py)?)?;
     m.add_submodule(&logic::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;

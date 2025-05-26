@@ -12,11 +12,13 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_LIST, isinstance, tensor_wrapper::TensorWrapper, types::any_type,
-        PromptServer,
-    },
+    core::category::CATEGORY_LIST,
     error::Error,
+    wrapper::{
+        comfyui::{types::any_type, PromptServer},
+        python::isinstance,
+        torch::tensor::TensorWrapper,
+    },
 };
 
 /// 批次转列表

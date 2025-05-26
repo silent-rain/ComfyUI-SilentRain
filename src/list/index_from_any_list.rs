@@ -8,12 +8,12 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_LIST,
+    core::category::CATEGORY_LIST,
+    error::Error,
+    wrapper::comfyui::{
         types::{any_type, NODE_INT, NODE_INT_MAX},
         PromptServer,
     },
-    error::Error,
 };
 
 /// 从任意列表索引

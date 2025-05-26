@@ -6,10 +6,12 @@ use pyo3::{
     Bound, Py, PyResult, Python,
 };
 
-use crate::core::{
-    category::CATEGORY_TEXT,
-    types::{NODE_INT, NODE_STRING},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_TEXT,
+    wrapper::comfyui::{
+        types::{NODE_INT, NODE_STRING},
+        PromptServer,
+    },
 };
 
 /// 文本转列表
