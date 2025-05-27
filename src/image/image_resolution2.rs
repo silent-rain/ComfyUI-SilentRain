@@ -1,4 +1,6 @@
 //! 图片分辨率
+//! - comfyui-easy-use 实现
+//!
 //! 依赖:
 //! - python: torch
 use std::collections::HashMap;
@@ -11,12 +13,12 @@ use pyo3::{
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    core::{
-        category::CATEGORY_IMAGE,
-        tensor_wrapper::TensorWrapper,
-        types::{NODE_IMAGE, NODE_INT},
-    },
+    core::category::CATEGORY_IMAGE,
     error::Error,
+    wrapper::{
+        comfyui::types::{NODE_IMAGE, NODE_INT},
+        torch::tensor::TensorWrapper,
+    },
 };
 
 /// 图像缩放模式枚举
@@ -39,12 +41,12 @@ pub enum ResizeMode {
 
 // 图片分辨率
 #[pyclass(subclass)]
-pub struct ImageResolution {
+pub struct ImageResolution2 {
     device: Device,
 }
 
 #[pymethods]
-impl ImageResolution {
+impl ImageResolution2 {
     #[new]
     fn new() -> Self {
         Self {
@@ -95,7 +97,7 @@ impl ImageResolution {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Obtain image resolution."
+        "This is a node for obtaining image resolution implemented by 'comfyui easy use'."
     }
 
     #[classattr]
@@ -154,7 +156,7 @@ impl ImageResolution {
     }
 }
 
-impl ImageResolution {
+impl ImageResolution2 {
     /// 获取图片分辨率
     fn resolution(
         &self,
@@ -168,80 +170,18 @@ impl ImageResolution {
             .parse::<ResizeMode>()
             .map_err(|e| Error::ParseEnumString(e.to_string()))?;
 
-        // 分辨率计算逻辑
-        let (width, height) = (raw_w as f64, raw_h as f64);
+        let (width, height) = (raw_w, raw_h);
+        let (k0, k1) = (height as f32 / raw_h as f32, width as f32 / raw_w as f32);
 
-        // let (k0, k1) = (height / raw_h as f64, width / raw_w as f64);
-        // let estimation = match resize_mode {
-        //     ResizeMode::OuterFit => f64::min(k0, k1) * f64::min(height, width),
-        //     _ => f64::max(k0, k1) * f64::min(height, width),
-        // };
-
-        // // 最佳分辨率
-        // let resolution = estimation.round() as usize;
-
-        let resolution = self.calculate_perfect_resolution(
-            width,
-            height,
-            raw_w as f64,
-            raw_h as f64,
-            resize_mode,
-        )?;
-
-        Ok((resolution, width as usize, height as usize, batch))
-    }
-
-    /// 核心计算逻辑（网页1的枚举模式匹配最佳实践）
-    fn calculate_perfect_resolution(
-        &self,
-        raw_w: f64,
-        raw_h: f64,
-        target_w: f64,
-        target_h: f64,
-        mode: ResizeMode,
-    ) -> Result<usize, Error> {
-        // 各模式独立计算
-        let estimation = match mode {
-            ResizeMode::Resize => {
-                // j仅拉伸, 采用最大缩放系数保证目标区域完全覆盖
-                let scale_w = target_w / raw_w;
-                let scale_h = target_h / raw_h;
-                let scale = scale_w.max(scale_h);
-                (raw_w * scale, raw_h * scale)
-            }
-            ResizeMode::InnerFit => {
-                // 裁剪并拉伸, 保持宽高比的最小缩放策略，避免图像变形
-                let scale_w = target_w / raw_w;
-                let scale_h = target_h / raw_h;
-                let scale = scale_w.min(scale_h);
-                (raw_w * scale, raw_h * scale)
-            }
-            ResizeMode::OuterFit => {
-                // 拉伸并填充, 智能填充算法，根据宽高比差异动态选择适配方向
-                let aspect_ratio = raw_w / raw_h;
-                let target_ratio = target_w / target_h;
-
-                if aspect_ratio > target_ratio {
-                    (target_w, target_w / aspect_ratio)
-                } else {
-                    (target_h * aspect_ratio, target_h)
-                }
-            }
+        let resolution = match resize_mode {
+            ResizeMode::OuterFit => f32::min(k0, k1) * f32::min(height as f32, width as f32),
+            _ => f32::max(k0, k1) * f32::min(height as f32, width as f32),
         };
 
-        // 像素完美对齐
-        let (w, h) = self.pixel_perfect_adjustment(estimation.0, estimation.1)?;
-        Ok((w * h) as usize) // 返回总像素量作为分辨率评估
-    }
+        // 8倍像素
+        const PPU: f32 = 8.0;
+        let resolution = ((resolution as f32 / PPU).round() * PPU) as usize;
 
-    /// 像素对齐优化
-    fn pixel_perfect_adjustment(&self, width: f64, height: f64) -> Result<(u32, u32), Error> {
-        const PPU: f64 = 8.0; // 像素单位
-        let unit = 1.0 / PPU;
-
-        Ok((
-            (width / unit).round() as u32 * PPU as u32,
-            (height / unit).round() as u32 * PPU as u32,
-        ))
+        Ok((resolution, width, height, batch))
     }
 }
