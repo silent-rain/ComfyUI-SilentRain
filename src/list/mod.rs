@@ -1,10 +1,5 @@
 //! 列表节点
 
-use pyo3::{
-    types::{PyModule, PyModuleMethods},
-    Bound, PyResult, Python,
-};
-
 mod index_from_any_list;
 pub use index_from_any_list::IndexFromAnyList;
 
@@ -25,6 +20,11 @@ pub use list_to_batch::ListToBatch;
 
 mod batch_to_list;
 pub use batch_to_list::BatchToList;
+
+use pyo3::{
+    types::{PyModule, PyModuleMethods},
+    Bound, PyResult, Python,
+};
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {

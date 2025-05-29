@@ -1,15 +1,15 @@
 //! 工具
 
-use pyo3::{
-    types::{PyModule, PyModuleMethods},
-    Bound, PyResult, Python,
-};
-
 mod file_scanner;
 pub use file_scanner::FileScanner;
 
 mod bridge_anything;
 pub use bridge_anything::BridgeAnything;
+
+use pyo3::{
+    types::{PyModule, PyModuleMethods},
+    Bound, PyResult, Python,
+};
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
