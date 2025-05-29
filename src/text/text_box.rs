@@ -112,8 +112,8 @@ impl TextBox {
         match result {
             Ok(v) => Ok((v,)),
             Err(e) => {
-                error!("string processing failed failed, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("TextBox error, {e}");
+                if let Err(e) = self.send_error(py, "TextBox".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),

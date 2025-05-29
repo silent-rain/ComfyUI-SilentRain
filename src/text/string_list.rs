@@ -184,8 +184,8 @@ impl StringList {
         match result {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("list to strings failed, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("StringList error, {e}");
+                if let Err(e) = self.send_error(py, "StringList".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),

@@ -119,8 +119,8 @@ impl IndexFromAnyList {
         match result {
             Ok(v) => Ok((v, total)),
             Err(e) => {
-                error!("get list index error, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("IndexFromAnyList error, {e}");
+                if let Err(e) = self.send_error(py, "IndexFromAnyList".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),
