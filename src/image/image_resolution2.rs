@@ -180,7 +180,7 @@ impl ImageResolution2 {
 
         // 8倍像素
         const PPU: f32 = 8.0;
-        let resolution = ((resolution as f32 / PPU).round() * PPU) as usize;
+        let resolution = ((resolution / PPU).round() * PPU) as usize;
 
         Ok((resolution, width, height, batch))
     }

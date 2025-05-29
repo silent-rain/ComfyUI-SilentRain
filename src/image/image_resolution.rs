@@ -217,7 +217,7 @@ impl ImageResolution {
 
         // 像素完美对齐
         let (w, h) = self.pixel_perfect_adjustment(estimation.0 as usize, estimation.1 as usize)?;
-        Ok((w * h) as usize) // 返回总像素量作为分辨率评估
+        Ok(w * h) // 返回总像素量作为分辨率评估
     }
 
     /// 像素对齐优化
