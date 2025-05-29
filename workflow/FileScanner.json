@@ -1,46 +1,9 @@
 {
   "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
   "revision": 0,
-  "last_node_id": 11,
-  "last_link_id": 10,
+  "last_node_id": 19,
+  "last_link_id": 42,
   "nodes": [
-    {
-      "id": 1,
-      "type": "ShowText|pysssss",
-      "pos": [
-        4113.0908203125,
-        -950.1875610351562
-      ],
-      "size": [
-        340,
-        170
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [
-        {
-          "label": "文本",
-          "name": "text",
-          "type": "STRING",
-          "link": 1
-        }
-      ],
-      "outputs": [
-        {
-          "label": "字符串",
-          "name": "STRING",
-          "shape": 6,
-          "type": "STRING",
-          "links": []
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-custom-scripts",
-        "ver": "9f7b3215e6af317603056a9a1666bf6e83e28835",
-        "Node name for S&R": "ShowText|pysssss"
-      }
-    },
     {
       "id": 2,
       "type": "ShowText|pysssss",
@@ -76,7 +39,10 @@
         "cnr_id": "comfyui-custom-scripts",
         "ver": "9f7b3215e6af317603056a9a1666bf6e83e28835",
         "Node name for S&R": "ShowText|pysssss"
-      }
+      },
+      "widgets_values": [
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/requirements.txt"
+      ]
     },
     {
       "id": 3,
@@ -116,46 +82,6 @@
       }
     },
     {
-      "id": 4,
-      "type": "easy showAnything",
-      "pos": [
-        4523.0908203125,
-        -360.18756103515625
-      ],
-      "size": [
-        270,
-        142
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "label": "输入任何",
-          "name": "anything",
-          "shape": 7,
-          "type": "*",
-          "link": 4
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-easy-use",
-        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
-        "Node name for S&R": "easy showAnything"
-      },
-      "widgets_values": [
-        "/home/one/code/ComfyUI/custom_nodes/comfyui_ipadapter_plus/NODES.md",
-        "/home/one/code/ComfyUI/custom_nodes/comfyui_ipadapter_plus/README.md"
-      ]
-    },
-    {
       "id": 5,
       "type": "easy showAnything",
       "pos": [
@@ -191,7 +117,7 @@
         "Node name for S&R": "easy showAnything"
       },
       "widgets_values": [
-        "/home/one/code/ComfyUI/custom_nodes/comfyui_ipadapter_plus/README.md"
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/fonts/put_font_files_here.txt"
       ]
     },
     {
@@ -206,14 +132,14 @@
         46
       ],
       "flags": {},
-      "order": 2,
+      "order": 1,
       "mode": 0,
       "inputs": [
         {
           "label": "list",
           "name": "list",
           "type": "*",
-          "link": 6
+          "link": 37
         }
       ],
       "outputs": [
@@ -228,7 +154,8 @@
       ],
       "properties": {
         "Node name for S&R": "ListCount"
-      }
+      },
+      "widgets_values": []
     },
     {
       "id": 7,
@@ -242,14 +169,14 @@
         102
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
           "label": "list",
           "name": "list",
           "type": "*",
-          "link": 7
+          "link": 38
         }
       ],
       "outputs": [
@@ -259,7 +186,7 @@
           "shape": 6,
           "type": "*",
           "links": [
-            4
+            42
           ]
         },
         {
@@ -273,7 +200,7 @@
         "Node name for S&R": "ShuffleAnyList"
       },
       "widgets_values": [
-        3541422,
+        1712402,
         "randomize"
       ]
     },
@@ -289,14 +216,14 @@
         102
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
           "label": "list",
           "name": "list",
           "type": "*",
-          "link": 8
+          "link": 39
         }
       ],
       "outputs": [
@@ -319,7 +246,7 @@
         "Node name for S&R": "RandomAnyList"
       },
       "widgets_values": [
-        7312132,
+        1546222,
         "randomize"
       ]
     },
@@ -335,14 +262,14 @@
         78
       ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
           "label": "list",
           "name": "list",
           "type": "*",
-          "link": 9
+          "link": 40
         }
       ],
       "outputs": [
@@ -410,15 +337,15 @@
       ]
     },
     {
-      "id": 11,
+      "id": 17,
       "type": "FileScanner",
       "pos": [
-        3723.090576171875,
-        -950.1875610351562
+        3720,
+        -940
       ],
       "size": [
-        315,
-        150
+        270,
+        198
       ],
       "flags": {},
       "order": 0,
@@ -431,11 +358,11 @@
           "shape": 6,
           "type": "STRING",
           "links": [
-            1,
-            6,
-            7,
-            8,
-            9
+            37,
+            38,
+            39,
+            40,
+            41
           ]
         },
         {
@@ -443,30 +370,104 @@
           "name": "contents",
           "shape": 6,
           "type": "STRING",
-          "links": []
+          "links": null
         }
       ],
       "properties": {
         "Node name for S&R": "FileScanner"
       },
       "widgets_values": [
-        "/home/one/code/ComfyUI/custom_nodes/comfyui_ipadapter_plus",
-        true,
+        "/home/one/code/ComfyUI/custom_nodes/",
         "auto",
-        "md"
+        "txt",
+        true,
+        0,
+        2
+      ]
+    },
+    {
+      "id": 19,
+      "type": "easy showAnything",
+      "pos": [
+        4520,
+        -360
+      ],
+      "size": [
+        240,
+        142
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/fonts/put_font_files_here.txt",
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/requirements.txt"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "ShowText|pysssss",
+      "pos": [
+        4110,
+        -950
+      ],
+      "size": [
+        240,
+        160
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/requirements.txt",
+        "/home/one/code/ComfyUI/custom_nodes/comfyui_essentials/fonts/put_font_files_here.txt"
       ]
     }
   ],
   "links": [
     [
-      1,
-      11,
-      0,
-      1,
-      0,
-      "STRING"
-    ],
-    [
       2,
       9,
       0,
@@ -483,14 +484,6 @@
       "*"
     ],
     [
-      4,
-      7,
-      0,
-      4,
-      0,
-      "*"
-    ],
-    [
       5,
       8,
       0,
@@ -499,42 +492,58 @@
       "*"
     ],
     [
-      6,
-      11,
-      0,
-      6,
-      0,
-      "*"
-    ],
-    [
-      7,
-      11,
-      0,
-      7,
-      0,
-      "*"
-    ],
-    [
-      8,
-      11,
-      0,
-      8,
-      0,
-      "*"
-    ],
-    [
-      9,
-      11,
-      0,
-      9,
-      0,
-      "*"
-    ],
-    [
       10,
       6,
       0,
       10,
+      0,
+      "*"
+    ],
+    [
+      37,
+      17,
+      0,
+      6,
+      0,
+      "*"
+    ],
+    [
+      38,
+      17,
+      0,
+      7,
+      0,
+      "*"
+    ],
+    [
+      39,
+      17,
+      0,
+      8,
+      0,
+      "*"
+    ],
+    [
+      40,
+      17,
+      0,
+      9,
+      0,
+      "*"
+    ],
+    [
+      41,
+      17,
+      0,
+      18,
+      0,
+      "STRING"
+    ],
+    [
+      42,
+      7,
+      0,
+      19,
       0,
       "*"
     ]
@@ -544,8 +553,8 @@
       "id": 1,
       "title": "File Scanner",
       "bounding": [
-        3713.090576171875,
-        -1020.1875610351562,
+        3710,
+        -1020,
         1190,
         970
       ],
@@ -557,10 +566,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8954302432552399,
+      "scale": 1.1918176537727265,
       "offset": [
-        -3245.5431491096297,
-        1426.3896326457952
+        -3567.7944075319865,
+        1165.612552453357
       ]
     },
     "frontendVersion": "1.20.7"
