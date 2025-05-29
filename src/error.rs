@@ -32,6 +32,8 @@ pub enum Error {
     NotContiguousError(#[from] numpy::NotContiguousError),
     #[error("strum error, {0}")]
     ParseEnumString(String),
+    #[error("creating image buffer error")]
+    ImageBuffer,
 }
 
 impl From<io::Error> for Error {

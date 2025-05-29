@@ -571,6 +571,7 @@ dependencies = [
  "hf-hub",
  "image",
  "log",
+ "ndarray",
  "numpy",
  "parquet",
  "pyo3",

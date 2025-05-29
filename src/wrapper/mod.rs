@@ -1,4 +1,5 @@
 // python 包装
+pub mod comfy;
 pub mod comfyui;
 pub mod python;
 pub mod torch;
