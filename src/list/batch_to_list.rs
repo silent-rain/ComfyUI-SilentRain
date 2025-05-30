@@ -132,7 +132,7 @@ impl BatchToList {
     ) -> Result<Bound<'py, PyAny>, Error> {
         // 1. 将Python对象转换为Candle张量
         let images_tensor: candle_core::Tensor =
-            TensorWrapper::new::<f32>(images, &self.device)?.into_tensor();
+            TensorWrapper::<f32>::new(images, &self.device)?.into_tensor();
 
         // 2. 检查张量维度，确保是批量数据 (B, C, H, W)
         if images_tensor.dims().len() != 4 {
@@ -156,7 +156,7 @@ impl BatchToList {
             let single_image = single_image.unsqueeze(0)?;
 
             // 5.23 将张量转换回Python对象
-            let tensor_wrapper: TensorWrapper = single_image.into();
+            let tensor_wrapper: TensorWrapper<f32> = single_image.into();
             let py_tensor = tensor_wrapper.to_py_tensor(py)?;
 
             // 5.4 添加到结果列表

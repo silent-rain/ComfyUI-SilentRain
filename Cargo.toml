@@ -28,6 +28,7 @@ chardet = "0.2"
 encoding = "0.2"
 rand = "0.9"
 rand_chacha = "0.9"
+lazy_static = "1.5"
 
 anyhow = "1.0"
 thiserror = "2.0"

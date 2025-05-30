@@ -34,7 +34,7 @@ pub fn lanczos(samples: &Tensor, width: usize, height: usize) -> Result<Tensor, 
 /// 将张量转换为图像
 ///
 /// samples: NHWC
-fn tensor_to_image(samples: &Tensor) -> Result<Vec<DynamicImage>, Error> {
+pub fn tensor_to_image(samples: &Tensor) -> Result<Vec<DynamicImage>, Error> {
     // NHWC -> NCWH
     let samples = samples.permute((0, 3, 2, 1))?;
 
@@ -70,8 +70,8 @@ fn tensor_to_image(samples: &Tensor) -> Result<Vec<DynamicImage>, Error> {
 
 /// 将图像转换为张量
 ///
-/// tensor: NCWH
-fn image_to_tensor(image: &DynamicImage, device: &Device) -> Result<Tensor, Error> {
+/// output: HWC
+pub fn image_to_tensor(image: &DynamicImage, device: &Device) -> Result<Tensor, Error> {
     let (width, height) = image.dimensions();
     let rgb = image.to_rgb8();
 
@@ -89,7 +89,7 @@ fn image_to_tensor(image: &DynamicImage, device: &Device) -> Result<Tensor, Erro
     // CHW
     let tensor = Tensor::from_vec(data, (3, height as usize, width as usize), device)?;
 
-    // 维度重排 CHW -> HWC 并转移到CPU
+    // 维度重排 CHW -> HWC
     let tensor = tensor.permute((1, 2, 0))?;
     Ok(tensor)
 }

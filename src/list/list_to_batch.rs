@@ -164,7 +164,7 @@ impl ListToBatch {
         let image_tensors: Vec<Tensor> = images
             .iter()
             .map(|image| {
-                TensorWrapper::new::<f32>(image, &self.device).map(|wrapper| wrapper.into_tensor())
+                TensorWrapper::<f32>::new(image, &self.device).map(|wrapper| wrapper.into_tensor())
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -219,7 +219,7 @@ impl ListToBatch {
         error!("image_batch: {:#?}", image_batch.dims());
 
         // 6. 转换回Python对象
-        let py_batch = TensorWrapper::from_tensor(image_batch).to_py_tensor(py)?;
+        let py_batch = TensorWrapper::<f32>::from_tensor(image_batch).to_py_tensor(py)?;
         Ok(py_batch)
     }
 }

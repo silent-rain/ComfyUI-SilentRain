@@ -145,11 +145,11 @@ impl ImageResolution2 {
         image: Bound<'py, PyAny>,
         resize_mode: String,
     ) -> PyResult<(Bound<'py, PyAny>, usize, usize, usize, usize)> {
-        let image = TensorWrapper::new::<f32>(&image, &self.device)?.into_tensor();
+        let image = TensorWrapper::<f32>::new(&image, &self.device)?.into_tensor();
 
         let (resolution, height, width, batch) = self.resolution(&image, resize_mode).unwrap();
 
-        let tensor_wrapper: TensorWrapper = image.into();
+        let tensor_wrapper: TensorWrapper<f32> = image.into();
         let py_tensor = tensor_wrapper.to_py_tensor(py)?;
 
         Ok((py_tensor, resolution, width, height, batch))

@@ -34,6 +34,8 @@ pub enum Error {
     ParseEnumString(String),
     #[error("creating image buffer error")]
     ImageBuffer,
+    #[error("image error, {0}")]
+    ImageError(#[from] image::ImageError),
 }
 
 impl From<io::Error> for Error {

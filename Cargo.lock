@@ -570,6 +570,7 @@ dependencies = [
  "env_logger",
  "hf-hub",
  "image",
+ "lazy_static",
  "log",
  "ndarray",
  "numpy",

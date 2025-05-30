@@ -2,6 +2,8 @@
 //! 依赖:
 //! - python: torch
 
+use std::marker::PhantomData;
+
 use candle_core::{Device, Tensor, WithDType};
 use numpy::{
     ndarray::{Dim, IxDynImpl},
@@ -12,21 +14,28 @@ use pyo3::{
     Python,
 };
 
-pub struct TensorWrapper {
+pub struct TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
     tensor: Tensor,
+    _marker: PhantomData<T>,
 }
 
-impl TensorWrapper {
-    pub fn new<'py, T: Element + WithDType>(
-        py_any: &Bound<'py, PyAny>,
-        device: &Device,
-    ) -> PyResult<Self> {
-        let ndarray = Self::extract_ndarray::<T>(py_any)?;
+impl<T> TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
+    pub fn new<'py>(py_any: &Bound<'py, PyAny>, device: &Device) -> PyResult<Self> {
+        let ndarray = Self::extract_ndarray(py_any)?;
         let shape = ndarray.shape();
         let tensor = Tensor::from_vec(ndarray.to_vec()?, shape, device)
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
 
-        Ok(Self { tensor })
+        Ok(Self {
+            tensor,
+            _marker: PhantomData,
+        })
     }
 
     /// The dimension size for this tensor on each axis.
@@ -35,7 +44,10 @@ impl TensorWrapper {
     }
 
     pub fn from_tensor(tensor: Tensor) -> Self {
-        Self { tensor }
+        Self {
+            tensor,
+            _marker: PhantomData,
+        }
     }
 
     pub fn into_tensor(self) -> Tensor {
@@ -43,10 +55,13 @@ impl TensorWrapper {
     }
 }
 
-impl TensorWrapper {
+impl<T> TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
     /// 转换为PyArray
     /// 使用更高效的numpy接口直接获取数据
-    pub fn extract_ndarray<'py, T: Element>(
+    pub fn extract_ndarray<'py>(
         py_any: &Bound<'py, PyAny>,
     ) -> PyResult<PyReadonlyArray<'py, T, Dim<IxDynImpl>>> {
         let numpy_any = py_any.call_method0("numpy")?;
@@ -58,7 +73,10 @@ impl TensorWrapper {
     }
 }
 
-impl TensorWrapper {
+impl<T> TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
     /// 转换为python对象
     ///
     /// 将数组转换为 python 的 tensor
@@ -74,13 +92,19 @@ impl TensorWrapper {
     }
 }
 
-impl From<Tensor> for TensorWrapper {
+impl<T> From<Tensor> for TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
     fn from(value: Tensor) -> Self {
         TensorWrapper::from_tensor(value)
     }
 }
 
-impl TensorWrapper {
+impl<T> TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
     /// 将 tensor 转换为 vec4
     ///
     /// 假设Tensor的形状是[batch, channels, height, width]
@@ -111,9 +135,11 @@ impl TensorWrapper {
     }
 }
 
-impl<'py> IntoPyObject<'py> for TensorWrapper {
-    // type Target = PyArray<f32, numpy::ndarray::Dim<numpy::ndarray::IxDynImpl>>; // the Python type
-    type Target = PyArrayDyn<f32>; // the Python type
+impl<'py, T> IntoPyObject<'py> for TensorWrapper<T>
+where
+    T: Element + WithDType,
+{
+    type Target = PyArrayDyn<T>; // the Python type
     type Output = Bound<'py, Self::Target>; // in most cases this will be `Bound`
     type Error = PyErr; // the conversion error type, has to be convertable to `PyErr`
 
@@ -125,7 +151,7 @@ impl<'py> IntoPyObject<'py> for TensorWrapper {
         let data = tensor
             .flatten_all()
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?
-            .to_vec1::<f32>()
+            .to_vec1::<_>()
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
 
         // 创建数组并重新排列维度
@@ -148,7 +174,7 @@ mod tests {
         Python::with_gil(|py| {
             let binding = PyList::empty(py);
             let py_any = binding.as_any();
-            let tensor_wrapper = TensorWrapper::new::<f32>(py_any, &Device::Cpu).unwrap();
+            let tensor_wrapper = TensorWrapper::<f32>::new(py_any, &Device::Cpu).unwrap();
             let tensor = tensor_wrapper.into_tensor();
             println!("dims: {:?}", tensor.dims());
         });
@@ -161,7 +187,7 @@ mod tests {
         Python::with_gil(|py| {
             let binding = PyList::empty(py);
             let py_any = binding.as_any();
-            let ndarray = TensorWrapper::extract_ndarray::<f32>(py_any).unwrap();
+            let ndarray = TensorWrapper::<f32>::extract_ndarray(py_any).unwrap();
             println!("ndarray: {:?}", ndarray.to_vec());
         });
 

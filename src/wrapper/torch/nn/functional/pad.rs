@@ -31,7 +31,7 @@ pub fn pad<'py>(
     let torch_module = py.import("torch")?;
     let functional = torch_module.getattr("nn")?.getattr("functional")?;
 
-    let input = TensorWrapper::from_tensor(input.clone()).to_py_tensor(py)?;
+    let input = TensorWrapper::<f32>::from_tensor(input.clone()).to_py_tensor(py)?;
     let mode = mode.to_string();
 
     // 准备参数
@@ -39,6 +39,6 @@ pub fn pad<'py>(
 
     // 调用 PyTorch 的 pad
     let py_any = functional.call_method("pad", args, None)?;
-    let result = TensorWrapper::new::<f32>(&py_any, device)?.into_tensor();
+    let result = TensorWrapper::<f32>::new(&py_any, device)?.into_tensor();
     Ok(result)
 }

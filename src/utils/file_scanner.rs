@@ -276,11 +276,13 @@ impl FileScanner {
         } else {
             self.single_scan(path)?
         };
-        if limit < 0 {
-            file_paths = file_paths[start_index..].to_vec();
+        let end_index = if limit <= 0 {
+            file_paths.len()
         } else {
-            file_paths = file_paths[start_index..limit as usize].to_vec();
+            limit as usize
         }
+        .min(file_paths.len());
+        file_paths = file_paths[start_index..end_index].to_vec();
 
         // 读取文件内容
         let mut contents = Vec::with_capacity(file_paths.len());
