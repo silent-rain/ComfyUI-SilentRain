@@ -1,6 +1,10 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": [],
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml",
+        // "./demo/Cargo.toml"
+    ],
     "rust-analyzer.cargo.extraEnv": {
     },
 }

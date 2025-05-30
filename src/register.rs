@@ -4,7 +4,7 @@ use pyo3::{PyResult, Python};
 
 use crate::{
     core::node::NodeRegister,
-    image::{ImageResolution, ImageResolution2, ImageSimpleResolution},
+    image::{ImageResolution, ImageResolution2, ImageSimpleResolution, LoadImagesFromFolder},
     list::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
         ShuffleAnyList,
@@ -79,6 +79,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ImageResolution2",
             py.get_type::<ImageResolution2>(),
             "Sr Image Resolution2",
+        ),
+        NodeRegister(
+            "LoadImagesFromFolder",
+            py.get_type::<LoadImagesFromFolder>(),
+            "Sr Load Images From Folder",
         ),
     ];
     Ok(nodes)
