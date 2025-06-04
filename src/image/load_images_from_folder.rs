@@ -5,8 +5,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use candle_core::{DType, Device, Tensor};
-use image::{DynamicImage, RgbaImage};
+use candle_core::Device;
+use image::DynamicImage;
 use log::error;
 use pyo3::{
     pyclass, pymethods,
@@ -16,7 +16,10 @@ use pyo3::{
 use walkdir::WalkDir;
 
 use crate::{
-    core::{category::CATEGORY_IMAGE, utils::image_to_tensor},
+    core::{
+        category::CATEGORY_IMAGE,
+        utils::image::{image_mask_to_tensor, image_to_tensor},
+    },
     error::Error,
     wrapper::{
         comfyui::{
@@ -385,33 +388,8 @@ impl LoadImagesFromFolder {
         let masks: Vec<Bound<'_, PyAny>> = images
             .iter()
             .map(|img| {
-                // 转换为RGBA格式获取alpha通道
-                let rgba = img.to_rgba8();
-                let (target_width, target_height) = rgba.dimensions();
-
-                // 提取alpha通道并转换为mask
-                let mask = if let Some(mask_data) = self.rgba_to_alpha_mask(&rgba) {
-                    // 转换为tensor [H, W]
-                    let tensor = Tensor::from_vec(
-                        mask_data,
-                        (target_height as usize, target_width as usize),
-                        &self.device,
-                    )?
-                    .to_dtype(DType::F32)?;
-                    // [H, W] -> [1, H, W]
-                    tensor.unsqueeze(0)?
-                } else {
-                    // 如果没有alpha通道，创建全零mask
-                    // [1, H, W]
-                    Tensor::zeros(
-                        (1, target_height as usize, target_width as usize),
-                        DType::F32,
-                        &self.device,
-                    )?
-                };
-
-                // 反转mask (1 - alpha)
-                let mask = (1.0 - mask)?;
+                // 将图像Mask转换为张量
+                let mask = image_mask_to_tensor(img, &self.device)?;
 
                 // 转换为PyTorch tensor并返回
                 let tensor_wrapper: TensorWrapper<f32> = mask.into();
@@ -420,18 +398,5 @@ impl LoadImagesFromFolder {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(masks)
-    }
-
-    /// 从RGBA图像中提取alpha通道作为灰度图像
-    fn rgba_to_alpha_mask(&self, rgba: &RgbaImage) -> Option<Vec<f32>> {
-        if rgba.pixels().all(|p| p.0[3] == 255) {
-            // 所有像素都是不透明的，没有alpha通道
-            None
-        } else {
-            // 提取alpha通道
-            let mask_data: Vec<f32> = rgba.pixels().map(|p| p[3] as f32 / 255.0).collect();
-
-            Some(mask_data)
-        }
     }
 }

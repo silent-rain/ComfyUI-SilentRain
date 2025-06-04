@@ -9,5 +9,4 @@ mod lanczos;
 pub use lanczos::lanczos;
 // mod lanczos2;
 
-mod tensor;
-pub use tensor::{image_mask_to_tensor, image_to_tensor, tensor_to_image};
+pub mod image;
