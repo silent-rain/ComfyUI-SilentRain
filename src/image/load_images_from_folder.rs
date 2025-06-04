@@ -236,7 +236,7 @@ impl LoadImagesFromFolder {
         }
 
         // 获取文件路径列表
-        let (file_paths, file_names) =
+        let (file_paths, file_folders, file_names) =
             self.get_file_paths(folder, include_subfolders, start_index, limit)?;
 
         // 读取图片
@@ -249,23 +249,21 @@ impl LoadImagesFromFolder {
         Ok((
             image_tensors,
             image_masks,
-            file_paths
-                .iter()
-                .map(|v| v.to_string_lossy().to_string())
-                .collect::<Vec<String>>(),
             file_names,
+            file_folders,
             file_paths.len(),
         ))
     }
 
     /// 获取文件路径列表
+    #[allow(clippy::complexity)]
     fn get_file_paths(
         &self,
         folder: &str,
         include_subfolders: bool,
         start_index: usize,
         limit: i32,
-    ) -> Result<(Vec<PathBuf>, Vec<String>), Error> {
+    ) -> Result<(Vec<PathBuf>, Vec<String>, Vec<String>), Error> {
         let path = Path::new(folder);
         if !path.is_dir() {
             return Err(Error::InvalidDirectory(folder.to_string()));
@@ -287,14 +285,20 @@ impl LoadImagesFromFolder {
         .min(file_paths.len());
         file_paths = file_paths[start_index..end_index].to_vec();
 
+        // 获取文件所在文件夹列表
+        let file_folders: Vec<String> = file_paths
+            .iter()
+            .map(|path| path.parent().unwrap().to_string_lossy().to_string())
+            .collect();
+
         // 获取文件名列表（不带路径）
         let file_names: Vec<String> = file_paths
             .iter()
-            .filter_map(|path| path.file_name()) // 获取文件名部分
+            .filter_map(|path| path.file_stem()) // 获取文件名部分
             .map(|name| name.to_string_lossy().to_string()) // 转换为String
             .collect();
 
-        Ok((file_paths, file_names))
+        Ok((file_paths, file_folders, file_names))
     }
 
     /// 递归扫描实现
