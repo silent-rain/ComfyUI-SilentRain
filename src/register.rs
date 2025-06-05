@@ -9,6 +9,7 @@ use crate::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
         ShuffleAnyList,
     },
+    logic::BatchFloat,
     text::{SaveText, StringList, StringListToSting, TextBox, TextToList},
     utils::{BridgeAnything, FileScanner},
 };
@@ -65,6 +66,7 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr Batch To List",
         ),
         // logic
+        NodeRegister("BatchFloat", py.get_type::<BatchFloat>(), "Sr Batch Float"),
         // image
         NodeRegister(
             "ImageSimpleResolution",

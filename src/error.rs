@@ -38,6 +38,8 @@ pub enum Error {
     ImageError(#[from] image::ImageError),
     #[error("file path not exist, {0}")]
     FilePathNotExist(String),
+    #[error("invalid parameter, {0}")]
+    InvalidParameter(String),
 }
 
 impl From<io::Error> for Error {
