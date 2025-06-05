@@ -9,4 +9,5 @@ mod lanczos;
 pub use lanczos::lanczos;
 // mod lanczos2;
 
+pub mod easing;
 pub mod image;

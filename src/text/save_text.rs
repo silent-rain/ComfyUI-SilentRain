@@ -182,7 +182,7 @@ impl SaveText {
                         ],
                         {
                             let mode = PyDict::new(py);
-                            mode.set_item("default", "overwrite")?;
+                            mode.set_item("default", SaveTextMode::Overwrite.to_string())?;
                             mode.set_item("tooltip", "Saved Content Mode")?;
                             mode
                         },
