@@ -9,6 +9,10 @@ name = "comfyui_silentrain"
 crate-type = ["cdylib", "rlib"]
 
 
+[profile.dev]
+debug = false # 关闭调试日志, 加快构建速度
+
+
 [dependencies]
 pyo3 = { version = "0.25", features = [
     "extension-module",
