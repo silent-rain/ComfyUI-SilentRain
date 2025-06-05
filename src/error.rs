@@ -36,6 +36,8 @@ pub enum Error {
     ImageBuffer,
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),
+    #[error("file path not exist, {0}")]
+    FilePathNotExist(String),
 }
 
 impl From<io::Error> for Error {

@@ -9,7 +9,7 @@ use crate::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
         ShuffleAnyList,
     },
-    text::{StringList, StringListToSting, TextBox, TextToList},
+    text::{SaveText, StringList, StringListToSting, TextBox, TextToList},
     utils::{BridgeAnything, FileScanner},
 };
 
@@ -35,6 +35,7 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr String List To Sting",
         ),
         NodeRegister("StringList", py.get_type::<StringList>(), "Sr String List"),
+        NodeRegister("SaveText", py.get_type::<SaveText>(), "Sr Save Text"),
         // list
         NodeRegister(
             "IndexFromAnyList",

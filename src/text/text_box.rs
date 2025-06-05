@@ -57,7 +57,8 @@ impl TextBox {
                     "strip_newlines",
                     (NODE_BOOLEAN, {
                         let strip_newlines = PyDict::new(py);
-                        strip_newlines.set_item("default", true)?;
+                        strip_newlines.set_item("default", false)?;
+                        strip_newlines.set_item("tooltip", "Parsing line breaks")?;
                         strip_newlines
                     }),
                 )?;

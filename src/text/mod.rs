@@ -12,6 +12,9 @@ pub use string_list_to_sting::StringListToSting;
 mod string_list;
 pub use string_list::StringList;
 
+mod save_text;
+pub use save_text::SaveText;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
