@@ -12,6 +12,8 @@ pub const NODE_JSON: &str = "JSON";
 pub const NODE_METADATA_RAW: &str = "METADATA_RAW";
 pub const NODE_IMAGE: &str = "IMAGE";
 pub const NODE_MASK: &str = "MASK";
+pub const NODE_MODEL: &str = "MODEL";
+pub const NODE_CLIP: &str = "CLIP";
 
 pub const NODE_INT_MAX: u64 = 0xffffffffffffffffu64;
 pub const NODE_SEED_MAX: u64 = 10000000;
