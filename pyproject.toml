@@ -1,9 +1,7 @@
-[build-system]
-requires = ["maturin>=1.8,<2.0"]
-build-backend = "maturin"
-
 [project]
 name = "comfyui-silentrain"
+description = "Ecological extension of comfyui using Rust language."
+license = { file = "LICENSE" }
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -13,5 +11,21 @@ classifiers = [
 dynamic = ["version"]
 dependencies = ["torch>=2.5.1"]
 
+
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+
+[project.urls]
+Repository = "https://github.com/silent-rain/ComfyUI-SilentRain"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "silentrain"
+DisplayName = "ComfyUI-SilentRain"
+Icon = ""
