@@ -15,23 +15,31 @@ pub enum Error {
     #[error("type not supported")]
     TypeNotSupported,
     #[error("type conversion failed, {0}")]
-    TypeConversionFailed(String),
+    TypeConversion(String),
     #[error("type downcast failed, {0}")]
     DowncastFailed(String),
+
     #[error("the input list is empty")]
     InputListEmpty,
     #[error("index out of range, {0}")]
     IndexOutOfRange(String),
     #[error("error in obtaining list items at specified index")]
     GetListIndex,
+
     #[error("py error, {0}")]
     PyErr(#[from] pyo3::PyErr),
+    #[error("pythonize error, {0}")]
+    PythonizeError(#[from] pythonize::PythonizeError),
+    #[error("py missing kwargs, {0}")]
+    PyMissingKwargs(String),
+
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),
     #[error("numpy error, {0}")]
     NotContiguousError(#[from] numpy::NotContiguousError),
     #[error("strum error, {0}")]
     ParseEnumString(String),
+
     #[error("creating image buffer error")]
     ImageBuffer,
     #[error("image error, {0}")]

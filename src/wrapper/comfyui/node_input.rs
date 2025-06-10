@@ -46,7 +46,7 @@ pub struct Node {
     pub outputs: Vec<Output>,
     pub properties: Properties,
     #[serde(rename = "widgets_values")]
-    pub widgets_values: Value,
+    pub widgets_values: Option<Value>,
     #[serde(default)]
     pub color: Option<String>,
     #[serde(default)]

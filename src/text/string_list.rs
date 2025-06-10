@@ -255,6 +255,12 @@ impl StringList {
 
             info!("workflow_id: {:#?}", extra_pnginfo.workflow.id);
             info!("unique_id: {:#?}", unique_id);
+
+            // 打印实例地址的几种方式
+            info!("对象地址: {:p}", std::ptr::addr_of!(self));
+            info!("对象地址: {:p}", self);
+            info!("对象地址: {:p}", self as *const _);
+            info!("对象地址: 0x{:x}", self as *const _ as usize);
         }
 
         let mut new_strings: Vec<String> = Vec::new();
