@@ -7,7 +7,7 @@
 //! - 编辑-刷新节点定义
 //! - 右键-刷新
 
-use log::error;
+use log::{error, info};
 use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
@@ -18,6 +18,7 @@ use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
     wrapper::comfyui::{
+        node_input::InputKwargs,
         types::{any_type, NODE_INT, NODE_INT_MAX, NODE_STRING},
         PromptServer,
     },
@@ -152,19 +153,17 @@ impl StringList {
                 optional
             })?;
 
-            // dict.set_item("hidden", {
-            //     let hidden = PyDict::new(py);
-            //     hidden.set_item("prompt", "PROMPT")?;
-            //     hidden.set_item("dynprompt", "DYNPROMPT")?;
-            //     hidden.set_item("extra_pnginfo", "EXTRA_PNGINFO")?;
-            //     // UNIQUE_ID is the unique identifier of the node, and matches the id property of the node on the client side.
-            //     // It is commonly used in client-server communications (see messages).
-            //     hidden.set_item("node_id", "UNIQUE_ID")?;
-            //     hidden.set_item("unique_id", "UNIQUE_ID")?;
-            //     hidden.set_item("my_unique_id", "UNIQUE_ID")?;
+            dict.set_item("hidden", {
+                let hidden = PyDict::new(py);
+                hidden.set_item("prompt", "PROMPT")?;
+                hidden.set_item("dynprompt", "DYNPROMPT")?;
+                hidden.set_item("extra_pnginfo", "EXTRA_PNGINFO")?;
+                // UNIQUE_ID is the unique identifier of the node, and matches the id property of the node on the client side.
+                // It is commonly used in client-server communications (see messages).
+                hidden.set_item("unique_id", "UNIQUE_ID")?;
 
-            //     hidden
-            // })?;
+                hidden
+            })?;
 
             Ok(dict.into())
         })
@@ -179,7 +178,7 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
-        let result = self.list_to_strings(string_num, delimiter, optional_string_list, kwargs);
+        let result = self.list_to_strings(string_num, delimiter, optional_string_list, &kwargs);
 
         match result {
             Ok(v) => Ok(v),
@@ -247,8 +246,17 @@ impl StringList {
         string_num: u64,
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
-        kwargs: Option<Bound<'_, PyDict>>,
+        kwargs: &Option<Bound<'_, PyDict>>,
     ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
+        if let Some(kwargs) = kwargs {
+            let kwargs = InputKwargs::new(kwargs);
+            let extra_pnginfo = kwargs.extra_pnginfo()?;
+            let unique_id = kwargs.unique_id()?;
+
+            info!("workflow_id: {:#?}", extra_pnginfo.workflow.id);
+            info!("unique_id: {:#?}", unique_id);
+        }
+
         let mut new_strings: Vec<String> = Vec::new();
 
         if let Some(optional_string_list) = optional_string_list {

@@ -21,6 +21,7 @@ pyo3 = { version = "0.25", features = [
     "auto-initialize",
 ] }
 numpy = "0.25" # Rust bindings for the NumPy C-API.
+pythonize = "0.25.0" # 用于 Python 和 Rust 之间的数据转换
 
 
 serde = { version = "1.0", features = ["derive"] }
@@ -49,4 +50,4 @@ hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.21"         # 标记文本
 parquet = "55.0"            # 列式存储数据文件格式
 image = "0.25"
-ndarray = "0.16"
+# ndarray = "0.16"
