@@ -6,7 +6,16 @@
 //! - 先点击执行, 使参数生效
 //! - 编辑-刷新节点定义
 //! - 右键-刷新
+//!
+//! comfyui-kjnodes 实现方案:
+//! ComfyUI/custom_nodes/comfyui-kjnodes/web/js/jsnodes.js
 
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
+
+use lazy_static::lazy_static;
 use log::{error, info};
 use pyo3::{
     pyclass, pymethods,
@@ -24,7 +33,17 @@ use crate::{
     },
 };
 
-static mut MAX_STRING_NUM: u64 = 2;
+static STRING_KEY: RwLock<String> = RwLock::new(String::new());
+
+// 全局 HashMap 定义
+lazy_static! {
+    static ref STRING_NUM_MAP: Arc<RwLock<HashMap<String, u64>>> = {
+        let mut map = HashMap::new();
+        // 初始化默认值
+        map.insert("default_key".to_string(), 5);
+        Arc::new(RwLock::new(map))
+    };
+}
 
 /// 字符串列表
 #[pyclass(subclass)]
@@ -106,7 +125,7 @@ impl StringList {
                     "string_num",
                     (NODE_INT, {
                         let index = PyDict::new(py);
-                        index.set_item("default", unsafe { MAX_STRING_NUM })?;
+                        index.set_item("default", 5)?;
                         index.set_item("min", 2)?;
                         index.set_item("max", NODE_INT_MAX)?;
                         index.set_item("step", 1)?;
@@ -137,8 +156,13 @@ impl StringList {
                     }),
                 )?;
 
+                let string_key = Self::get_string_key().unwrap_or("default_key".to_string());
+                let max_string_num = Self::get_num_map(&string_key)
+                    .unwrap_or(Some(5))
+                    .unwrap_or(5);
+
                 // 动态输入
-                for i in 1..=unsafe { MAX_STRING_NUM } {
+                for i in 1..=max_string_num {
                     optional.set_item(
                         format!("string_{}", i),
                         (NODE_STRING, {
@@ -217,11 +241,6 @@ impl StringList {
             );
         }
 
-        // 更新可变参数
-        unsafe {
-            MAX_STRING_NUM = string_num;
-        }
-
         // 打印 kwargs
         // let mut strs = Vec::new();
         // if let Some(kwargs) = kwargs {
@@ -248,6 +267,7 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: &Option<Bound<'_, PyDict>>,
     ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
+        // 添加输入字符串个数的缓存
         if let Some(kwargs) = kwargs {
             let kwargs = InputKwargs::new(kwargs);
             let extra_pnginfo = kwargs.extra_pnginfo()?;
@@ -256,11 +276,15 @@ impl StringList {
             info!("workflow_id: {:#?}", extra_pnginfo.workflow.id);
             info!("unique_id: {:#?}", unique_id);
 
+            let string_num_key = format!("{}_{}", extra_pnginfo.workflow.id, unique_id);
+            Self::update_string_key(string_num_key.clone())?;
+            Self::add_num_map(string_num_key, string_num)?;
+
             // 打印实例地址的几种方式
-            info!("对象地址: {:p}", std::ptr::addr_of!(self));
-            info!("对象地址: {:p}", self);
-            info!("对象地址: {:p}", self as *const _);
-            info!("对象地址: 0x{:x}", self as *const _ as usize);
+            info!("对象地址: {:p}", std::ptr::addr_of!(self)); // 引用变量本身的地址
+            info!("对象地址: {:p}", self); // 引用指向的对象的地址
+            info!("对象地址: {:p}", self as *const _); // 引用指向的对象的地址
+            info!("对象地址: 0x{:x}", self as *const _ as usize); // 引用指向的对象的地址
         }
 
         let mut new_strings: Vec<String> = Vec::new();
@@ -302,5 +326,55 @@ impl StringList {
         let strings = new_strings.join(&delimiter);
 
         Ok((new_strings.clone(), new_strings, strings, total))
+    }
+}
+
+impl StringList {
+    /// 获取全局的字符串Key
+    fn get_string_key() -> Result<String, Error> {
+        let key = STRING_KEY
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        Ok(key.clone())
+    }
+
+    /// 更新全局的字符串Key
+    fn update_string_key(value: String) -> Result<(), Error> {
+        let mut key = STRING_KEY
+            .write()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        *key = value;
+        Ok(())
+    }
+
+    /// 向全局 HashMap 添加键值对
+    fn add_num_map(key: String, value: u64) -> Result<(), Error> {
+        let mut map = STRING_NUM_MAP
+            .write()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        map.insert(key, value);
+
+        Ok(())
+    }
+
+    /// 从全局 HashMap 获取值
+    fn get_num_map(key: &str) -> Result<Option<u64>, Error> {
+        let map = STRING_NUM_MAP
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        Ok(map.get(key).cloned())
+    }
+
+    /// 打印全局 HashMap 内容
+    fn _print_num_map() -> Result<(), Error> {
+        let map = STRING_NUM_MAP
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        info!("全局 HashMap 内容:");
+        for (key, value) in map.iter() {
+            info!("  {}: {}", key, value);
+        }
+
+        Ok(())
     }
 }

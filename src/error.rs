@@ -18,7 +18,8 @@ pub enum Error {
     TypeConversion(String),
     #[error("type downcast failed, {0}")]
     DowncastFailed(String),
-
+    #[error("lock error, {0}")]
+    LockError(String),
     #[error("the input list is empty")]
     InputListEmpty,
     #[error("index out of range, {0}")]
