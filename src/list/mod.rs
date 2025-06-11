@@ -21,6 +21,9 @@ pub use list_to_batch::ListToBatch;
 mod batch_to_list;
 pub use batch_to_list::BatchToList;
 
+mod merge_multi_list;
+pub use merge_multi_list::MergeMultiList;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,

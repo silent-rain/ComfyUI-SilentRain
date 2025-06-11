@@ -109,18 +109,17 @@ impl BatchToList {
         py: Python<'py>,
         batch: Bound<'py, PyAny>,
     ) -> PyResult<(Bound<'py, PyAny>,)> {
-        // 变量重命名
-        let images = batch;
-
         // 图片
-        if isinstance(py, &images, "torch.Tensor")? {
+        if isinstance(py, &batch, "torch.Tensor")? {
             let image_list = self
-                .image_batch_to_list(py, &images)
+                .image_batch_to_list(py, &batch)
                 .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
             return Ok((image_list,));
         }
 
-        Ok((images,))
+        // 将batch（原列表数据）数据直接输出为list
+        let list = batch;
+        Ok((list,))
     }
 }
 

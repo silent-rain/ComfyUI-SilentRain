@@ -6,8 +6,8 @@ use crate::{
     core::node::NodeRegister,
     image::{ImageResolution, ImageResolution2, ImageSimpleResolution, LoadImagesFromFolder},
     list::{
-        BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, RandomAnyList,
-        ShuffleAnyList,
+        BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, MergeMultiList,
+        RandomAnyList, ShuffleAnyList,
     },
     logic::BatchFloat,
     text::{SaveText, StringList, StringListToSting, TextBox, TextToList},
@@ -64,6 +64,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "BatchToList",
             py.get_type::<BatchToList>(),
             "Sr Batch To List",
+        ),
+        NodeRegister(
+            "MergeMultiList",
+            py.get_type::<MergeMultiList>(),
+            "Sr Merge Multi List",
         ),
         // logic
         NodeRegister("BatchFloat", py.get_type::<BatchFloat>(), "Sr Batch Float"),
