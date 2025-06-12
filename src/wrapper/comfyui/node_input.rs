@@ -55,7 +55,7 @@ pub struct Node {
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Input {
-    pub label: String,
+    pub label: Option<String>,
     pub name: String,
     pub shape: Option<u32>,
     #[serde(rename = "type")]
@@ -65,6 +65,7 @@ pub struct Input {
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Output {
+    pub label: Option<String>,
     pub name: String,
     pub shape: Option<u32>,
     #[serde(rename = "type")]
@@ -175,19 +176,85 @@ impl<'py> InputKwargs<'py> {
         Ok(value)
     }
 
+    /// 获取额外附加信息
     pub fn extra_pnginfo(&self) -> Result<ExtraPnginfo, Error> {
         self.parse("extra_pnginfo")
     }
 
-    pub fn unique_id(&self) -> Result<String, Error> {
-        self.parse("unique_id")
+    /// 获取工作流信息
+    pub fn workflow(&self) -> Result<Workflow, Error> {
+        Ok(self.parse::<ExtraPnginfo>("extra_pnginfo")?.workflow)
     }
 
+    /// 获取当前节点ID
+    pub fn unique_id(&self) -> Result<u32, Error> {
+        Ok(self.parse::<String>("unique_id")?.parse::<u32>()?)
+    }
+
+    /// 获取提示词
     pub fn prompt(&self) -> Result<Value, Error> {
         self.parse("prompt")
     }
 
+    /// 获取动态提示词
     pub fn dynprompt(&self) -> Result<Value, Error> {
         self.parse("dynprompt")
+    }
+
+    /// 获取指定节点
+    pub fn node(&self, node_id: u32) -> Result<Option<Node>, Error> {
+        let workflow = self.workflow()?;
+        for node in workflow.nodes {
+            if node.id == node_id {
+                return Ok(Some(node));
+            }
+        }
+        Ok(None)
+    }
+
+    /// 获取前一个节点的信息
+    pub fn pre_node(&self) -> Result<Option<Node>, Error> {
+        // 获取当前节点id
+        let cur_node_id = self.unique_id()?;
+
+        // 直接获取到前一个节点的 id
+        // let pre_node_id: Option<u32> = self
+        //     .node(cur_node_id)?
+        //     .and_then(|cur_node| cur_node.inputs.iter().find_map(|input| input.link));
+
+        // 获取当前节点
+        let cur_node = self.node(cur_node_id)?.ok_or_else(|| {
+            Error::OptionNone(format!(
+                "node_id: {cur_node_id}, the current node does not exist"
+            ))
+        })?;
+
+        // 获取前一个节点的id, 默认第一个输入的id
+        let pre_input_id = cur_node
+            .inputs
+            .iter()
+            .find_map(|input| input.link)
+            .ok_or_else(|| {
+                Error::OptionNone(format!(
+                    "node_id: {cur_node_id}, the current node does not have a previous node"
+                ))
+            })?;
+
+        // 获取前一个节点的信息
+        let mut pre_node = None;
+        let workflow = self.workflow()?;
+        for node in workflow.nodes {
+            for output in node.outputs.clone() {
+                if let Some(links) = output.links {
+                    let link = links.iter().find(|link| **link == pre_input_id);
+                    if link.is_some() {
+                        pre_node = Some(node);
+                        break;
+                    }
+                }
+            }
+        }
+
+        Ok(pre_node)
     }
 }
