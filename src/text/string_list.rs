@@ -20,7 +20,7 @@ use log::{error, info};
 use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
+    Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
@@ -112,7 +112,7 @@ impl StringList {
 
     #[classattr]
     #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
+    const FUNCTION: &'static str = "notify";
 
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
@@ -221,6 +221,35 @@ impl StringList {
         }
     }
 
+    /// 执行逻辑并通知前端更新 UI
+    #[pyo3(name = "notify", signature = (string_num, delimiter, optional_string_list=None, **kwargs))]
+    fn notify<'py>(
+        &mut self,
+        py: Python<'py>,
+        string_num: u64,
+        delimiter: String,
+        optional_string_list: Option<Bound<'py, PyAny>>,
+        kwargs: Option<Bound<'py, PyDict>>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let result = self.list_to_strings(string_num, delimiter, optional_string_list, &kwargs);
+
+        match result {
+            Ok(v) => Ok(self.node_result(py, v)?),
+            Err(e) => {
+                error!("StringList error, {e}");
+                if let Err(e) = self.send_error(py, "StringList".to_string(), e.to_string()) {
+                    error!("send error failed, {e}");
+                    return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                        e.to_string(),
+                    ));
+                };
+                Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    e.to_string(),
+                ))
+            }
+        }
+    }
+
     /// 返回需要评估的输入名称列表。
     ///
     /// 需要搭配 lazy 属性实用
@@ -286,6 +315,11 @@ impl StringList {
             info!("对象地址: {:p}", self as *const _); // 引用指向的对象的地址
             info!("对象地址: 0x{:x}", self as *const _ as usize); // 引用指向的对象的地址
         }
+
+        error!(
+            "string_num: {:#?}, delimiter: {:#?}, optional_string_list: {:#?}",
+            string_num, delimiter, optional_string_list
+        );
 
         let mut new_strings: Vec<String> = Vec::new();
 
@@ -376,5 +410,24 @@ impl StringList {
         }
 
         Ok(())
+    }
+}
+
+impl StringList {
+    /// 组合为前端需要的数据结构
+    fn node_result<'py, T>(&self, py: Python<'py>, result: T) -> PyResult<Bound<'py, PyDict>>
+    where
+        T: IntoPyObject<'py>,
+    {
+        let input_dict = PyDict::new(py);
+        input_dict.set_item("string_num", vec![5])?;
+
+        let dict = PyDict::new(py);
+        dict.set_item("ui", input_dict)?;
+        dict.set_item("result", result)?;
+
+        error!("dict: {:#?},", dict,);
+
+        Ok(dict)
     }
 }
