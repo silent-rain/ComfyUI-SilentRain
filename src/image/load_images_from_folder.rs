@@ -43,13 +43,6 @@ impl PromptServer for LoadImagesFromFolder {}
 impl LoadImagesFromFolder {
     #[new]
     fn new() -> Self {
-        // 初始化全局日志
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {
             device: Device::Cpu,
             file_extensions: ["png", "jpg", "jpeg", "bmp", "webp"]

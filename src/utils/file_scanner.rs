@@ -38,13 +38,6 @@ impl PromptServer for FileScanner {}
 impl FileScanner {
     #[new]
     fn new() -> Self {
-        // 初始化全局日志
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {
             file_extension: "".to_string(),
         }

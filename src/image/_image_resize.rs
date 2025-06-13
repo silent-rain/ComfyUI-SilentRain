@@ -72,12 +72,6 @@ impl PromptServer for ListToBatch {}
 impl ListToBatch {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {
             device: Device::Cpu,
         }
