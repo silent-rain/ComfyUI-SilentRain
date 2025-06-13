@@ -85,7 +85,7 @@ pub fn image_mask_to_tensor(image: &DynamicImage, device: &Device) -> Result<Ten
     let (width, height) = rgba.dimensions();
 
     // 检查是否有透明像素
-    let mask = if rgba.pixels().any(|p| p.0[3] != 255) {
+    let mask = if rgba.pixels().all(|p| p.0[3] == 255) {
         // 所有像素都是不透明的，没有alpha通道
         // 没有透明像素，直接返回全零张量
         // [1, H, W]

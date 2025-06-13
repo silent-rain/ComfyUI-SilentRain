@@ -16,10 +16,10 @@ debug = false # 关闭调试日志, 加快构建速度
 [dependencies]
 pyo3 = { version = "0.25.1", features = [
     "extension-module",
+    "auto-initialize",  # 在 Rust 中使用 Python
     # "multiple-pymethods",
     # "macros",
-    "auto-initialize", # 在 Rust 中使用 Python
-    "abi3-py312",
+    # "abi3-py312",
 ] }
 numpy = "0.25" # rust-numpy
 pythonize = "0.25.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象

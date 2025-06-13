@@ -105,7 +105,7 @@ where
     /// 从 Python torch.Tensor 转为 Rust candle_core::Tensor
     ///
     /// Tensor::from_slice
-    fn torch_to_candle2<'py>(
+    fn _torch_to_candle2<'py>(
         torch_tensor: &Bound<'py, PyAny>,
         device: &Device,
     ) -> Result<Tensor, Error> {
@@ -133,7 +133,7 @@ where
     /// 从 Python torch.Tensor 转为 Rust candle_core::Tensor
     ///
     /// Tensor::from_raw_buffer
-    fn torch_to_candle3<'py>(
+    fn _torch_to_candle3<'py>(
         torch_tensor: &Bound<'py, PyAny>,
         device: &Device,
     ) -> Result<Tensor, Error> {
