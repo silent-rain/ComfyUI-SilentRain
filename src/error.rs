@@ -38,6 +38,8 @@ pub enum Error {
     PythonizeError(#[from] pythonize::PythonizeError),
     #[error("py missing kwargs, {0}")]
     PyMissingKwargs(String),
+    #[error("py downcast error, {0}")]
+    PyDowncastError(String),
 
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),

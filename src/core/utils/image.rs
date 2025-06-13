@@ -84,15 +84,18 @@ pub fn image_mask_to_tensor(image: &DynamicImage, device: &Device) -> Result<Ten
     let rgba = image.to_rgba8();
     let (width, height) = rgba.dimensions();
 
-    // 提取alpha通道并转换为mask
-    let mask = if rgba.pixels().all(|p| p.0[3] == 255) {
+    // 检查是否有透明像素
+    let mask = if rgba.pixels().any(|p| p.0[3] != 255) {
         // 所有像素都是不透明的，没有alpha通道
-        // 如果没有alpha通道，创建全零mask
+        // 没有透明像素，直接返回全零张量
         // [1, H, W]
         Tensor::zeros((1, height as usize, width as usize), DType::F32, device)?
     } else {
         // 提取alpha通道
-        let mask_data: Vec<f32> = rgba.pixels().map(|p| p[3] as f32 / 255.0).collect();
+        let mask_data: Vec<f32> = rgba
+            .pixels() // 每个像素4字节 (RGBA)
+            .map(|p| p[3] as f32 / 255.0) // 提取并归一化alpha值
+            .collect();
 
         // 转换为tensor [H, W]
         let tensor = Tensor::from_vec(mask_data, (height as usize, width as usize), device)?
@@ -101,7 +104,7 @@ pub fn image_mask_to_tensor(image: &DynamicImage, device: &Device) -> Result<Ten
         tensor.unsqueeze(0)?
     };
 
-    // 反转mask (1 - alpha)
+    // 反转 mask (1 - alpha)
     let mask = (1.0 - mask)?;
 
     Ok(mask)

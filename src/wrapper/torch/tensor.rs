@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use candle_core::{Device, Tensor, WithDType};
+use candle_core::{DType, Device, Shape, Tensor, WithDType};
 use numpy::{
     ndarray::{Dim, IxDynImpl},
     Element, PyArray, PyArrayDyn, PyArrayMethods, PyReadonlyArray, PyUntypedArrayMethods,
@@ -13,6 +13,8 @@ use pyo3::{
     exceptions::PyRuntimeError, types::PyAnyMethods, Bound, IntoPyObject, PyAny, PyErr, PyResult,
     Python,
 };
+
+use crate::error::Error;
 
 pub struct TensorWrapper<T>
 where
@@ -27,9 +29,7 @@ where
     T: Element + WithDType,
 {
     pub fn new<'py>(py_any: &Bound<'py, PyAny>, device: &Device) -> PyResult<Self> {
-        let ndarray = Self::extract_ndarray(py_any)?;
-        let shape = ndarray.shape();
-        let tensor = Tensor::from_vec(ndarray.to_vec()?, shape, device)
+        let tensor = Self::torch_to_candle(py_any, device)
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
 
         Ok(Self {
@@ -64,12 +64,107 @@ where
     pub fn extract_ndarray<'py>(
         py_any: &Bound<'py, PyAny>,
     ) -> PyResult<PyReadonlyArray<'py, T, Dim<IxDynImpl>>> {
+        // 用 .numpy() 得到 numpy array
         let numpy_any = py_any.call_method0("numpy")?;
         let array_view = numpy_any
             .downcast::<PyArrayDyn<T>>()? // 直接获取numpy数组
             .readonly(); // 获取只读视图
 
         Ok(array_view)
+    }
+
+    /// 从 Python torch.Tensor 转为 Rust candle_core::Tensor
+    ///
+    /// Tensor::from_vec
+    fn torch_to_candle<'py>(
+        torch_tensor: &Bound<'py, PyAny>,
+        device: &Device,
+    ) -> Result<Tensor, Error> {
+        // 1. 获取 numpy 数组
+        let np = torch_tensor.call_method0("numpy")?;
+
+        // 2. 使用 downcast 而不是 extract
+        let arr = np
+            .downcast::<PyArrayDyn<T>>()
+            .map_err(|e| Error::PyDowncastError(e.to_string()))?;
+
+        // 3. 获取形状
+        let shape = arr.shape().to_vec();
+
+        // 4. 获取数据切片
+        let data = arr.to_vec()?;
+
+        // 5. 创建 tensor
+        let tensor = Tensor::from_vec(data, shape, device)
+            .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
+
+        // 6. 返回 Tensor
+        Ok(tensor)
+    }
+
+    /// 从 Python torch.Tensor 转为 Rust candle_core::Tensor
+    ///
+    /// Tensor::from_slice
+    fn torch_to_candle2<'py>(
+        torch_tensor: &Bound<'py, PyAny>,
+        device: &Device,
+    ) -> Result<Tensor, Error> {
+        // 1. 获取 numpy 数组
+        let np = torch_tensor.call_method0("numpy")?;
+
+        // 2. 使用 downcast 而不是 extract
+        let arr = np
+            .downcast::<PyArrayDyn<T>>()
+            .map_err(|e| Error::PyDowncastError(e.to_string()))?;
+
+        // 3. 获取形状
+        let shape = arr.shape().to_vec();
+
+        // 4. 获取数据切片
+        let slice = unsafe { arr.as_slice()? };
+
+        // 5. 创建 tensor
+        let tensor = Tensor::from_slice(slice, Shape::from(shape), device)?;
+
+        // 6. 返回 Tensor
+        Ok(tensor)
+    }
+
+    /// 从 Python torch.Tensor 转为 Rust candle_core::Tensor
+    ///
+    /// Tensor::from_raw_buffer
+    fn torch_to_candle3<'py>(
+        torch_tensor: &Bound<'py, PyAny>,
+        device: &Device,
+    ) -> Result<Tensor, Error> {
+        // 1. 获取 numpy 数组
+        let np = torch_tensor.call_method0("numpy")?;
+
+        // 2. 使用 downcast 而不是 extract
+        let arr = np
+            .downcast::<PyArrayDyn<T>>()
+            .map_err(|e| Error::PyDowncastError(e.to_string()))?;
+
+        // 3. 获取形状
+        let shape = arr.shape().to_vec();
+
+        // 4. 获取数据切片
+        // let slice = unsafe { arr.as_slice()? };
+
+        // 5. 创建 tensor
+        // let tensor = Tensor::from_slice(slice, Shape::from(shape), device)?;
+
+        let slice: &[u8] = unsafe {
+            let slice_t = arr.as_slice()?; // 获取 &[T]
+            std::slice::from_raw_parts(
+                slice_t.as_ptr() as *const u8,  // 转换为 u8 指针
+                std::mem::size_of_val(slice_t), // 计算字节长度
+            )
+        };
+        let tensor = Tensor::from_raw_buffer(slice, DType::F32, &shape, device)?;
+
+        // 6. 返回 Tensor
+        Ok(tensor)
     }
 }
 
