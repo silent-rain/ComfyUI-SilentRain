@@ -1,5 +1,8 @@
 //! 逻辑
 
+mod batch_float;
+pub use batch_float::BatchFloat;
+
 use pyo3::{types::PyModule, Bound, PyResult, Python};
 
 /// 逻辑模块

@@ -18,12 +18,12 @@ use pyo3::{
 use walkdir::WalkDir;
 
 use crate::{
-    core::{
-        category::CATEGORY_UTILS,
-        types::{NODE_BOOLEAN, NODE_STRING},
+    core::category::CATEGORY_UTILS,
+    error::Error,
+    wrapper::comfyui::{
+        types::{NODE_BOOLEAN, NODE_INT, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
 /// 文件扫描器
@@ -38,13 +38,6 @@ impl PromptServer for FileScanner {}
 impl FileScanner {
     #[new]
     fn new() -> Self {
-        // 初始化全局日志
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {
             file_extension: "".to_string(),
         }
@@ -115,7 +108,7 @@ impl FileScanner {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Scan all files in the specified directory."
+        "Scan all files in the specified folder."
     }
 
     // 调研方法函数名称
@@ -128,11 +121,11 @@ impl FileScanner {
     /// def INPUT_TYPES(cls):
     ///      return {
     ///          "required": {
-    ///             "directory": ("STRING", {
+    ///             "folder": ("STRING", {
     ///                "default": "./input",
     ///                "tooltip": "扫描目录路径"
     ///             }),
-    ///            "recursive": ("BOOLEAN", {"default":,"label_on": "enabled", "label_off": "disabled"}),
+    ///            "include_subfolders": ("BOOLEAN", {"default":,"label_on": "enabled", "label_off": "disabled"}),
     ///            "encoding": (["utf-8", "gbk", "big5", "latin1"], {
     ///               "default": "utf-8",
     ///               "tooltip": "文件编码格式"
@@ -152,23 +145,12 @@ impl FileScanner {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "directory",
+                    "folder",
                     (NODE_STRING, {
-                        let directory = PyDict::new(py);
-                        directory.set_item("default", "./input")?;
-                        directory.set_item("tooltip", "Scan directory path")?;
-                        directory
-                    }),
-                )?;
-
-                required.set_item(
-                    "recursive",
-                    (NODE_BOOLEAN, {
-                        let recursive = PyDict::new(py);
-                        recursive.set_item("default", false)?;
-                        recursive.set_item("label_on", "enabled")?;
-                        recursive.set_item("label_off", "disabled")?;
-                        recursive
+                        let folder = PyDict::new(py);
+                        folder.set_item("default", "./input")?;
+                        folder.set_item("tooltip", "Scan folder path")?;
+                        folder
                     }),
                 )?;
                 required.set_item(
@@ -183,36 +165,76 @@ impl FileScanner {
                 required.set_item(
                     "file_extension",
                     (NODE_STRING, {
-                        let directory = PyDict::new(py);
-                        directory.set_item("default", "txt")?;
-                        directory.set_item("tooltip", "Filter file extensions")?;
-                        directory
+                        let file_extension = PyDict::new(py);
+                        file_extension.set_item("default", "txt")?;
+                        file_extension.set_item("tooltip", "Filter file extensions")?;
+                        file_extension
                     }),
                 )?;
+
                 required
+            })?;
+
+            dict.set_item("optional", {
+                let optional = PyDict::new(py);
+                optional.set_item(
+                    "include_subfolders",
+                    (NODE_BOOLEAN, {
+                        let include_subfolders = PyDict::new(py);
+                        include_subfolders.set_item("default", false)?;
+                        include_subfolders.set_item("label_on", "enabled")?;
+                        include_subfolders.set_item("label_off", "disabled")?;
+                        include_subfolders
+                    }),
+                )?;
+                optional.set_item(
+                    "start_index",
+                    (NODE_INT, {
+                        let start_index = PyDict::new(py);
+                        start_index.set_item("default", 0)?;
+                        start_index.set_item("min", 0)?;
+                        start_index.set_item("step", 0)?;
+                        start_index
+                    }),
+                )?;
+                optional.set_item(
+                    "limit",
+                    (NODE_INT, {
+                        let limit = PyDict::new(py);
+                        limit.set_item("default", -1)?;
+                        limit.set_item("min", -1)?;
+                        limit.set_item("step", 1)?;
+                        limit
+                    }),
+                )?;
+
+                optional
             })?;
             Ok(dict.into())
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(name = "execute")]
     fn execute(
         &mut self,
         py: Python,
-        directory: String,
-        file_extension: String,
-        recursive: bool,
+        folder: String,
         encoding: String,
+        file_extension: String,
+        include_subfolders: bool,
+        start_index: usize,
+        limit: i32,
     ) -> PyResult<(Vec<String>, Vec<String>)> {
         self.file_extension = file_extension;
 
-        let results = self.scan_files(&directory, recursive, &encoding);
+        let results = self.scan_files(&folder, &encoding, include_subfolders, start_index, limit);
 
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("scan files failed, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("FileScanner error, {e}");
+                if let Err(e) = self.send_error(py, "FileScanner".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),
@@ -230,21 +252,30 @@ impl FileScanner {
     /// 主扫描方法
     fn scan_files(
         &self,
-        directory: &str,
-        recursive: bool,
+        folder: &str,
         encoding: &str,
+        include_subfolders: bool,
+        start_index: usize,
+        limit: i32,
     ) -> Result<(Vec<String>, Vec<String>), Error> {
-        let path = Path::new(directory);
+        let path = Path::new(folder);
         if !path.is_dir() {
-            return Err(Error::InvalidDirectory(directory.to_string()));
+            return Err(Error::InvalidDirectory(folder.to_string()));
         }
 
         // 获取文件路径列表
-        let file_paths = if recursive {
+        let mut file_paths = if include_subfolders {
             self.recursive_scan(path)?
         } else {
             self.single_scan(path)?
         };
+        let end_index = if limit <= 0 {
+            file_paths.len()
+        } else {
+            limit as usize
+        }
+        .min(file_paths.len());
+        file_paths = file_paths[start_index..end_index].to_vec();
 
         // 读取文件内容
         let mut contents = Vec::with_capacity(file_paths.len());

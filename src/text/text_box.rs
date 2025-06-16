@@ -10,12 +10,12 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_TEXT,
+    core::category::CATEGORY_TEXT,
+    error::Error,
+    wrapper::comfyui::{
         types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
 /// 文本框
@@ -28,12 +28,6 @@ impl PromptServer for TextBox {}
 impl TextBox {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -57,7 +51,8 @@ impl TextBox {
                     "strip_newlines",
                     (NODE_BOOLEAN, {
                         let strip_newlines = PyDict::new(py);
-                        strip_newlines.set_item("default", true)?;
+                        strip_newlines.set_item("default", false)?;
+                        strip_newlines.set_item("tooltip", "Parsing line breaks")?;
                         strip_newlines
                     }),
                 )?;
@@ -112,8 +107,8 @@ impl TextBox {
         match result {
             Ok(v) => Ok((v,)),
             Err(e) => {
-                error!("string processing failed failed, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("TextBox error, {e}");
+                if let Err(e) = self.send_error(py, "TextBox".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),

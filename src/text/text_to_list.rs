@@ -6,10 +6,12 @@ use pyo3::{
     Bound, Py, PyResult, Python,
 };
 
-use crate::core::{
-    category::CATEGORY_TEXT,
-    types::{NODE_INT, NODE_STRING},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_TEXT,
+    wrapper::comfyui::{
+        types::{NODE_INT, NODE_STRING},
+        PromptServer,
+    },
 };
 
 /// 文本转列表
@@ -22,12 +24,6 @@ impl PromptServer for TextToList {}
 impl TextToList {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -85,7 +81,6 @@ impl TextToList {
                         let start_index = PyDict::new(py);
                         start_index.set_item("default", 0)?;
                         start_index.set_item("min", 0)?;
-                        start_index.set_item("max", 1000000)?;
                         start_index.set_item("step", 1)?;
                         start_index
                     }),
@@ -93,12 +88,11 @@ impl TextToList {
                 required.set_item(
                     "limit",
                     (NODE_INT, {
-                        let start_index = PyDict::new(py);
-                        start_index.set_item("default", -1)?;
-                        start_index.set_item("min", -1)?;
-                        start_index.set_item("max", 1000000)?;
-                        start_index.set_item("step", 1)?;
-                        start_index
+                        let limit = PyDict::new(py);
+                        limit.set_item("default", -1)?;
+                        limit.set_item("min", -1)?;
+                        limit.set_item("step", 1)?;
+                        limit
                     }),
                 )?;
                 required

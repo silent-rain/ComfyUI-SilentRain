@@ -6,10 +6,12 @@ use pyo3::{
     Bound, Py, PyAny, PyResult, Python,
 };
 
-use crate::core::{
-    category::CATEGORY_LIST,
-    types::{any_type, NODE_INT},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_LIST,
+    wrapper::comfyui::{
+        types::{any_type, NODE_INT},
+        PromptServer,
+    },
 };
 
 /// 列表计数
@@ -22,12 +24,6 @@ impl PromptServer for ListCount {}
 impl ListCount {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -77,11 +73,11 @@ impl ListCount {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any",
+                    "list",
                     (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required
@@ -91,8 +87,8 @@ impl ListCount {
     }
 
     #[pyo3(name = "execute")]
-    fn execute(&mut self, any: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
-        let total = any.len();
+    fn execute(&mut self, list: Vec<Bound<'_, PyAny>>) -> PyResult<(usize,)> {
+        let total = list.len();
 
         Ok((total,))
     }

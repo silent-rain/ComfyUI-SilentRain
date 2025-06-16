@@ -1,0 +1,469 @@
+{
+  "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
+  "revision": 0,
+  "last_node_id": 44,
+  "last_link_id": 43,
+  "nodes": [
+    {
+      "id": 35,
+      "type": "LoadImage",
+      "pos": [
+        4086.3251953125,
+        268.8001403808594
+      ],
+      "size": [
+        315,
+        314
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            41,
+            42
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 36,
+      "type": "easy showAnything",
+      "pos": [
+        4846.3251953125,
+        -11.199856758117676
+      ],
+      "size": [
+        220,
+        142
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "easy showAnything",
+      "pos": [
+        5106.3251953125,
+        -1.1998564004898071
+      ],
+      "size": [
+        220,
+        142
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": 38,
+      "type": "PreviewImage",
+      "pos": [
+        4826.3251953125,
+        348.8001403808594
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 38
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 39,
+      "type": "PreviewImage",
+      "pos": [
+        5086.3251953125,
+        338.8001403808594
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 39
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 40,
+      "type": "TextToList",
+      "pos": [
+        4096.3251953125,
+        -11.199856758117676
+      ],
+      "size": [
+        280,
+        156
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            40,
+            43
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2",
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 41,
+      "type": "ListBridge",
+      "pos": [
+        4466.3251953125,
+        -11.199856758117676
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 40
+        }
+      ],
+      "outputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListBridge"
+      }
+    },
+    {
+      "id": 42,
+      "type": "ListBridge",
+      "pos": [
+        4456.3251953125,
+        358.8001403808594
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            38
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListBridge"
+      }
+    },
+    {
+      "id": 43,
+      "type": "BridgeAnything",
+      "pos": [
+        4456.3251953125,
+        458.8001403808594
+      ],
+      "size": [
+        226.79998779296875,
+        26
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "any",
+          "name": "any",
+          "type": "*",
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "label": "out",
+          "name": "out",
+          "type": "*",
+          "links": [
+            39
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BridgeAnything"
+      }
+    },
+    {
+      "id": 44,
+      "type": "BridgeAnything",
+      "pos": [
+        4466.3251953125,
+        108.80014038085938
+      ],
+      "size": [
+        226.79998779296875,
+        26
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "any",
+          "name": "any",
+          "type": "*",
+          "link": 43
+        }
+      ],
+      "outputs": [
+        {
+          "label": "out",
+          "name": "out",
+          "type": "*",
+          "links": [
+            37
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BridgeAnything"
+      }
+    }
+  ],
+  "links": [
+    [
+      36,
+      41,
+      0,
+      36,
+      0,
+      "*"
+    ],
+    [
+      37,
+      44,
+      0,
+      37,
+      0,
+      "*"
+    ],
+    [
+      38,
+      42,
+      0,
+      38,
+      0,
+      "IMAGE"
+    ],
+    [
+      39,
+      43,
+      0,
+      39,
+      0,
+      "IMAGE"
+    ],
+    [
+      40,
+      40,
+      0,
+      41,
+      0,
+      "*"
+    ],
+    [
+      41,
+      35,
+      0,
+      42,
+      0,
+      "*"
+    ],
+    [
+      42,
+      35,
+      0,
+      43,
+      0,
+      "*"
+    ],
+    [
+      43,
+      40,
+      0,
+      44,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Bridge",
+      "bounding": [
+        4076.3251953125,
+        -81.19985961914062,
+        1300,
+        700
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.083470594338842,
+      "offset": [
+        -3940.905843906426,
+        448.94286898566526
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

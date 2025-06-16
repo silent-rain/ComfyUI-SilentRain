@@ -1,4 +1,4 @@
-//! 任意索引
+//! 从任意列表索引
 
 use log::error;
 use pyo3::{
@@ -8,30 +8,24 @@ use pyo3::{
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_LIST,
+    core::category::CATEGORY_LIST,
+    error::Error,
+    wrapper::comfyui::{
         types::{any_type, NODE_INT, NODE_INT_MAX},
         PromptServer,
     },
-    error::Error,
 };
 
-/// 任意索引
+/// 从任意列表索引
 #[pyclass(subclass)]
-pub struct IndexAnything {}
+pub struct IndexFromAnyList {}
 
-impl PromptServer for IndexAnything {}
+impl PromptServer for IndexFromAnyList {}
 
 #[pymethods]
-impl IndexAnything {
+impl IndexFromAnyList {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -82,11 +76,11 @@ impl IndexAnything {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any",
+                    "list",
                     (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required.set_item(
@@ -110,17 +104,17 @@ impl IndexAnything {
     fn execute<'py>(
         &mut self,
         py: Python,
-        any: Vec<Bound<'py, PyAny>>,
+        list: Vec<Bound<'py, PyAny>>,
         index: Vec<usize>,
     ) -> PyResult<(Bound<'py, PyAny>, usize)> {
-        let total = any.len();
-        let result = self.get_list_index(any, index[0]);
+        let total = list.len();
+        let result = self.get_list_index(list, index[0]);
 
         match result {
             Ok(v) => Ok((v, total)),
             Err(e) => {
-                error!("get list index error, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("IndexFromAnyList error, {e}");
+                if let Err(e) = self.send_error(py, "IndexFromAnyList".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),
@@ -134,24 +128,24 @@ impl IndexAnything {
     }
 }
 
-impl IndexAnything {
+impl IndexFromAnyList {
     /// 获取列表指定索引的数据
     fn get_list_index<'py>(
         &self,
-        anys: Vec<Bound<'py, PyAny>>,
+        list: Vec<Bound<'py, PyAny>>,
         index: usize,
     ) -> Result<Bound<'py, PyAny>, Error> {
-        if anys.is_empty() {
+        if list.is_empty() {
             return Err(Error::InputListEmpty);
         }
 
-        if index >= anys.len() {
+        if index >= list.len() {
             return Err(Error::IndexOutOfRange(format!(
                 "The length of the list is {}",
-                anys.len()
+                list.len()
             )));
         }
-        let result = anys.get(index).ok_or(Error::GetListIndex)?.clone();
+        let result = list.get(index).ok_or(Error::GetListIndex)?.clone();
 
         Ok(result)
     }
@@ -169,7 +163,7 @@ mod tests {
     #[test]
     fn test_get_valid_index() -> anyhow::Result<()> {
         Python::with_gil(|py| {
-            let index_any = IndexAnything::new();
+            let index_any = IndexFromAnyList::new();
 
             // 创建包含Python对象的列表
             let elem1 = PyString::new(py, "1").into_any();
@@ -191,7 +185,7 @@ mod tests {
     #[test]
     fn test_index_out_of_range() {
         Python::with_gil(|py| {
-            let index_any = IndexAnything::new();
+            let index_any = IndexFromAnyList::new();
             let elem = PyString::new(py, "test").into_any();
             let anys = vec![elem];
 
@@ -209,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_empty_list() {
-        let index_any = IndexAnything::new();
+        let index_any = IndexFromAnyList::new();
         let err = index_any
             .get_list_index(vec![], 0)
             .expect_err("Should return empty list error");
@@ -220,7 +214,7 @@ mod tests {
     #[test]
     fn test_mixed_types() -> anyhow::Result<()> {
         Python::with_gil(|py| {
-            let index_any = IndexAnything::new();
+            let index_any = IndexFromAnyList::new();
 
             // 创建包含不同类型元素的列表
             let elements = vec![

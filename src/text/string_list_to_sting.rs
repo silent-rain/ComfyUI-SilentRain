@@ -6,7 +6,10 @@ use pyo3::{
     Bound, Py, PyResult, Python,
 };
 
-use crate::core::{category::CATEGORY_TEXT, types::NODE_STRING, PromptServer};
+use crate::{
+    core::category::CATEGORY_TEXT,
+    wrapper::comfyui::{types::NODE_STRING, PromptServer},
+};
 
 /// 文本转列表
 #[pyclass(subclass)]
@@ -18,12 +21,6 @@ impl PromptServer for StringListToSting {}
 impl StringListToSting {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 

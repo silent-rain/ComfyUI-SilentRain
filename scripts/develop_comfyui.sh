@@ -29,13 +29,15 @@ echo "develop ${App} to ComfyUI path ..."
 \cp -r ./${App} ${ComfyUI}/
 
 # 检查是否安装成功
-echo "print comfyui new node ..."
+echo "comfyui new node ..."
 tree ${ComfyUI}/${App}
 
-echo "print comfyui node dir list ..."
+echo -e "\n"
+
+echo "comfyui node dir list ..."
 ls -hl ${ComfyUI}/${App}
 
 # 删除解压的文件
 rm -rf ${App} ${App}-*.dist-info
 
-echo "Done"
+echo -e "\nDone"

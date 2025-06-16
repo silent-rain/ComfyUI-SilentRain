@@ -35,11 +35,21 @@ unzip ${App}-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
 echo "develop ${App} to Project path ..."
 \cp -r ./${App} ${Project}/
 
+
+echo -e "\n"
+
 # 检查是否安装成功
-echo "print comfyui new node ..."
+echo "comfyui new node ..."
 tree ${Project}/${App}
+
+
+echo -e "\n"
+
+
+echo "comfyui node dir list ..."
+ls -hl ${Project}/${App}
 
 # 删除解压的文件
 rm -rf ${App} ${App}-*.dist-info
 
-echo "Done"
+echo -e "\nDone"

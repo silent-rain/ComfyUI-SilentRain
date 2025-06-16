@@ -1,4 +1,4 @@
-//! 字符串列表
+//! 字符串列表 - EXPERIMENTAL
 //!
 //! 尚未实现前端动态添加参数量的效果, 当前需要结合js进行动态处理。
 //!
@@ -6,24 +6,44 @@
 //! - 先点击执行, 使参数生效
 //! - 编辑-刷新节点定义
 //! - 右键-刷新
+//!
+//! comfyui-kjnodes 实现方案:
+//! ComfyUI/custom_nodes/comfyui-kjnodes/web/js/jsnodes.js
 
-use log::error;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
+
+use lazy_static::lazy_static;
+use log::{error, info};
 use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
+    Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
-    core::{
-        category::CATEGORY_TEXT,
+    core::category::CATEGORY_TEXT,
+    error::Error,
+    wrapper::comfyui::{
+        node_input::InputKwargs,
         types::{any_type, NODE_INT, NODE_INT_MAX, NODE_STRING},
         PromptServer,
     },
-    error::Error,
 };
 
-static mut MAX_STRING_NUM: u64 = 2;
+static STRING_KEY: RwLock<String> = RwLock::new(String::new());
+
+// 全局 HashMap 定义
+lazy_static! {
+    static ref STRING_NUM_MAP: Arc<RwLock<HashMap<String, u64>>> = {
+        let mut map = HashMap::new();
+        // 初始化默认值
+        map.insert("default_key".to_string(), 5);
+        Arc::new(RwLock::new(map))
+    };
+}
 
 /// 字符串列表
 #[pyclass(subclass)]
@@ -35,12 +55,6 @@ impl PromptServer for StringList {}
 impl StringList {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -75,7 +89,12 @@ impl StringList {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Return a list of strings and the merged strings."
+        "Return a list of strings and the merged strings.
+        use:
+            - Click 'Execute' first to make the parameters take effect
+            - Edit - Refresh Node Definition
+            - Right click - Refresh
+        "
     }
 
     // 实验性的, 可选
@@ -87,7 +106,7 @@ impl StringList {
 
     #[classattr]
     #[pyo3(name = "FUNCTION")]
-    const FUNCTION: &'static str = "execute";
+    const FUNCTION: &'static str = "notify";
 
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
@@ -100,7 +119,7 @@ impl StringList {
                     "string_num",
                     (NODE_INT, {
                         let index = PyDict::new(py);
-                        index.set_item("default", unsafe { MAX_STRING_NUM })?;
+                        index.set_item("default", 5)?;
                         index.set_item("min", 2)?;
                         index.set_item("max", NODE_INT_MAX)?;
                         index.set_item("step", 1)?;
@@ -131,8 +150,13 @@ impl StringList {
                     }),
                 )?;
 
+                let string_key = Self::get_string_key().unwrap_or("default_key".to_string());
+                let max_string_num = Self::get_num_map(&string_key)
+                    .unwrap_or(Some(5))
+                    .unwrap_or(5);
+
                 // 动态输入
-                for i in 1..=unsafe { MAX_STRING_NUM } {
+                for i in 1..=max_string_num {
                     optional.set_item(
                         format!("string_{}", i),
                         (NODE_STRING, {
@@ -147,19 +171,17 @@ impl StringList {
                 optional
             })?;
 
-            // dict.set_item("hidden", {
-            //     let hidden = PyDict::new(py);
-            //     hidden.set_item("prompt", "PROMPT")?;
-            //     hidden.set_item("dynprompt", "DYNPROMPT")?;
-            //     hidden.set_item("extra_pnginfo", "EXTRA_PNGINFO")?;
-            //     // UNIQUE_ID is the unique identifier of the node, and matches the id property of the node on the client side.
-            //     // It is commonly used in client-server communications (see messages).
-            //     hidden.set_item("node_id", "UNIQUE_ID")?;
-            //     hidden.set_item("unique_id", "UNIQUE_ID")?;
-            //     hidden.set_item("my_unique_id", "UNIQUE_ID")?;
+            dict.set_item("hidden", {
+                let hidden = PyDict::new(py);
+                hidden.set_item("prompt", "PROMPT")?;
+                hidden.set_item("dynprompt", "DYNPROMPT")?;
+                hidden.set_item("extra_pnginfo", "EXTRA_PNGINFO")?;
+                // UNIQUE_ID is the unique identifier of the node, and matches the id property of the node on the client side.
+                // It is commonly used in client-server communications (see messages).
+                hidden.set_item("unique_id", "UNIQUE_ID")?;
 
-            //     hidden
-            // })?;
+                hidden
+            })?;
 
             Ok(dict.into())
         })
@@ -174,18 +196,42 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
-        error!(
-            "execute: {:?}  ==== {:?} ==== {:?} ==== {:?}",
-            string_num, delimiter, optional_string_list, kwargs
-        );
-
-        let result = self.list_to_strings(string_num, delimiter, optional_string_list, kwargs);
+        let result = self.list_to_strings(string_num, delimiter, optional_string_list, &kwargs);
 
         match result {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("list to strings failed, {e}");
-                if let Err(e) = self.send_error(py, "SCAN_FILES_ERROR".to_string(), e.to_string()) {
+                error!("StringList error, {e}");
+                if let Err(e) = self.send_error(py, "StringList".to_string(), e.to_string()) {
+                    error!("send error failed, {e}");
+                    return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                        e.to_string(),
+                    ));
+                };
+                Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    e.to_string(),
+                ))
+            }
+        }
+    }
+
+    /// 执行逻辑并通知前端更新 UI
+    #[pyo3(name = "notify", signature = (string_num, delimiter, optional_string_list=None, **kwargs))]
+    fn notify<'py>(
+        &mut self,
+        py: Python<'py>,
+        string_num: u64,
+        delimiter: String,
+        optional_string_list: Option<Bound<'py, PyAny>>,
+        kwargs: Option<Bound<'py, PyDict>>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let result = self.list_to_strings(string_num, delimiter, optional_string_list, &kwargs);
+
+        match result {
+            Ok(v) => Ok(self.node_result(py, v)?),
+            Err(e) => {
+                error!("StringList error, {e}");
+                if let Err(e) = self.send_error(py, "StringList".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                         e.to_string(),
@@ -211,14 +257,11 @@ impl StringList {
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
-        error!(
-            "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
-            string_num, delimiter, optional_string_list, kwargs
-        );
-
-        // 更新可变参数
-        unsafe {
-            MAX_STRING_NUM = string_num;
+        if false {
+            error!(
+                "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
+                string_num, delimiter, optional_string_list, kwargs
+            );
         }
 
         // 打印 kwargs
@@ -245,8 +288,33 @@ impl StringList {
         string_num: u64,
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
-        kwargs: Option<Bound<'_, PyDict>>,
+        kwargs: &Option<Bound<'_, PyDict>>,
     ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
+        // 添加输入字符串个数的缓存
+        if let Some(kwargs) = kwargs {
+            let kwargs = InputKwargs::new(kwargs);
+            let extra_pnginfo = kwargs.extra_pnginfo()?;
+            let unique_id = kwargs.unique_id()?;
+
+            info!("workflow_id: {:#?}", extra_pnginfo.workflow.id);
+            info!("unique_id: {:#?}", unique_id);
+
+            let string_num_key = format!("{}_{}", extra_pnginfo.workflow.id, unique_id);
+            Self::update_string_key(string_num_key.clone())?;
+            Self::add_num_map(string_num_key, string_num)?;
+
+            // 打印实例地址的几种方式
+            info!("对象地址: {:p}", std::ptr::addr_of!(self)); // 引用变量本身的地址
+            info!("对象地址: {:p}", self); // 引用指向的对象的地址
+            info!("对象地址: {:p}", self as *const _); // 引用指向的对象的地址
+            info!("对象地址: 0x{:x}", self as *const _ as usize); // 引用指向的对象的地址
+        }
+
+        error!(
+            "string_num: {:#?}, delimiter: {:#?}, optional_string_list: {:#?}",
+            string_num, delimiter, optional_string_list
+        );
+
         let mut new_strings: Vec<String> = Vec::new();
 
         if let Some(optional_string_list) = optional_string_list {
@@ -286,5 +354,74 @@ impl StringList {
         let strings = new_strings.join(&delimiter);
 
         Ok((new_strings.clone(), new_strings, strings, total))
+    }
+}
+
+impl StringList {
+    /// 获取全局的字符串Key
+    fn get_string_key() -> Result<String, Error> {
+        let key = STRING_KEY
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        Ok(key.clone())
+    }
+
+    /// 更新全局的字符串Key
+    fn update_string_key(value: String) -> Result<(), Error> {
+        let mut key = STRING_KEY
+            .write()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        *key = value;
+        Ok(())
+    }
+
+    /// 向全局 HashMap 添加键值对
+    fn add_num_map(key: String, value: u64) -> Result<(), Error> {
+        let mut map = STRING_NUM_MAP
+            .write()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        map.insert(key, value);
+
+        Ok(())
+    }
+
+    /// 从全局 HashMap 获取值
+    fn get_num_map(key: &str) -> Result<Option<u64>, Error> {
+        let map = STRING_NUM_MAP
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        Ok(map.get(key).cloned())
+    }
+
+    /// 打印全局 HashMap 内容
+    fn _print_num_map() -> Result<(), Error> {
+        let map = STRING_NUM_MAP
+            .read()
+            .map_err(|e| Error::LockError(e.to_string()))?;
+        info!("全局 HashMap 内容:");
+        for (key, value) in map.iter() {
+            info!("  {}: {}", key, value);
+        }
+
+        Ok(())
+    }
+}
+
+impl StringList {
+    /// 组合为前端需要的数据结构
+    fn node_result<'py, T>(&self, py: Python<'py>, result: T) -> PyResult<Bound<'py, PyDict>>
+    where
+        T: IntoPyObject<'py>,
+    {
+        let input_dict = PyDict::new(py);
+        input_dict.set_item("string_num", vec![5])?;
+
+        let dict = PyDict::new(py);
+        dict.set_item("ui", input_dict)?;
+        dict.set_item("result", result)?;
+
+        error!("dict: {:#?},", dict,);
+
+        Ok(dict)
     }
 }

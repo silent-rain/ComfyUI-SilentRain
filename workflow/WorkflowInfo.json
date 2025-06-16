@@ -1,0 +1,253 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "revision": 0,
+  "last_node_id": 12,
+  "last_link_id": 16,
+  "nodes": [
+    {
+      "id": 4,
+      "type": "TextBox",
+      "pos": [
+        4230,
+        410
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextBox"
+      },
+      "widgets_values": [
+        "222",
+        false
+      ]
+    },
+    {
+      "id": 7,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        4950,
+        490
+      ],
+      "size": [
+        210,
+        330
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "1156ff983b635ef506e7b79659126837a1e9d275",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 8,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        5200,
+        490
+      ],
+      "size": [
+        240,
+        330
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "1156ff983b635ef506e7b79659126837a1e9d275",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 9,
+      "type": "ShowText|pysssss",
+      "pos": [
+        4950,
+        330
+      ],
+      "size": [
+        280,
+        88
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "00000000-0000-0000-0000-000000000000"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "WorkflowInfo",
+      "pos": [
+        4710,
+        410
+      ],
+      "size": [
+        142.33651733398438,
+        66
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "any",
+          "name": "any",
+          "type": "*",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "label": "workflow_id",
+          "name": "workflow_id",
+          "type": "STRING",
+          "links": [
+            12
+          ]
+        },
+        {
+          "label": "workflow",
+          "name": "workflow",
+          "type": "*",
+          "links": [
+            13
+          ]
+        },
+        {
+          "label": "pre_node",
+          "name": "pre_node",
+          "type": "*",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "WorkflowInfo"
+      }
+    }
+  ],
+  "links": [
+    [
+      12,
+      11,
+      0,
+      9,
+      0,
+      "STRING"
+    ],
+    [
+      13,
+      11,
+      1,
+      7,
+      0,
+      "*"
+    ],
+    [
+      14,
+      11,
+      2,
+      8,
+      0,
+      "*"
+    ],
+    [
+      16,
+      4,
+      0,
+      11,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8954302432552445,
+      "offset": [
+        -4019.172379522054,
+        124.68588978991389
+      ]
+    },
+    "frontendVersion": "1.21.7"
+  },
+  "version": 0.4
+}

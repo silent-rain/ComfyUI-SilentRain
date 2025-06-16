@@ -5,15 +5,9 @@ import comfyui_silentrain
 # 函数导入
 from comfyui_silentrain import sum_as_string
 
-# ComfyUI 注册节点导入
-from comfyui_silentrain import NODE_CLASS_MAPPINGS
-from comfyui_silentrain import NODE_DISPLAY_NAME_MAPPINGS
-
 
 # 子模导入, 当前仅支持该方式导入
-from comfyui_silentrain import text
-from comfyui_silentrain import logic
-from comfyui_silentrain import utils
+from comfyui_silentrain import core
 
 
 print("comfyui_silentrain:")
@@ -25,17 +19,8 @@ print(sum_as_string(1, 2))
 
 
 print("\n\n")
-print("NODE_DISPLAY_NAME_MAPPINGS:", NODE_DISPLAY_NAME_MAPPINGS)
-print("NODE_CLASS_MAPPINGS:", NODE_CLASS_MAPPINGS)
-
-
-print("\n\n")
-print("FileScanner: ", dir(text.FileScanner))
-print("IndexAny: ", dir(logic.IndexAny))
-
-print("\n\n")
-print("AlwaysEqualProxy: ", dir(utils.AlwaysEqualProxy))
-any_type = utils.AlwaysEqualProxy
+print("AlwaysEqualProxy: ", dir(core.AlwaysEqualProxy))
+any_type = core.AlwaysEqualProxy
 print(type(any_type),any_type)
 # print(type(any_type.__str__()),any_type.__str__())
 # print(type(any_type.__repr__()),any_type.__repr__())

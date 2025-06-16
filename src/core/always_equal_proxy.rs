@@ -1,13 +1,25 @@
+//! 任意类型代理
+//!
+//! 将以下代码用rust实现
+//! ```python
+//! class AlwaysEqualProxy(str):
+//!         def __eq__(self, _):
+//!             return True
+//!         def __ne__(self, _):
+//!             return False
+//! ```
+//!
+//! 注意: 在python端, 使用json.dumps()会报错
+
 use std::{
     collections::hash_map::DefaultHasher,
-    ffi::CString,
     fmt,
     hash::{Hash, Hasher},
     ops::Deref,
 };
 
 use pyo3::{
-    pyclass, pyfunction, pymethods,
+    pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyString},
     Bound, Py, PyAny, PyResult, Python,
 };
@@ -107,30 +119,6 @@ impl From<&str> for AlwaysEqualProxy {
     fn from(s: &str) -> Self {
         AlwaysEqualProxy(s.to_string())
     }
-}
-
-/// 任意类型
-// #[pyfunction]
-// pub fn any_type() -> String {
-//     "*".to_string()
-// }
-#[pyfunction]
-pub fn any_type(py: Python) -> PyResult<Bound<'_, pyo3::PyAny>> {
-    let code = CString::new(
-        r#"
-class AlwaysEqualProxy(str):
-    def __eq__(self, _):
-        return True
-    def __ne__(self, _):
-        return False
-
-any_type = AlwaysEqualProxy('*')
-        "#,
-    )
-    .expect("Failed to create CString");
-
-    py.run(&code, None, None)?;
-    py.eval(&CString::new("any_type").unwrap(), None, None)
 }
 
 #[cfg(test)]

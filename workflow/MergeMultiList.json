@@ -1,0 +1,496 @@
+{
+  "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
+  "revision": 0,
+  "last_node_id": 104,
+  "last_link_id": 110,
+  "nodes": [
+    {
+      "id": 73,
+      "type": "MergeMultiList",
+      "pos": [
+        5230,
+        950
+      ],
+      "size": [
+        156.59628295898438,
+        46
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list_1",
+          "name": "list_1",
+          "type": "*",
+          "link": 104
+        },
+        {
+          "label": "list_2",
+          "name": "list_2",
+          "type": "*",
+          "link": 106
+        }
+      ],
+      "outputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            93,
+            94,
+            108
+          ]
+        },
+        {
+          "label": "count",
+          "name": "count",
+          "type": "INT",
+          "links": [
+            91
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MergeMultiList"
+      }
+    },
+    {
+      "id": 74,
+      "type": "TextToList",
+      "pos": [
+        4560,
+        760
+      ],
+      "size": [
+        330,
+        190
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            103
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2\n3\n4",
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 75,
+      "type": "TextToList",
+      "pos": [
+        4560,
+        1010
+      ],
+      "size": [
+        330,
+        190
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            105
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "5\n6\n7",
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 78,
+      "type": "easy showAnything",
+      "pos": [
+        5450,
+        1100
+      ],
+      "size": [
+        140,
+        76.00006103515625
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 91
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "7"
+      ]
+    },
+    {
+      "id": 79,
+      "type": "easy showAnything",
+      "pos": [
+        5080,
+        1120
+      ],
+      "size": [
+        140,
+        376.00006103515625
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 93
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ]
+    },
+    {
+      "id": 80,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        5250,
+        1130
+      ],
+      "size": [
+        161.23788452148438,
+        76.00006103515625
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 94
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "0820a7560bcc405ef6d0a7c5c53a83cc02ae7db2",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 88,
+      "type": "ListToBatch",
+      "pos": [
+        4970,
+        820
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 103
+        }
+      ],
+      "outputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "links": [
+            104
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListToBatch"
+      }
+    },
+    {
+      "id": 89,
+      "type": "ListToBatch",
+      "pos": [
+        4970,
+        950
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 105
+        }
+      ],
+      "outputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "links": [
+            106
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListToBatch"
+      }
+    },
+    {
+      "id": 102,
+      "type": "ListToBatch",
+      "pos": [
+        5650,
+        960
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 108
+        }
+      ],
+      "outputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "links": [
+            109
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListToBatch"
+      }
+    },
+    {
+      "id": 103,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        5850,
+        960
+      ],
+      "size": [
+        210,
+        160
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 109
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "0820a7560bcc405ef6d0a7c5c53a83cc02ae7db2",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    }
+  ],
+  "links": [
+    [
+      91,
+      73,
+      1,
+      78,
+      0,
+      "*"
+    ],
+    [
+      93,
+      73,
+      0,
+      79,
+      0,
+      "*"
+    ],
+    [
+      94,
+      73,
+      0,
+      80,
+      0,
+      "*"
+    ],
+    [
+      103,
+      74,
+      0,
+      88,
+      0,
+      "*"
+    ],
+    [
+      104,
+      88,
+      0,
+      73,
+      0,
+      "*"
+    ],
+    [
+      105,
+      75,
+      0,
+      89,
+      0,
+      "*"
+    ],
+    [
+      106,
+      89,
+      0,
+      73,
+      1,
+      "*"
+    ],
+    [
+      108,
+      73,
+      0,
+      102,
+      0,
+      "*"
+    ],
+    [
+      109,
+      102,
+      0,
+      103,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.895430243255247,
+      "offset": [
+        -4404.73319402421,
+        -586.9802833325725
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

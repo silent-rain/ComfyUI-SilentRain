@@ -1,0 +1,569 @@
+{
+  "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
+  "revision": 0,
+  "last_node_id": 55,
+  "last_link_id": 52,
+  "nodes": [
+    {
+      "id": 45,
+      "type": "easy showAnything",
+      "pos": [
+        5190.32373046875,
+        201.20469665527344
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 44
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "22,1,2"
+      ]
+    },
+    {
+      "id": 46,
+      "type": "StringList",
+      "pos": [
+        4710.32373046875,
+        191.20469665527344
+      ],
+      "size": [
+        443.4000244140625,
+        286
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "optional_string_list",
+          "name": "optional_string_list",
+          "shape": 7,
+          "type": "*",
+          "link": 45
+        }
+      ],
+      "outputs": [
+        {
+          "label": "string_list",
+          "name": "string_list",
+          "type": "STRING",
+          "links": [
+            48,
+            51
+          ]
+        },
+        {
+          "label": "prompt_strings",
+          "name": "prompt_strings",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            49,
+            52
+          ]
+        },
+        {
+          "label": "strings",
+          "name": "strings",
+          "type": "STRING",
+          "links": [
+            44
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringList"
+      },
+      "widgets_values": [
+        6,
+        ",",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": 47,
+      "type": "easy showAnything",
+      "pos": [
+        5210.32373046875,
+        721.2047119140625
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "3"
+      ]
+    },
+    {
+      "id": 48,
+      "type": "easy showAnything",
+      "pos": [
+        5210.32373046875,
+        561.2047119140625
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 47
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "3"
+      ]
+    },
+    {
+      "id": 49,
+      "type": "BatchCount+",
+      "pos": [
+        4940.32373046875,
+        561.2047119140625
+      ],
+      "size": [
+        210,
+        26
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "批次",
+          "name": "batch",
+          "type": "*",
+          "link": 48
+        }
+      ],
+      "outputs": [
+        {
+          "label": "整数",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            47
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui_essentials",
+        "ver": "1.1.0",
+        "Node name for S&R": "BatchCount+"
+      }
+    },
+    {
+      "id": 50,
+      "type": "BatchCount+",
+      "pos": [
+        4400.32373046875,
+        581.2047119140625
+      ],
+      "size": [
+        210,
+        26
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "批次",
+          "name": "batch",
+          "type": "*",
+          "link": 49
+        }
+      ],
+      "outputs": [
+        {
+          "label": "整数",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            50
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui_essentials",
+        "ver": "1.1.0",
+        "Node name for S&R": "BatchCount+"
+      }
+    },
+    {
+      "id": 51,
+      "type": "easy showAnything",
+      "pos": [
+        4680.32373046875,
+        581.2047119140625
+      ],
+      "size": [
+        210,
+        196
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 50
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "id": 52,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        5190.32373046875,
+        341.2047119140625
+      ],
+      "size": [
+        210,
+        150
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 51
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "0820a7560bcc405ef6d0a7c5c53a83cc02ae7db2",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 53,
+      "type": "ListCount",
+      "pos": [
+        4950.32373046875,
+        711.2047119140625
+      ],
+      "size": [
+        180,
+        46
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 52
+        }
+      ],
+      "outputs": [
+        {
+          "label": "int",
+          "name": "int",
+          "type": "INT",
+          "links": [
+            46
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListCount"
+      }
+    },
+    {
+      "id": 54,
+      "type": "StringList",
+      "pos": [
+        4380.32373046875,
+        201.20469665527344
+      ],
+      "size": [
+        295.6000061035156,
+        286
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "optional_string_list",
+          "name": "optional_string_list",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "string_list",
+          "name": "string_list",
+          "type": "STRING",
+          "links": [
+            45
+          ]
+        },
+        {
+          "label": "prompt_strings",
+          "name": "prompt_strings",
+          "shape": 6,
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "label": "strings",
+          "name": "strings",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringList"
+      },
+      "widgets_values": [
+        3,
+        ",",
+        "22",
+        ""
+      ]
+    },
+    {
+      "id": 55,
+      "type": "Note",
+      "pos": [
+        4400.32373046875,
+        691.2047119140625
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "使用：\n- 先点击执行, 使参数生效\n- 编辑-刷新节点定义\n- 右键-刷新"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      44,
+      46,
+      2,
+      45,
+      0,
+      "*"
+    ],
+    [
+      45,
+      54,
+      0,
+      46,
+      0,
+      "*"
+    ],
+    [
+      46,
+      53,
+      0,
+      47,
+      0,
+      "*"
+    ],
+    [
+      47,
+      49,
+      0,
+      48,
+      0,
+      "*"
+    ],
+    [
+      48,
+      46,
+      0,
+      49,
+      0,
+      "*"
+    ],
+    [
+      49,
+      46,
+      1,
+      50,
+      0,
+      "*"
+    ],
+    [
+      50,
+      50,
+      0,
+      51,
+      0,
+      "*"
+    ],
+    [
+      51,
+      46,
+      0,
+      52,
+      0,
+      "*"
+    ],
+    [
+      52,
+      46,
+      1,
+      53,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "字符串转列表 - 动态可选参数 - 实验性",
+      "bounding": [
+        4370.32373046875,
+        121.20469665527344,
+        1100,
+        800
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.1918176537727265,
+      "offset": [
+        -4200.198155822117,
+        56.43689046592151
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

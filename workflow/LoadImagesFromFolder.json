@@ -1,0 +1,531 @@
+{
+  "id": "bd88ed1a-2717-4d2b-8fb6-121477ddc5b0",
+  "revision": 0,
+  "last_node_id": 20,
+  "last_link_id": 39,
+  "nodes": [
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [
+        2354.8740234375,
+        -1144.7193603515625
+      ],
+      "size": [
+        210,
+        258
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 25
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.38",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "MaskPreview+",
+      "pos": [
+        2360,
+        -810
+      ],
+      "size": [
+        210,
+        290
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "遮罩",
+          "name": "mask",
+          "type": "MASK",
+          "link": 26
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfyui_essentials",
+        "ver": "1.1.0",
+        "Node name for S&R": "MaskPreview+"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 14,
+      "type": "LoadImagesFromFolder",
+      "pos": [
+        1990,
+        -830
+      ],
+      "size": [
+        278.8580017089844,
+        210
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "shape": 6,
+          "type": "IMAGE",
+          "links": [
+            25
+          ]
+        },
+        {
+          "label": "masks",
+          "name": "masks",
+          "shape": 6,
+          "type": "MASK",
+          "links": [
+            26
+          ]
+        },
+        {
+          "label": "filenames",
+          "name": "filenames",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            32,
+            35
+          ]
+        },
+        {
+          "label": "filepaths",
+          "name": "filepaths",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            33,
+            36
+          ]
+        },
+        {
+          "label": "count",
+          "name": "count",
+          "type": "INT",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImagesFromFolder"
+      },
+      "widgets_values": [
+        "/home/one/code/comfyui-silentrain/demo",
+        false,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 15,
+      "type": "ShowText|pysssss",
+      "pos": [
+        2610,
+        -740
+      ],
+      "size": [
+        140,
+        76
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "ComfyUI_temp_ppycx_00001_"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "ShowText|pysssss",
+      "pos": [
+        2870,
+        -750
+      ],
+      "size": [
+        140,
+        76
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "/home/one/code/comfyui-silentrain/demo"
+      ]
+    },
+    {
+      "id": 20,
+      "type": "easy showAnything",
+      "pos": [
+        2684.435791015625,
+        -267.0010681152344
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 39
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "demo\nxxx"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "TextBox",
+      "pos": [
+        2360,
+        -450
+      ],
+      "size": [
+        300,
+        112
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            37,
+            39
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextBox"
+      },
+      "widgets_values": [
+        "demo\nxxx",
+        false
+      ]
+    },
+    {
+      "id": 18,
+      "type": "SaveText",
+      "pos": [
+        2730,
+        -600
+      ],
+      "size": [
+        270,
+        202
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "STRING",
+          "widget": {
+            "name": "captions"
+          },
+          "link": 37
+        },
+        {
+          "label": "filepath",
+          "name": "filepath",
+          "type": "STRING",
+          "widget": {
+            "name": "filepath"
+          },
+          "link": 36
+        },
+        {
+          "label": "filename",
+          "name": "filename",
+          "type": "STRING",
+          "widget": {
+            "name": "filename"
+          },
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "STRING",
+          "links": [
+            38
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveText"
+      },
+      "widgets_values": [
+        "output",
+        "output",
+        "file",
+        "",
+        "",
+        ".txt",
+        "Overwrite"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "easy showAnything",
+      "pos": [
+        3090,
+        -760
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "easy showAnything",
+      "pos": [
+        3100,
+        -580
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 38
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "7ef0612ce7552968146ed41f5863a1638bf33412",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "demo\nxxx"
+      ]
+    }
+  ],
+  "links": [
+    [
+      25,
+      14,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      26,
+      14,
+      1,
+      9,
+      0,
+      "MASK"
+    ],
+    [
+      31,
+      14,
+      4,
+      3,
+      0,
+      "*"
+    ],
+    [
+      32,
+      14,
+      2,
+      15,
+      0,
+      "STRING"
+    ],
+    [
+      33,
+      14,
+      3,
+      16,
+      0,
+      "STRING"
+    ],
+    [
+      35,
+      14,
+      2,
+      18,
+      2,
+      "STRING"
+    ],
+    [
+      36,
+      14,
+      3,
+      18,
+      1,
+      "STRING"
+    ],
+    [
+      37,
+      17,
+      0,
+      18,
+      0,
+      "STRING"
+    ],
+    [
+      38,
+      18,
+      0,
+      19,
+      0,
+      "*"
+    ],
+    [
+      39,
+      17,
+      0,
+      20,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.1,
+      "offset": [
+        -1864.9620257212976,
+        1209.1898762597575
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

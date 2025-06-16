@@ -1,0 +1,736 @@
+{
+  "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
+  "revision": 0,
+  "last_node_id": 71,
+  "last_link_id": 68,
+  "nodes": [
+    {
+      "id": 56,
+      "type": "LoadImage",
+      "pos": [
+        4812.33056640625,
+        293.6368408203125
+      ],
+      "size": [
+        210,
+        326
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            60
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "ComfyUI_temp_yzxoi_00001_.png",
+        "image"
+      ]
+    },
+    {
+      "id": 57,
+      "type": "ShowText|pysssss",
+      "pos": [
+        4922.33056640625,
+        843.6368408203125
+      ],
+      "size": [
+        210,
+        126
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "文本",
+          "name": "text",
+          "type": "STRING",
+          "link": 55
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "9f7b3215e6af317603056a9a1666bf6e83e28835",
+        "Node name for S&R": "ShowText|pysssss"
+      }
+    },
+    {
+      "id": 58,
+      "type": "TextToList",
+      "pos": [
+        4592.33056640625,
+        743.6368408203125
+      ],
+      "size": [
+        280,
+        170
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            59
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2",
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 59,
+      "type": "BatchToList",
+      "pos": [
+        5162.33056640625,
+        733.6368408203125
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "link": 56
+        }
+      ],
+      "outputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            57
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BatchToList"
+      }
+    },
+    {
+      "id": 60,
+      "type": "ShowText|pysssss",
+      "pos": [
+        5172.33056640625,
+        843.6368408203125
+      ],
+      "size": [
+        210,
+        126
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "文本",
+          "name": "text",
+          "type": "STRING",
+          "link": 57
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "9f7b3215e6af317603056a9a1666bf6e83e28835",
+        "Node name for S&R": "ShowText|pysssss"
+      }
+    },
+    {
+      "id": 61,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        5832.33056640625,
+        733.6368408203125
+      ],
+      "size": [
+        270,
+        220
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 58
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-Crystools",
+        "ver": "0820a7560bcc405ef6d0a7c5c53a83cc02ae7db2",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 62,
+      "type": "ListToBatch",
+      "pos": [
+        4922.33056640625,
+        733.6368408203125
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 59
+        }
+      ],
+      "outputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "links": [
+            55,
+            56
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListToBatch"
+      }
+    },
+    {
+      "id": 63,
+      "type": "ImageBatch",
+      "pos": [
+        5052.33056640625,
+        283.6368408203125
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像1",
+          "name": "image1",
+          "type": "IMAGE",
+          "link": 60
+        },
+        {
+          "label": "图像2",
+          "name": "image2",
+          "type": "IMAGE",
+          "link": 61
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            58,
+            62,
+            64
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "ImageBatch"
+      }
+    },
+    {
+      "id": 64,
+      "type": "PreviewImage",
+      "pos": [
+        5052.33056640625,
+        373.6368408203125
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 62
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 65,
+      "type": "PreviewImage",
+      "pos": [
+        5292.33056640625,
+        373.6368408203125
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 63
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 66,
+      "type": "BatchToList",
+      "pos": [
+        5302.33056640625,
+        293.6368408203125
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "link": 64
+        }
+      ],
+      "outputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            63,
+            67
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BatchToList"
+      }
+    },
+    {
+      "id": 67,
+      "type": "PreviewImage",
+      "pos": [
+        5812.33056640625,
+        423.6368408203125
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 65
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 68,
+      "type": "PreviewImage",
+      "pos": [
+        5532.33056640625,
+        373.6368408203125
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 66
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 69,
+      "type": "ListToBatch",
+      "pos": [
+        5542.33056640625,
+        293.6368408203125
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "list",
+          "name": "list",
+          "type": "*",
+          "link": 67
+        }
+      ],
+      "outputs": [
+        {
+          "label": "batch",
+          "name": "batch",
+          "type": "*",
+          "links": [
+            66,
+            68
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ListToBatch"
+      }
+    },
+    {
+      "id": 70,
+      "type": "ImageFromBatch",
+      "pos": [
+        5772.33056640625,
+        283.6368408203125
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 68
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            65
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "ImageFromBatch"
+      },
+      "widgets_values": [
+        0,
+        1
+      ]
+    },
+    {
+      "id": 71,
+      "type": "LoadImage",
+      "pos": [
+        4582.33056640625,
+        293.6368408203125
+      ],
+      "size": [
+        210,
+        326
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            61
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    }
+  ],
+  "links": [
+    [
+      55,
+      62,
+      0,
+      57,
+      0,
+      "STRING"
+    ],
+    [
+      56,
+      62,
+      0,
+      59,
+      0,
+      "*"
+    ],
+    [
+      57,
+      59,
+      0,
+      60,
+      0,
+      "STRING"
+    ],
+    [
+      58,
+      63,
+      0,
+      61,
+      0,
+      "*"
+    ],
+    [
+      59,
+      58,
+      0,
+      62,
+      0,
+      "*"
+    ],
+    [
+      60,
+      56,
+      0,
+      63,
+      0,
+      "IMAGE"
+    ],
+    [
+      61,
+      71,
+      0,
+      63,
+      1,
+      "IMAGE"
+    ],
+    [
+      62,
+      63,
+      0,
+      64,
+      0,
+      "IMAGE"
+    ],
+    [
+      63,
+      66,
+      0,
+      65,
+      0,
+      "IMAGE"
+    ],
+    [
+      64,
+      63,
+      0,
+      66,
+      0,
+      "*"
+    ],
+    [
+      65,
+      70,
+      0,
+      67,
+      0,
+      "IMAGE"
+    ],
+    [
+      66,
+      69,
+      0,
+      68,
+      0,
+      "IMAGE"
+    ],
+    [
+      67,
+      66,
+      0,
+      69,
+      0,
+      "*"
+    ],
+    [
+      68,
+      69,
+      0,
+      70,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "List To Batch & Batch To List",
+      "bounding": [
+        4572.33056640625,
+        213.63685607910156,
+        1610,
+        760
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9849732675807658,
+      "offset": [
+        -4380.142439835413,
+        176.65800783599457
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

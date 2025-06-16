@@ -1,0 +1,528 @@
+{
+  "id": "654fea49-7b98-41a4-b1f1-66544dfb208c",
+  "revision": 0,
+  "last_node_id": 34,
+  "last_link_id": 34,
+  "nodes": [
+    {
+      "id": 24,
+      "type": "easy showAnything",
+      "pos": [
+        4726.26220703125,
+        -289.65850830078125
+      ],
+      "size": [
+        310,
+        196
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "easy showAnything",
+      "pos": [
+        4726.26220703125,
+        -29.658498764038086
+      ],
+      "size": [
+        310,
+        196
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "2"
+      ]
+    },
+    {
+      "id": 26,
+      "type": "easy showAnything",
+      "pos": [
+        4726.26220703125,
+        250.3415069580078
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "xxxxx\n\nqqqq\n\nwww\neee\n\n\nrrr\nttt"
+      ]
+    },
+    {
+      "id": 27,
+      "type": "easy showAnything",
+      "pos": [
+        5106.26220703125,
+        -279.65850830078125
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "3"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "easy showAnything",
+      "pos": [
+        5096.26220703125,
+        -19.658498764038086
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1"
+      ]
+    },
+    {
+      "id": 29,
+      "type": "StringListToSting",
+      "pos": [
+        4736.26220703125,
+        550.3414916992188
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "string_list",
+          "name": "string_list",
+          "type": "STRING",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "type": "STRING",
+          "links": [
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringListToSting"
+      },
+      "widgets_values": [
+        ","
+      ]
+    },
+    {
+      "id": 30,
+      "type": "TextToList",
+      "pos": [
+        4296.26220703125,
+        550.3414916992188
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            33
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2\n3",
+        0,
+        -1
+      ]
+    },
+    {
+      "id": 31,
+      "type": "easy showAnything",
+      "pos": [
+        5066.26220703125,
+        540.3414916992188
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 34
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "50ae13a9935d71c7bb28330cd1f71633526aebfc",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1,2,3"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "TextBox",
+      "pos": [
+        4286.26220703125,
+        250.3415069580078
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            30
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextBox"
+      },
+      "widgets_values": [
+        "xxxxx\n\nqqqq\\n\nwww\\neee\n\\n\nrrr\nttt",
+        true
+      ]
+    },
+    {
+      "id": 34,
+      "type": "TextToList",
+      "pos": [
+        4286.26220703125,
+        -29.658498764038086
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            29
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2\n3",
+        1,
+        2
+      ]
+    },
+    {
+      "id": 33,
+      "type": "TextToList",
+      "pos": [
+        4286.26220703125,
+        -289.65850830078125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            28
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1\n2\n3",
+        0,
+        -1
+      ]
+    }
+  ],
+  "links": [
+    [
+      28,
+      33,
+      0,
+      24,
+      0,
+      "*"
+    ],
+    [
+      29,
+      34,
+      0,
+      25,
+      0,
+      "*"
+    ],
+    [
+      30,
+      32,
+      0,
+      26,
+      0,
+      "*"
+    ],
+    [
+      31,
+      33,
+      1,
+      27,
+      0,
+      "*"
+    ],
+    [
+      32,
+      34,
+      1,
+      28,
+      0,
+      "*"
+    ],
+    [
+      33,
+      30,
+      0,
+      29,
+      0,
+      "STRING"
+    ],
+    [
+      34,
+      29,
+      0,
+      31,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "文本",
+      "bounding": [
+        4276.26220703125,
+        -359.65850830078125,
+        1200,
+        1200
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.0834705943388416,
+      "offset": [
+        -4168.6563462610275,
+        440.0241931960595
+      ]
+    },
+    "frontendVersion": "1.20.7"
+  },
+  "version": 0.4
+}

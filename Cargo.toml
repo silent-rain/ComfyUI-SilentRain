@@ -9,26 +9,47 @@ name = "comfyui_silentrain"
 crate-type = ["cdylib", "rlib"]
 
 
+[profile.dev]
+debug = false # 关闭调试日志, 加快构建速度
+
+
 [dependencies]
-pyo3 = { version = "0.24", features = [
+pyo3 = { version = "0.25.1", features = [
     "extension-module",
+    "auto-initialize",  # 在 Rust 中使用 Python
     # "multiple-pymethods",
-    "macros",
-    # "auto-initialize",
+    # "macros",
+    # "abi3-py312",
 ] }
+numpy = "0.25" # rust-numpy
+pythonize = "0.25.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象
+# pyo3-async-runtimes = { version = "0.25.0", features = [
+#     "attributes",
+#     "tokio-runtime",
+# ] } # 用于与 Python 的 Asyncio 库和 Rust 的异步运行时进行互操作的实用程序。
+dict_derive = "0.6" # Derive FromPyObject 自动将 Python 字典转换为 Rust 结构体
+# pyo3-log = "0.12.4" # 从 Rust 到 Python 日志记录的桥梁
+# pyo3-arrow pyo3 的轻量级Apache Arrow集成。
+# pyo3-bytes = "0.3.0" # bytes 转换
+
+async-std = "1.13"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
+strum = "0.27"
+strum_macros = "0.27"
 walkdir = "2.5"
 chardet = "0.2"
 encoding = "0.2"
+rand = "0.9"
+rand_chacha = "0.9"
+lazy_static = "1.5"
+
 anyhow = "1.0"
 thiserror = "2.0"
 log = "0.4"
+env_logger = "0.11"
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = [] }
-env_logger = "0.11"
-rand = "0.9"
-rand_chacha = "0.9"
 
 candle-core = "0.9"
 candle-nn = "0.9"
@@ -37,3 +58,5 @@ candle-transformers = "0.9"
 hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.21"         # 标记文本
 parquet = "55.0"            # 列式存储数据文件格式
+image = "0.25"
+# ndarray = "0.16"

@@ -7,10 +7,12 @@ use pyo3::{
 };
 use rand::{Rng, SeedableRng};
 
-use crate::core::{
-    category::CATEGORY_LIST,
-    types::{any_type, NODE_INT, NODE_SEED_MAX},
-    PromptServer,
+use crate::{
+    core::category::CATEGORY_LIST,
+    wrapper::comfyui::{
+        types::{any_type, NODE_INT, NODE_SEED_MAX},
+        PromptServer,
+    },
 };
 
 /// 从任意列表随机一个元素
@@ -23,12 +25,6 @@ impl PromptServer for RandomAnyList {}
 impl RandomAnyList {
     #[new]
     fn new() -> Self {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_level(true)
-            .with_file(true)
-            .with_line_number(true)
-            .try_init();
         Self {}
     }
 
@@ -48,7 +44,7 @@ impl RandomAnyList {
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str, &'static str) {
-        ("out", "total")
+        ("list", "total")
     }
 
     #[classattr]
@@ -79,11 +75,11 @@ impl RandomAnyList {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "any",
+                    "list",
                     (any_type(py)?, {
-                        let any = PyDict::new(py);
-                        any.set_item("tooltip", "Input any list")?;
-                        any
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any list")?;
+                        list
                     }),
                 )?;
                 required.set_item(
@@ -106,10 +102,10 @@ impl RandomAnyList {
     #[pyo3(name = "execute")]
     fn execute<'py>(
         &mut self,
-        any: Vec<Bound<'py, PyAny>>,
+        list: Vec<Bound<'py, PyAny>>,
         seed: Vec<u64>,
     ) -> PyResult<(Bound<'py, PyAny>, usize)> {
-        let (results, total) = self.shuffle(any, seed[0]);
+        let (results, total) = self.shuffle(list, seed[0]);
         Ok((results[0].clone(), total))
     }
 }
@@ -117,9 +113,9 @@ impl RandomAnyList {
 impl RandomAnyList {
     /// 使用 Fisher-Yates 算法重新洗牌数组中的元素顺序
     /// 返回 (洗牌后的数组, 数组长度)
-    fn shuffle<T>(&self, mut arr: Vec<T>, seed: u64) -> (Vec<T>, usize) {
+    fn shuffle<T>(&self, mut list: Vec<T>, seed: u64) -> (Vec<T>, usize) {
         // 获取向量的长度
-        let len = arr.len();
+        let len = list.len();
 
         // 使用给定的种子创建一个随机数生成器
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
@@ -127,9 +123,9 @@ impl RandomAnyList {
         // 实现 Fisher-Yates 洗牌算法[2,3,5](@ref)
         for i in (1..len).rev() {
             let j = rng.random_range(0..=i);
-            arr.swap(i, j);
+            list.swap(i, j);
         }
 
-        (arr, len)
+        (list, len)
     }
 }
