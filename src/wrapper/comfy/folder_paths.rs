@@ -1,9 +1,20 @@
 //! 文件夹路径
 
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use lazy_static::lazy_static;
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use log::{error, warn};
+
+use crate::{
+    core::utils::directory::{filter_files_extensions, recursive_search},
+    error::Error,
+    wrapper::comfy::file_list_cache::{CacheEntry, FileListCache},
+};
 
 // 支持的模型文件扩展名
 lazy_static! {
@@ -26,12 +37,12 @@ lazy_static! {
 #[derive(Debug)]
 pub struct FolderPaths {
     base_path: PathBuf,
+    /// folders, extensions
     folder_names_and_paths: HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)>,
     output_directory: PathBuf,
     temp_directory: PathBuf,
     input_directory: PathBuf,
     user_directory: PathBuf,
-    filename_list_cache: HashMap<String, (Vec<String>, HashMap<String, f64>, f64)>,
 }
 
 impl FolderPaths {
@@ -202,7 +213,6 @@ impl FolderPaths {
             temp_directory: base_path.join("temp"),
             input_directory: base_path.join("input"),
             user_directory: base_path.join("user"),
-            filename_list_cache: HashMap::new(),
         }
     }
 
@@ -237,43 +247,141 @@ impl FolderPaths {
     pub fn user_directory(&self) -> &Path {
         &self.user_directory
     }
+}
 
-    /// 更新文件名缓存
-    pub fn update_filename_cache(&mut self, key: String, filenames: Vec<String>) {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64();
+impl FolderPaths {
+    /// 旧文件夹名称映射
+    pub fn map_legacy(folder_name: &str) -> &str {
+        match folder_name {
+            "unet" => "diffusion_models",
+            "clip" => "text_encoders",
+            _ => folder_name,
+        }
+    }
+}
 
-        let mut mtimes = HashMap::new();
-        for filename in &filenames {
-            // 这里应该添加获取文件修改时间的逻辑
-            mtimes.insert(filename.clone(), timestamp);
+impl FolderPaths {
+    /// 获取完整文件路径
+    pub fn get_full_path(
+        &self,
+        folder_name: &str,
+        filename: &str,
+    ) -> Result<Option<PathBuf>, Error> {
+        let folder_name = Self::map_legacy(folder_name);
+
+        // 获取基础路径列表
+        let (base_paths, _) = self
+            .folder_names_and_paths()
+            .get(folder_name)
+            .ok_or_else(|| Error::FolderNotFound(format!("folder {} not found", folder_name)))?;
+
+        // 规范化文件名路径
+        let normalized_filename = Path::new("/")
+            .join(filename)
+            .strip_prefix("/")
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|_| PathBuf::from(filename));
+
+        // 在基础路径中查找文件
+        for base in base_paths {
+            let full_path = base.join(&normalized_filename);
+
+            // 检查文件是否存在
+            if let Ok(metadata) = fs::symlink_metadata(&full_path) {
+                if metadata.is_file() {
+                    return Ok(Some(full_path));
+                } else if metadata.file_type().is_symlink() {
+                    // 检查符号链接是否有效
+                    if fs::metadata(&full_path).is_err() {
+                        warn!(
+                            "WARNING path {} exists but doesn't link anywhere, skipping.",
+                            full_path.display()
+                        );
+                    }
+                }
+            }
         }
 
-        self.filename_list_cache
-            .insert(key, (filenames, mtimes, timestamp));
+        Ok(None)
     }
 
-    /// 获取文件名缓存
-    pub fn get_filename_cache(
-        &self,
-        key: &str,
-    ) -> Option<&(Vec<String>, HashMap<String, f64>, f64)> {
-        self.filename_list_cache.get(key)
+    /// 获取文件名列表
+    pub fn get_filename_list(&self, cache: &mut FileListCache, folder_name: &str) -> Vec<String> {
+        let folder_name = Self::map_legacy(folder_name);
+
+        if let Some(entry) = self.cached_filename_list(folder_name) {
+            return entry.files.clone();
+        }
+
+        // 更新缓存
+        let entry = self.get_filename_list_(folder_name);
+        cache.set(folder_name.to_string(), entry.clone());
+        entry.files
     }
 
-    /// 检查缓存是否有效
-    pub fn is_cache_valid(&self, key: &str, max_age_seconds: f64) -> bool {
-        match self.filename_list_cache.get(key) {
-            Some((_, _, timestamp)) => {
-                let current_time = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs_f64();
-                current_time - timestamp <= max_age_seconds
+    /// 从缓存中获取文件列表
+    fn cached_filename_list(&self, folder_name: &str) -> Option<CacheEntry> {
+        let folder_name = Self::map_legacy(folder_name);
+
+        let cache = match FileListCache::new() {
+            Ok(v) => v,
+            Err(e) => {
+                error!("error: {}", e);
+                return None;
             }
-            None => false,
+        };
+
+        let entry = cache.get(folder_name)?;
+        // 检查目录修改时间是否变化
+        if !entry.is_valid() {
+            return None;
+        }
+
+        // 检查是否有新增目录
+        if let Some((dir_paths, _)) = self.folder_names_and_paths.get(folder_name) {
+            for dir_path in dir_paths {
+                // 判断是否为目录
+                if !dir_path.is_dir() {
+                    continue;
+                }
+                // 检查目录是否发生变化
+                entry
+                    .dir_mtimes
+                    .get(&dir_path.to_string_lossy().to_string())?;
+            }
+        }
+
+        Some(entry.clone())
+    }
+
+    /// 获取文件名列表
+    fn get_filename_list_(&self, folder_name: &str) -> CacheEntry {
+        let folder_name = Self::map_legacy(folder_name);
+        let mut output_list = HashSet::new();
+        let mut dir_mtimes = HashMap::new();
+
+        if let Some((dir_paths, extensions)) = self.folder_names_and_paths.get(folder_name) {
+            for dir_path in dir_paths {
+                let (files, dirs) = recursive_search(dir_path.to_string_lossy().as_ref(), &[]);
+                dir_mtimes.extend(dirs);
+
+                let extensions_vec: Vec<String> =
+                    extensions.iter().map(|s| s.to_string()).collect();
+                let filtered = filter_files_extensions(&files, &extensions_vec);
+                output_list.extend(filtered);
+            }
+        }
+
+        let mut sorted_list: Vec<String> = output_list.into_iter().collect();
+        sorted_list.sort_unstable();
+
+        CacheEntry {
+            files: sorted_list,
+            dir_mtimes,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64(),
         }
     }
 }

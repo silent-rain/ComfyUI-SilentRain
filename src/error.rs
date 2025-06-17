@@ -7,6 +7,8 @@ pub enum Error {
     Io(std::io::Error),
     #[error("parse int error, {0}")]
     ParseIntError(std::num::ParseIntError),
+    #[error("system time error, {0}")]
+    SystemTimeError(std::time::SystemTimeError),
 
     #[error("option none, {0}")]
     OptionNone(String),
@@ -54,6 +56,8 @@ pub enum Error {
     ImageError(#[from] image::ImageError),
     #[error("file path not exist, {0}")]
     FilePathNotExist(String),
+    #[error("folder not found, {0}")]
+    FolderNotFound(String),
     #[error("invalid parameter, {0}")]
     InvalidParameter(String),
 }
@@ -67,5 +71,11 @@ impl From<std::io::Error> for Error {
 impl From<std::num::ParseIntError> for Error {
     fn from(e: std::num::ParseIntError) -> Self {
         Error::ParseIntError(e)
+    }
+}
+
+impl From<std::time::SystemTimeError> for Error {
+    fn from(e: std::time::SystemTimeError) -> Self {
+        Error::SystemTimeError(e)
     }
 }
