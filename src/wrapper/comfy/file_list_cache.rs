@@ -55,7 +55,7 @@ pub struct FileListCache {
 impl FileListCache {
     pub fn new() -> Result<MutexGuard<'static, FileListCache>, Error> {
         let cache = FILE_LIST_CACHE.get_or_init(|| Mutex::new(FileListCache::default()));
-        let obj = cache.lock().map_err(|e| Error::LockError(e.to_string()))?;
+        let obj = cache.lock().map_err(|e| Error::OnceLock(e.to_string()))?;
         Ok(obj)
     }
 

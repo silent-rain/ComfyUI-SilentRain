@@ -246,7 +246,7 @@ impl SaveText {
     ) -> Result<(String,), Error> {
         // 判断文件路径是否存在
         if !Path::new(&filepath).exists() {
-            return Err(Error::FilePathNotExist(format!(
+            return Err(Error::InvalidDirectory(format!(
                 "{}: File path does not exist",
                 filepath
             )));

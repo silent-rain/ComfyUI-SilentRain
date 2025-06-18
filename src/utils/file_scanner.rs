@@ -260,7 +260,10 @@ impl FileScanner {
     ) -> Result<(Vec<String>, Vec<String>), Error> {
         let path = Path::new(folder);
         if !path.is_dir() {
-            return Err(Error::InvalidDirectory(folder.to_string()));
+            return Err(Error::InvalidDirectory(format!(
+                "{}: File path does not exist",
+                folder
+            )));
         }
 
         // 获取文件路径列表

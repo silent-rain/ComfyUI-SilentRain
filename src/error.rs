@@ -3,18 +3,22 @@
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    // 标准库错误处理
     #[error("io error, {0}")]
     Io(std::io::Error),
     #[error("parse int error, {0}")]
     ParseIntError(std::num::ParseIntError),
     #[error("system time error, {0}")]
     SystemTimeError(std::time::SystemTimeError),
-
+    // std::sync::poison::rwlock
+    #[error("lock error, {0}")]
+    LockError(String),
+    // std::sync::once_lock::OnceLock
+    #[error("once lock error, {0}")]
+    OnceLock(String),
     #[error("option none, {0}")]
     OptionNone(String),
 
-    #[error("invalid directory, {0}")]
-    InvalidDirectory(String),
     #[error("encode error, {0}")]
     Encode(String),
     #[error("decode error, {0}")]
@@ -25,8 +29,7 @@ pub enum Error {
     TypeConversion(String),
     #[error("type downcast failed, {0}")]
     DowncastFailed(String),
-    #[error("lock error, {0}")]
-    LockError(String),
+
     #[error("the input list is empty")]
     InputListEmpty,
     #[error("index out of range, {0}")]
@@ -54,10 +57,9 @@ pub enum Error {
     ImageBuffer,
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),
-    #[error("file path not exist, {0}")]
-    FilePathNotExist(String),
-    #[error("folder not found, {0}")]
-    FolderNotFound(String),
+
+    #[error("invalid directory, {0}")]
+    InvalidDirectory(String),
     #[error("invalid parameter, {0}")]
     InvalidParameter(String),
 }
