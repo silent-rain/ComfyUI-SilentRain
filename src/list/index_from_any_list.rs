@@ -136,7 +136,7 @@ impl IndexFromAnyList {
         index: usize,
     ) -> Result<Bound<'py, PyAny>, Error> {
         if list.is_empty() {
-            return Err(Error::InputListEmpty);
+            return Err(Error::ListEmpty);
         }
 
         if index >= list.len() {
@@ -208,7 +208,7 @@ mod tests {
             .get_list_index(vec![], 0)
             .expect_err("Should return empty list error");
 
-        assert!(matches!(err, Error::InputListEmpty));
+        assert!(matches!(err, Error::ListEmpty));
     }
 
     #[test]

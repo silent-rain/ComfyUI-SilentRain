@@ -33,8 +33,8 @@ pub enum Error {
     #[error("type downcast failed, {0}")]
     DowncastFailed(String),
 
-    #[error("the input list is empty")]
-    InputListEmpty,
+    #[error("the list is empty")]
+    ListEmpty,
     #[error("index out of range, {0}")]
     IndexOutOfRange(String),
     #[error("error in obtaining list items at specified index")]

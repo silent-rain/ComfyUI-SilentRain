@@ -13,7 +13,7 @@ mod string_list;
 pub use string_list::StringList;
 
 mod save_text;
-pub use save_text::SaveText;
+pub use save_text::{SaveText, SaveTextMode};
 
 use pyo3::{
     types::{PyModule, PyModuleMethods},

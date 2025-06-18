@@ -1,4 +1,4 @@
-//! 保存图像列表
+//! 保存图像与文本
 
 use std::{collections::HashMap, fs::File, io::BufWriter, path::Path};
 
@@ -18,6 +18,7 @@ use serde_json::Value;
 use crate::{
     core::{category::CATEGORY_IMAGE, utils::image::tensor_to_images2},
     error::Error,
+    text::{SaveText, SaveTextMode},
     wrapper::{
         comfyui::{
             node_input::InputPrompt,
@@ -28,17 +29,17 @@ use crate::{
     },
 };
 
-/// 保存图像列表
+/// 保存图像与文本
 #[pyclass(subclass)]
-pub struct SaveImages {
+pub struct SaveImageText {
     device: Device,
     image_extension: String,
 }
 
-impl PromptServer for SaveImages {}
+impl PromptServer for SaveImageText {}
 
 #[pymethods]
-impl SaveImages {
+impl SaveImageText {
     #[new]
     fn new() -> Self {
         Self {
@@ -108,13 +109,12 @@ impl SaveImages {
                     }),
                 )?;
                 required.set_item(
-                    "filepath",
+                    "captions",
                     (NODE_STRING, {
-                        let filepath = PyDict::new(py);
-                        filepath.set_item("default", "output")?;
-                        // filepath.set_item("placeholder", "output folder")?;
-                        filepath.set_item("tooltip", "Save file path")?;
-                        filepath
+                        let captions = PyDict::new(py);
+                        captions.set_item("default", "")?;
+                        captions.set_item("tooltip", "Saved Text Content")?;
+                        captions
                     }),
                 )?;
                 required.set_item(
@@ -125,6 +125,43 @@ impl SaveImages {
                         filename.set_item("tooltip", "Save file name")?;
                         filename
                     }),
+                )?;
+                required.set_item(
+                    "filepath",
+                    (NODE_STRING, {
+                        let filepath = PyDict::new(py);
+                        filepath.set_item("default", "output")?;
+                        // filepath.set_item("placeholder", "output folder")?;
+                        filepath.set_item("tooltip", "Save file path")?;
+                        filepath
+                    }),
+                )?;
+
+                required.set_item(
+                    "text_extension",
+                    (NODE_STRING, {
+                        let text_extension = PyDict::new(py);
+                        text_extension.set_item("default", ".txt")?;
+                        text_extension.set_item("tooltip", "Save file extension")?;
+                        text_extension
+                    }),
+                )?;
+
+                required.set_item(
+                    "text_mode",
+                    (
+                        vec![
+                            SaveTextMode::Overwrite.to_string(),
+                            SaveTextMode::Append.to_string(),
+                            SaveTextMode::AppendNewLine.to_string(),
+                        ],
+                        {
+                            let text_mode = PyDict::new(py);
+                            text_mode.set_item("default", SaveTextMode::Overwrite.to_string())?;
+                            text_mode.set_item("tooltip", "Saved Content Mode")?;
+                            text_mode
+                        },
+                    ),
                 )?;
 
                 required
@@ -185,18 +222,24 @@ impl SaveImages {
         &mut self,
         py: Python<'py>,
         image: Bound<'py, PyAny>,
-        filepath: &str,
+        captions: &str,
         filename: &str,
+        filepath: &str,
+        text_extension: &str,
+        text_mode: &str,
         filename_prefix: &str,
         filename_suffix: &str,
         save_workflow: bool,
         prompt: Bound<'py, PyDict>,
         extra_pnginfo: Bound<'py, PyDict>,
     ) -> PyResult<Bound<'py, PyDict>> {
-        let results = self.save_images(
+        let results = self.save_image_and_text(
             &image,
-            filepath,
+            captions,
             filename,
+            filepath,
+            text_extension,
+            text_mode,
             filename_prefix,
             filename_suffix,
             save_workflow,
@@ -207,8 +250,8 @@ impl SaveImages {
         match results {
             Ok(_v) => self.node_result(py),
             Err(e) => {
-                error!("SaveImages error, {e}");
-                if let Err(e) = self.send_error(py, "SaveImages".to_string(), e.to_string()) {
+                error!("SaveImageText error, {e}");
+                if let Err(e) = self.send_error(py, "SaveImageText".to_string(), e.to_string()) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
@@ -218,7 +261,7 @@ impl SaveImages {
     }
 }
 
-impl SaveImages {
+impl SaveImageText {
     /// 组合为前端需要的数据结构
     fn node_result<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
@@ -227,15 +270,18 @@ impl SaveImages {
     }
 }
 
-impl SaveImages {
+impl SaveImageText {
     /// 保存图像
     #[allow(clippy::type_complexity)]
     #[allow(clippy::too_many_arguments)]
-    fn save_images<'py>(
+    fn save_image_and_text<'py>(
         &self,
         image: &Bound<'py, PyAny>,
-        filepath: &str,
+        captions: &str,
         filename: &str,
+        filepath: &str,
+        text_extension: &str,
+        text_mode: &str,
         filename_prefix: &str,
         filename_suffix: &str,
         save_workflow: bool,
@@ -258,25 +304,39 @@ impl SaveImages {
         // 转换张量为图像
         let image = TensorWrapper::<f32>::new(image, &self.device)?.into_tensor();
         let images = tensor_to_images2(&image)?;
+        if images.is_empty() {
+            return Err(Error::ListEmpty);
+        }
+        let image = &images[0];
 
         if !save_workflow {
             // 保存图片
-            images.iter().for_each(|image| {
-                if let Err(e) = image.save_with_format(&image_path, ImageFormat::Png) {
-                    error!("save image failed, {e}");
-                }
-            });
-        }
+            if let Err(e) = image.save_with_format(&image_path, ImageFormat::Png) {
+                error!("save image failed, {e}");
+                return Ok(());
+            }
+        } else {
+            // 获取文本框列表
+            let text_chunck = Self::get_text_chunck(prompt, extra_pnginfo)?;
 
-        // 获取文本框列表
-        let text_chunck = Self::get_text_chunck(prompt, extra_pnginfo)?;
-
-        // 保存图片
-        images.iter().for_each(|image| {
+            // 保存图片
             if let Err(e) = Self::save_image_with_metadata(image, &image_path, &text_chunck) {
                 error!("save image failed, {e}");
             }
-        });
+        }
+
+        // 保存文本
+        if let Err(e) = SaveText::save_text(
+            captions,
+            filepath,
+            filename,
+            filename_prefix,
+            filename_suffix,
+            text_extension,
+            text_mode,
+        ) {
+            error!("save text failed, {e}");
+        }
 
         Ok(())
     }

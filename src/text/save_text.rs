@@ -161,7 +161,7 @@ impl SaveText {
                     (NODE_STRING, {
                         let file_extension = PyDict::new(py);
                         file_extension.set_item("default", ".txt")?;
-                        file_extension.set_item("tooltip", "Filter file extensions")?;
+                        file_extension.set_item("tooltip", "Save file extension")?;
                         file_extension
                     }),
                 )?;
@@ -195,15 +195,15 @@ impl SaveText {
     fn execute(
         &mut self,
         py: Python,
-        captions: String,
-        filepath: String,
-        filename: String,
-        filename_prefix: String,
-        filename_suffix: String,
-        file_extension: String,
-        mode: String,
+        captions: &str,
+        filepath: &str,
+        filename: &str,
+        filename_prefix: &str,
+        filename_suffix: &str,
+        file_extension: &str,
+        mode: &str,
     ) -> PyResult<(String,)> {
-        let results = self.save_text(
+        let results = Self::save_text(
             captions,
             filepath,
             filename,
@@ -234,15 +234,14 @@ impl SaveText {
 impl SaveText {
     /// 保存文本
     #[allow(clippy::too_many_arguments)]
-    fn save_text(
-        &self,
-        captions: String,
-        filepath: String,
-        filename: String,
-        filename_prefix: String,
-        filename_suffix: String,
-        file_extension: String,
-        mode: String,
+    pub fn save_text(
+        captions: &str,
+        filepath: &str,
+        filename: &str,
+        filename_prefix: &str,
+        filename_suffix: &str,
+        file_extension: &str,
+        mode: &str,
     ) -> Result<(String,), Error> {
         // 判断文件路径是否存在
         if !Path::new(&filepath).exists() {
@@ -283,6 +282,6 @@ impl SaveText {
             }
         }
 
-        Ok((captions,))
+        Ok((captions.to_string(),))
     }
 }
