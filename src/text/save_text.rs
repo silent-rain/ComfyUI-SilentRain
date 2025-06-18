@@ -123,7 +123,8 @@ impl SaveText {
                     "filepath",
                     (NODE_STRING, {
                         let filepath = PyDict::new(py);
-                        filepath.set_item("default", "output_folder")?;
+                        filepath.set_item("default", "output")?;
+                        // filepath.set_item("placeholder", "output folder")?;
                         filepath.set_item("tooltip", "Save file path")?;
                         filepath
                     }),
