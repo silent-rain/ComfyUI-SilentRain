@@ -120,6 +120,15 @@ impl SaveText {
                     }),
                 )?;
                 required.set_item(
+                    "filename",
+                    (NODE_STRING, {
+                        let filename = PyDict::new(py);
+                        filename.set_item("default", "file")?;
+                        filename.set_item("tooltip", "Save file name")?;
+                        filename
+                    }),
+                )?;
+                required.set_item(
                     "filepath",
                     (NODE_STRING, {
                         let filepath = PyDict::new(py);
@@ -127,15 +136,6 @@ impl SaveText {
                         // filepath.set_item("placeholder", "output folder")?;
                         filepath.set_item("tooltip", "Save file path")?;
                         filepath
-                    }),
-                )?;
-                required.set_item(
-                    "filename",
-                    (NODE_STRING, {
-                        let filename = PyDict::new(py);
-                        filename.set_item("default", "file")?;
-                        filename.set_item("tooltip", "Save file name")?;
-                        filename
                     }),
                 )?;
                 required.set_item(

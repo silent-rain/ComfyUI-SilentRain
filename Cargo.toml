@@ -37,6 +37,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 strum = "0.27"
 strum_macros = "0.27"
+rust_decimal = "1.37"
 walkdir = "2.5"
 chardet = "0.2"
 encoding = "0.2"
@@ -59,4 +60,5 @@ hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.21"         # 标记文本
 parquet = "55.0"            # 列式存储数据文件格式
 image = "0.25"
+png = "0.17"
 # ndarray = "0.16"

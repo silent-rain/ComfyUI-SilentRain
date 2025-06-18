@@ -1,7 +1,7 @@
 //! image 与 tensor 相互转换
 //!
 use candle_core::{DType, Device, Tensor};
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
+use image::{DynamicImage, GenericImageView, GrayImage, ImageBuffer, Rgb, RgbImage, RgbaImage};
 
 use crate::error::Error;
 
@@ -40,6 +40,82 @@ pub fn tensor_to_image(samples: &Tensor) -> Result<Vec<DynamicImage>, Error> {
     }
 
     Ok(images)
+}
+
+/// 将张量转换为图像
+///
+/// tensor: BHWC
+pub fn tensor_to_images2(tensor: &Tensor) -> Result<Vec<DynamicImage>, Error> {
+    let (batch, _, _, _) = tensor.dims4()?;
+
+    // BHWC -> Vec<HWC>
+    let mut tensors = tensor.chunk(batch, 0)?;
+
+    let mut images = Vec::with_capacity(batch);
+    for tensor in tensors.iter_mut() {
+        let img = tensor_to_image2(tensor)?;
+        images.push(img);
+    }
+
+    Ok(images)
+}
+
+/// 将张量转换为图像
+///
+/// tensor: HWC/1HWC
+pub fn tensor_to_image2(tensor: &Tensor) -> Result<DynamicImage, Error> {
+    // 检查张量形状
+    let (height, width, channels) = match tensor.dims() {
+        [h, w, c] => (*h, *w, *c),
+        [b, h, w, c] if *b == 1 => (*h, *w, *c),
+        _ => {
+            return Err(Error::InvalidTensorShape(format!(
+                "Invalid tensor shape: {:#?}",
+                tensor.dims()
+            )))
+        }
+    };
+
+    // 转换为f32并缩放 - 使用运算符重载
+    let tensor = (tensor.to_dtype(DType::F32)? * 255.0)?;
+    // 或者使用显式创建标量张量的方法：
+    // let scalar = Tensor::new(255.0, tensor.device())?;
+    // let tensor = tensor.to_dtype(DType::F32)?.mul(&scalar)?;
+
+    // 裁剪到0-255范围
+    let tensor = tensor.clamp(0.0, 255.0)?;
+
+    // 转换为u8
+    let tensor = tensor.to_dtype(DType::U8)?;
+
+    // //  加维度重排 CHW -> HWC
+    // let tensor = tensor.permute([1, 2, 0])?;
+
+    // 转换为缓存
+    let buffer = tensor.contiguous()?.flatten_all()?.to_vec1()?;
+
+    // 转换为图像
+    match channels {
+        1 => {
+            // 灰度图像
+            let img = GrayImage::from_raw(width as u32, height as u32, buffer)
+                .ok_or(Error::ImageBuffer)?;
+            Ok(DynamicImage::ImageLuma8(img))
+        }
+        3 => {
+            // RGB图像
+            let img = RgbImage::from_raw(width as u32, height as u32, buffer)
+                .ok_or(Error::ImageBuffer)?;
+            Ok(DynamicImage::ImageRgb8(img))
+        }
+        4 => {
+            // RGBA图像
+            let img = RgbaImage::from_raw(width as u32, height as u32, buffer)
+                .ok_or(Error::ImageBuffer)?;
+            Ok(DynamicImage::ImageRgba8(img))
+        }
+        _ => Err(Error::UnsupportedNumberOfChannels(channels as u32)),
+    }
 }
 
 /// 将图像转换为张量

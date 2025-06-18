@@ -7,9 +7,9 @@ pub enum Error {
     #[error("io error, {0}")]
     Io(std::io::Error),
     #[error("parse int error, {0}")]
-    ParseIntError(std::num::ParseIntError),
+    ParseIntError(#[from] std::num::ParseIntError),
     #[error("system time error, {0}")]
-    SystemTimeError(std::time::SystemTimeError),
+    SystemTimeError(#[from] std::time::SystemTimeError),
     // std::sync::poison::rwlock
     #[error("lock error, {0}")]
     LockError(String),
@@ -18,6 +18,9 @@ pub enum Error {
     OnceLock(String),
     #[error("option none, {0}")]
     OptionNone(String),
+
+    #[error("serde json error, {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
 
     #[error("encode error, {0}")]
     Encode(String),
@@ -48,15 +51,21 @@ pub enum Error {
 
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),
+    #[error("invalid tensor shape, {0}")]
+    InvalidTensorShape(String),
     #[error("numpy error, {0}")]
     NotContiguousError(#[from] numpy::NotContiguousError),
     #[error("strum error, {0}")]
     ParseEnumString(String),
 
-    #[error("creating image buffer error")]
-    ImageBuffer,
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),
+    #[error("creating image buffer error")]
+    ImageBuffer,
+    #[error("unsupported number of channels: {0}")]
+    UnsupportedNumberOfChannels(u32),
+    #[error("png encoding error, {0}")]
+    PngEncodingError(#[from] png::EncodingError),
 
     #[error("invalid directory, {0}")]
     InvalidDirectory(String),
@@ -67,17 +76,5 @@ pub enum Error {
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::Io(e)
-    }
-}
-
-impl From<std::num::ParseIntError> for Error {
-    fn from(e: std::num::ParseIntError) -> Self {
-        Error::ParseIntError(e)
-    }
-}
-
-impl From<std::time::SystemTimeError> for Error {
-    fn from(e: std::time::SystemTimeError) -> Self {
-        Error::SystemTimeError(e)
     }
 }
