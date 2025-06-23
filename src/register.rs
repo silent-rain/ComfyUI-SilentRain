@@ -14,7 +14,7 @@ use crate::{
     },
     logic::BatchFloat,
     text::{SaveText, StringList, StringListToSting, TextBox, TextToList},
-    utils::{BridgeAnything, FileScanner, WorkflowInfo},
+    utils::{BatchRename, BridgeAnything, FileScanner, WorkflowInfo},
 };
 
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
@@ -34,6 +34,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "WorkflowInfo",
             py.get_type::<WorkflowInfo>(),
             "Sr Workflow Info",
+        ),
+        NodeRegister(
+            "BatchRename",
+            py.get_type::<BatchRename>(),
+            "Sr Batch Rename",
         ),
         // text
         NodeRegister("TextBox", py.get_type::<TextBox>(), "Sr Text Box"),
