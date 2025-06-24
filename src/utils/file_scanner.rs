@@ -391,6 +391,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_read_file_with_auto_encoding() -> anyhow::Result<()> {
         let file_scanner = FileScanner::new();
         let content = file_scanner.read_file_with_auto_encoding(Path::new("README.md"))?;

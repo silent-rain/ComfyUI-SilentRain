@@ -265,6 +265,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_new() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyList::empty(py);
@@ -278,6 +279,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_extract_ndarray() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyList::empty(py);

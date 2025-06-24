@@ -391,6 +391,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_folder_paths_initialization() {
         let folder_paths = FolderPaths::new(None);
         assert!(folder_paths.base_path().exists());

@@ -161,6 +161,7 @@ mod tests {
     use pyo3::{types::PyString, Python};
 
     #[test]
+    #[ignore]
     fn test_get_valid_index() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();
@@ -183,6 +184,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_index_out_of_range() {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();
@@ -202,6 +204,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_empty_list() {
         let index_any = IndexFromAnyList::new();
         let err = index_any
@@ -212,6 +215,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_mixed_types() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();

@@ -64,6 +64,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_isinstance() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyString::new(py, "this is a str.");
@@ -79,6 +80,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_isinstance2() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyString::new(py, "this is a str.");

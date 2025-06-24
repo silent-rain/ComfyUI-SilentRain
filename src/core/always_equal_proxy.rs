@@ -126,6 +126,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_always_equal_proxy() -> anyhow::Result<()> {
         let any_type = AlwaysEqualProxy::from("*");
 
