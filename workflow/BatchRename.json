@@ -1,0 +1,54 @@
+{
+  "id": "001e31f2-b8b8-4e00-ab68-90fc9d22c79f",
+  "revision": 0,
+  "last_node_id": 2,
+  "last_link_id": 0,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "BatchRename",
+      "pos": [
+        3980,
+        10
+      ],
+      "size": [
+        270,
+        178
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "BatchRename"
+      },
+      "widgets_values": [
+        "comfyui-silentrain/demo/assets/text_rename",
+        "NewName_%d",
+        "OnlyFolder",
+        2,
+        1,
+        5
+      ]
+    }
+  ],
+  "links": [],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.2100000000000004,
+      "offset": [
+        -3373.0331956401997,
+        406.6236217353327
+      ]
+    },
+    "frontendVersion": "1.21.7",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
