@@ -13,7 +13,7 @@ use crate::{
         RandomAnyList, ShuffleAnyList,
     },
     logic::BatchFloat,
-    text::{SaveText, StringList, StringListToSting, TextBox, TextToList},
+    text::{RegularString, SaveText, StringList, StringListToSting, TextBox, TextToList},
     utils::{BatchRename, BridgeAnything, FileScanner, WorkflowInfo},
 };
 
@@ -50,6 +50,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
         ),
         NodeRegister("StringList", py.get_type::<StringList>(), "Sr String List"),
         NodeRegister("SaveText", py.get_type::<SaveText>(), "Sr Save Text"),
+        NodeRegister(
+            "RegularString",
+            py.get_type::<RegularString>(),
+            "Sr Regular String",
+        ),
         // list
         NodeRegister(
             "IndexFromAnyList",

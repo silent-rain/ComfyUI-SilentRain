@@ -21,6 +21,8 @@ pub enum Error {
 
     #[error("serde json error, {0}")]
     SerdeJsonError(#[from] serde_json::Error),
+    #[error("regex error, {0}")]
+    RegexError(#[from] regex::Error),
 
     #[error("encode error, {0}")]
     Encode(String),
