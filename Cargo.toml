@@ -16,7 +16,7 @@ debug = false # 关闭调试日志, 加快构建速度
 [dependencies]
 pyo3 = { version = "0.25.1", features = [
     "extension-module",
-    "auto-initialize",  # 在 Rust 中使用 Python
+    # "auto-initialize",  # 将 Python 嵌入到 Rust 二进制文件中
     # "multiple-pymethods",
     # "macros",
     # "abi3-py312",

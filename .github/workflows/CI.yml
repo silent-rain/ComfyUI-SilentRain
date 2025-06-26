@@ -46,7 +46,7 @@ jobs:
           echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Install OpenSSL development libraries
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev python3-dev
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
