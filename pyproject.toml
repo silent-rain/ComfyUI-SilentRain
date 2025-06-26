@@ -1,5 +1,5 @@
 [project]
-name = "comfyui-silentrain"
+name = "comfyui_silentrain"
 description = "Ecological extension of comfyui using Rust language."
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
