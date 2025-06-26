@@ -18,8 +18,8 @@ on:
 permissions:
   contents: read
 
-env:
-  PACKAGE_NAME: comfyui_silentrain # 全局环境变量，所有 job/step 都可以用
+# env:
+#   PACKAGE_NAME: comfyui_silentrain # 全局环境变量，所有 job/step 都可以用
 
 jobs:
   linux:
@@ -39,19 +39,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # 从 Cargo.toml 提取包名和版本号
-      # - name: Extract package info
-      #   id: package-info # 必须定义id
-      #   run: |
-      #     NAME=$(grep -A1 '^\[package\]' Cargo.toml | grep '^name =' | cut -d '"' -f2 | tr '-' '_' | tr -d '\n')  # 替换下划线
-      #     VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
-      #     echo "${NAME} ${VERSION}"
-      #     echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
-      #     echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
-
-      - name: Get version from tag
+      - name: Extract package info
+        id: package-info # 必须定义id
         run: |
-          VERSION=$(git describe --tags --abbrev=0)
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          NAME=$(grep -A1 '^\[package\]' Cargo.toml | grep '^name =' | cut -d '"' -f2 | tr '-' '_' | tr -d '\n')  # 替换下划线
+          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
+          echo "${NAME} ${VERSION}"
+          echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
+
+      # - name: Get version from tag
+      #   run: |
+      #     VERSION=$(git describe --tags --abbrev=0)
+      #     echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Install libraries
         run: sudo apt-get update && sudo apt-get install -y libssl-dev python3-dev protobuf-compiler
@@ -88,10 +88,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.target }}
 
-      - name: Get version from tag
+      - name: Extract package info (Windows)
+        shell: pwsh
         run: |
-          VERSION=$(git describe --tags --abbrev=0)
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          $name = ((Select-String '^\[package\]' -Path Cargo.toml -Context 0,1 | Select-Object -ExpandProperty Context).PostContext | Select-String '^name =').Line -replace 'name = "', '' -replace '"', '' -replace '-', '_'
+          $version = (Select-String '^version =' -Path Cargo.toml).Line -replace 'version = "', '' -replace '"', ''
+          echo "$name $version"
+          echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       # - name: Install protoc
       #   shell: pwsh
@@ -133,10 +137,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Get version from tag
+      # 从 Cargo.toml 提取包名和版本号
+      - name: Extract package info
+        id: package-info # 必须定义id
         run: |
-          VERSION=$(git describe --tags --abbrev=0)
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          NAME=$(grep -A1 '^\[package\]' Cargo.toml | grep '^name =' | cut -d '"' -f2 | tr '-' '_' | tr -d '\n')  # 替换下划线
+          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
+          echo "${NAME} ${VERSION}"
+          echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Install Protocol Buffers (protoc)
         run: brew install openssl protobuf python@3
