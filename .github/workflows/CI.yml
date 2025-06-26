@@ -65,6 +65,8 @@ jobs:
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
+        env:
+          PROTOC: ${{ env.PROTOC }} # 传递环境变量
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
