@@ -56,6 +56,13 @@ jobs:
       - name: Install libraries
         run: sudo apt-get update && sudo apt-get install -y libssl-dev python3-dev protobuf-compiler
 
+      - name: Ensure protoc is in Docker
+        run: |
+          which protoc
+          protoc --version
+          export PROTOC=$(which protoc)
+          echo "PROTOC=$PROTOC" >> $GITHUB_ENV
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
