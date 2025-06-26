@@ -3,7 +3,6 @@
     "python-envs.pythonProjects": [],
     "rust-analyzer.linkedProjects": [
         "./Cargo.toml",
-        // "./demo/Cargo.toml"
     ],
     "rust-analyzer.cargo.extraEnv": {
     },
