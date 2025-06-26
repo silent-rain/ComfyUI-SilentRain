@@ -41,6 +41,7 @@ jobs:
         run: |
           NAME=$(grep '^name =' Cargo.toml | cut -d '"' -f2 | tr '-' '_')  # 替换下划线
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
+          echo "${NAME} ${VERSION}""
           echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
 
