@@ -37,8 +37,9 @@ jobs:
 
       # 从 Cargo.toml 提取包名和版本号
       - name: Extract package info
+        id: package-info # 必须定义id
         run: |
-          NAME=$(grep '^name =' Cargo.toml | cut -d '"' -f2 | tr '_' '-')  # 替换下划线
+          NAME=$(grep '^name =' Cargo.toml | cut -d '"' -f2 | tr '-' '_')  # 替换下划线
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
           echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
