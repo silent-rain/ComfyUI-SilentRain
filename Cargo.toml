@@ -46,6 +46,7 @@ lazy_static = "1.5" # 用于延迟初始化全局变量
 reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "blocking",
+    "rustls-tls",
 ] } # 用于 HTTP 客户端
 regex = "1.11" # 正则表达式
 
@@ -61,11 +62,13 @@ candle-nn = "0.9"
 candle-onnx = "0.9"
 candle-transformers = "0.9"
 candle-flash-attn = { version = "0.9", optional = true } # 用于 Flash Attention
-hf-hub = { version = "0.4", features = [] }              # 与 huggingface hub 集成
-tokenizers = "0.21"                                      # 标记文本
-parquet = "55.0"                                         # 列式存储数据文件格式
+hf-hub = { version = "0.4", default-features = false, features = [
+    "rustls-tls",
+] } # 与 huggingface hub 集成
+tokenizers = "0.21" # 标记文本
+parquet = "55.0" # 列式存储数据文件格式
 image = "0.25"
-png = "0.17"                                             # 用于读取和写入 PNG 图像
+png = "0.17" # 用于读取和写入 PNG 图像
 # ndarray = "0.16"                                         # 用于多维数组
 
 # src
@@ -113,8 +116,4 @@ accelerate = [
     "candle-nn/accelerate",
     "candle-transformers/accelerate",
 ] #  ​​Hugging Face 开发的 accelerate 库​​，它是一个专为 PyTorch 设计的分布式训练加速工具
-rustls-tls = [
-    "reqwest/rustls-tls",
-    "hf-hub/rustls-tls",
-    "tokenizers/rustls-tls",
-]
+rustls-tls = ["reqwest/rustls-tls", "hf-hub/rustls-tls"]
