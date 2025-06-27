@@ -69,7 +69,7 @@ jobs:
           PROTOC: ${{ env.PROTOC }} # 传递环境变量
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist
+          args: --release --out dist -i python${{ matrix.python-version }}
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
           container: off # Set to off to disable manylinux docker build and build on the host instead.
@@ -77,8 +77,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.platform.target }}-${{ github.run_id }}-${{ github.job }}
-          # name: ${{ env.PACKAGE_NAME }}-${{ env.PACKAGE_VERSION }}-${{ matrix.python-version }}-linux-${{ matrix.platform.target }}
+          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.job }}
           path: dist
 
   windows:
@@ -130,7 +129,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.platform.target }}-${{ github.run_id }}-${{ github.job }}
+          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.job }}
           path: dist
 
   macos:
@@ -169,7 +168,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-${{ matrix.platform.target }}-${{ github.run_id }}-${{ github.job }}
+          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.job }}
           path: dist
 
   release:
