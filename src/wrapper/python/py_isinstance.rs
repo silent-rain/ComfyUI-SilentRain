@@ -15,7 +15,7 @@ pub fn isinstance<'py>(
     py_any: &Bound<'py, PyAny>,
     py_type: &str,
 ) -> PyResult<bool> {
-    let code = CString::new(format!("isinstance({:?}, {})", py_any, py_type)).unwrap();
+    let code = CString::new(format!("isinstance({py_any:?}, {py_type})")).unwrap();
     let res = if py_type.starts_with("torch") {
         //         let code = c_str!(
         //             "

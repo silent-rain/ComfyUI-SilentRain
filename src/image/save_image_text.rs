@@ -291,8 +291,7 @@ impl SaveImageText {
         // 判断文件路径是否存在
         if !Path::new(&filepath).exists() {
             return Err(Error::InvalidDirectory(format!(
-                "{}: File path does not exist",
-                filepath
+                "{filepath}: File path does not exist"
             )));
         }
 
@@ -423,11 +422,11 @@ impl SaveImageText {
         // 编码文本
         let bytes = encoder
             .encode(text, EncoderTrap::Replace)
-            .map_err(|e| Error::Encode(format!("Encoding to ISO-8859-1 failed: {}", e)))?;
+            .map_err(|e| Error::Encode(format!("Encoding to ISO-8859-1 failed: {e}")))?;
 
         encoder
             .decode(&bytes, DecoderTrap::Ignore)
-            .map_err(|e| Error::Decode(format!("Decoding from ISO-8859-1 failed: {}", e)))
+            .map_err(|e| Error::Decode(format!("Decoding from ISO-8859-1 failed: {e}")))
     }
 }
 

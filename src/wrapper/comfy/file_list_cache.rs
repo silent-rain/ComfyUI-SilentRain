@@ -34,7 +34,7 @@ impl CacheEntry {
             let current_mtime = match get_mtime(&folder_name) {
                 Ok(v) => v,
                 Err(e) => {
-                    error!("error: {}", e);
+                    error!("error: {e}");
                     return false;
                 }
             };

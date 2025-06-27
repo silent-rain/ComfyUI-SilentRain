@@ -273,7 +273,7 @@ impl FolderPaths {
         let (base_paths, _) = self
             .folder_names_and_paths()
             .get(folder_name)
-            .ok_or_else(|| Error::InvalidDirectory(format!("folder {} not found", folder_name)))?;
+            .ok_or_else(|| Error::InvalidDirectory(format!("folder {folder_name} not found")))?;
 
         // 规范化文件名路径
         let normalized_filename = Path::new("/")
@@ -326,7 +326,7 @@ impl FolderPaths {
         let cache = match FileListCache::new() {
             Ok(v) => v,
             Err(e) => {
-                error!("error: {}", e);
+                error!("error: {e}");
                 return None;
             }
         };

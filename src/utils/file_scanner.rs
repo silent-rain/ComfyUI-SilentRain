@@ -261,8 +261,7 @@ impl FileScanner {
         let path = Path::new(folder);
         if !path.is_dir() {
             return Err(Error::InvalidDirectory(format!(
-                "{}: File path does not exist",
-                folder
+                "{folder}: File path does not exist"
             )));
         }
 

@@ -40,7 +40,7 @@ impl WorkflowInfo {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types(py: Python) -> (&'static str, Bound<'_, PyAny>, Bound<'_, PyAny>) {
+    fn return_types(py: Python<'_>) -> (&'static str, Bound<'_, PyAny>, Bound<'_, PyAny>) {
         let any_type = any_type(py).unwrap();
         (NODE_STRING, any_type.clone(), any_type)
     }

@@ -357,7 +357,8 @@ impl BatchRename {
         let padding_width =
             std::cmp::max(self.padding_width, (total as f64).log10().ceil() as usize);
 
-        format!("{:0width$}", current_index, width = padding_width)
+        // format!("{:0width$}", current_index, width = padding_width)
+        format!("{current_index:0padding_width$}")
     }
 
     /// 获取新的文件名称
