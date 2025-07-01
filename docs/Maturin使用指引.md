@@ -3,7 +3,12 @@
 ## 安装
 
 ```shell
+# cargo
 cargo install maturin
+# pipx
+pipx install maturin
+# uv
+uv tool install maturin
 ```
 
 ## 初始化项目
