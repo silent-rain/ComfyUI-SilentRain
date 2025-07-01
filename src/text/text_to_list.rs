@@ -89,8 +89,8 @@ impl TextToList {
                     "limit",
                     (NODE_INT, {
                         let limit = PyDict::new(py);
-                        limit.set_item("default", -1)?;
-                        limit.set_item("min", -1)?;
+                        limit.set_item("default", 0)?;
+                        limit.set_item("min", 0)?;
                         limit.set_item("step", 1)?;
                         limit
                     }),
@@ -105,8 +105,8 @@ impl TextToList {
     fn execute(
         &mut self,
         text: &str,
-        start_index: i32,
-        limit: i32,
+        start_index: usize,
+        limit: usize,
     ) -> PyResult<(Vec<String>, usize)> {
         let result = self.string_to_list(text, start_index, limit);
 
@@ -115,20 +115,20 @@ impl TextToList {
 }
 
 impl TextToList {
-    fn string_to_list(&self, text: &str, start_index: i32, limit: i32) -> (Vec<String>, usize) {
+    fn string_to_list(&self, text: &str, start_index: usize, limit: usize) -> (Vec<String>, usize) {
         let lines = text
             .split("\n")
             .map(|v| v.to_string())
             .collect::<Vec<String>>();
 
-        let len = lines.len() as i32;
-        let end_index = if limit == -1 || limit > len {
-            len
+        let end_index = if limit == 0 {
+            lines.len()
         } else {
-            limit
-        };
+            start_index + limit
+        }
+        .min(lines.len());
 
-        let results = lines[start_index as usize..end_index as usize].to_vec();
+        let results = lines[start_index..end_index].to_vec();
         let total = results.len();
         (results, total)
     }

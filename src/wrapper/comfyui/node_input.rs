@@ -5,6 +5,7 @@ use pyo3::{
     types::{PyDict, PyDictMethods},
     Bound,
 };
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -29,7 +30,8 @@ pub struct Workflow {
     pub groups: Vec<Group>,
     pub config: Value, // 空对象用Value表示
     pub extra: Extra,
-    pub version: f32,
+    #[serde(serialize_with = "serialize_decimal_two_digits")]
+    pub version: Decimal,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -45,37 +47,47 @@ pub struct Node {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub properties: Properties,
-    #[serde(rename = "widgets_values")]
+    #[serde(rename = "widgets_values", skip_serializing_if = "Option::is_none")]
     pub widgets_values: Option<Value>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bgcolor: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Input {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shape: Option<u32>,
     #[serde(rename = "type")]
     pub input_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub widget: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<u32>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Output {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shape: Option<u32>,
     #[serde(rename = "type")]
     pub output_type: String,
+    #[serde(default)]
     pub links: Option<Vec<u32>>, // 可能为null
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Properties {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cnr_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ver: Option<String>,
     #[serde(rename = "Node name for S&R")]
     pub node_name_for_sr: Option<String>,
@@ -105,6 +117,15 @@ pub struct Extra {
 pub struct Ds {
     pub scale: f32,
     pub offset: (f32, f32),
+}
+
+fn serialize_decimal_two_digits<S>(value: &Decimal, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let rounded = value.round_dp(2);
+    let float_value: f64 = rounded.try_into().unwrap_or(0.0); // 尝试转换，失败时返回默认值
+    serializer.serialize_f64(float_value)
 }
 
 impl ExtraPnginfo {
@@ -256,5 +277,45 @@ impl<'py> InputKwargs<'py> {
         }
 
         Ok(pre_node)
+    }
+}
+
+/// 提示词入参
+#[derive(Debug)]
+pub struct InputPrompt {
+    prompt: Value,
+}
+
+impl InputPrompt {
+    pub fn new<'py>(prompt: Bound<'py, PyDict>) -> Result<Self, Error> {
+        let prompt: Value = pythonize::depythonize(&prompt)?;
+
+        Ok(Self { prompt })
+    }
+
+    /// 将python的prompt转换为json字符串
+    #[allow(clippy::inherent_to_string)]
+    pub fn to_string(&self) -> String {
+        self.prompt.to_string()
+    }
+}
+
+/// 附加信息
+pub struct InputExtraPnginfo {
+    extra_pnginfo: ExtraPnginfo,
+}
+
+impl InputExtraPnginfo {
+    pub fn new<'py>(extra_pnginfo: Bound<'py, PyDict>) -> Result<Self, Error> {
+        let extra_pnginfo: ExtraPnginfo = pythonize::depythonize(&extra_pnginfo)?;
+
+        Ok(Self { extra_pnginfo })
+    }
+
+    /// 将python的extra_pnginfo转换为json字符串
+    pub fn to_string(&self) -> Result<String, Error> {
+        let extra_pnginfo = serde_json::to_string(&self.extra_pnginfo)?;
+
+        Ok(extra_pnginfo)
     }
 }

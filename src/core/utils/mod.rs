@@ -1,4 +1,6 @@
 //! 工具
+pub mod directory;
+
 mod bislerp;
 pub use bislerp::bislerp;
 

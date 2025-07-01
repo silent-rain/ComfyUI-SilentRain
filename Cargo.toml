@@ -1,5 +1,5 @@
 [package]
-name = "comfyui-silentrain"
+name = "comfyui_silentrain"
 version = "0.1.0"
 edition = "2021"
 
@@ -16,7 +16,7 @@ debug = false # 关闭调试日志, 加快构建速度
 [dependencies]
 pyo3 = { version = "0.25.1", features = [
     "extension-module",
-    "auto-initialize",  # 在 Rust 中使用 Python
+    # "auto-initialize",  # 将 Python 嵌入到 Rust 二进制文件中
     # "multiple-pymethods",
     # "macros",
     # "abi3-py312",
@@ -32,17 +32,23 @@ dict_derive = "0.6" # Derive FromPyObject 自动将 Python 字典转换为 Rust 
 # pyo3-arrow pyo3 的轻量级Apache Arrow集成。
 # pyo3-bytes = "0.3.0" # bytes 转换
 
-async-std = "1.13"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-strum = "0.27"
-strum_macros = "0.27"
-walkdir = "2.5"
-chardet = "0.2"
-encoding = "0.2"
-rand = "0.9"
-rand_chacha = "0.9"
-lazy_static = "1.5"
+serde = { version = "1.0", features = ["derive"] } # 用于序列化和反序列化
+serde_json = { version = "1.0" } # 用于序列化和反序列化
+strum = "0.27" # 用于枚举的宏
+strum_macros = "0.27" # 用于枚举的宏
+rust_decimal = "1.37" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
+walkdir = "2.5" # 用于遍历目录树
+chardet = "0.2" # 用于检测文本编码的库
+encoding = "0.2" # 用于编码和解码文本的库
+rand = "0.9" # 用于生成随机数
+rand_chacha = "0.9" # 用于生成随机数
+lazy_static = "1.5" # 用于延迟初始化全局变量
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "blocking",
+    "rustls-tls",
+] } # 用于 HTTP 客户端
+regex = "1.11" # 正则表达式
 
 anyhow = "1.0"
 thiserror = "2.0"
@@ -55,8 +61,60 @@ candle-core = "0.9"
 candle-nn = "0.9"
 candle-onnx = "0.9"
 candle-transformers = "0.9"
-hf-hub = "0.4"              # 与 huggingface hub 集成
-tokenizers = "0.21"         # 标记文本
-parquet = "55.0"            # 列式存储数据文件格式
+candle-flash-attn = { version = "0.9", optional = true } # 用于 Flash Attention
+hf-hub = { version = "0.4", default-features = false, features = [
+    "rustls-tls",
+] } # 与 huggingface hub 集成
+tokenizers = "0.21" # 标记文本
+parquet = "55.0" # 列式存储数据文件格式
 image = "0.25"
-# ndarray = "0.16"
+png = "0.17" # 用于读取和写入 PNG 图像
+# ndarray = "0.16"                                         # 用于多维数组
+
+# src
+intel-mkl-src = { version = "0.8", optional = true }  # 为 Intel/AMD 平台提供行业领先的数学计算性能，适合高性能计算场景
+accelerate-src = { version = "0.3", optional = true } # 为 Apple 设备提供原生硬件加速，优化能效比
+
+
+# ONNX Runtime
+# [target.'cfg(not(target_os = "macos"))'.dependencies]
+# ort = { version = "=2.0.0-rc.10", features = [
+#     "load-dynamic",
+#     "half",
+# ], optional = true }
+# [target.'cfg(target_os = "macos")'.dependencies]
+# ort = { version = "=2.0.0-rc.10", features = ["half"], optional = true }
+
+
+[features]
+default = ["rustls-tls", "mkl"]
+mkl = [
+    "dep:intel-mkl-src",
+    "candle-nn/mkl",
+    "candle-transformers/mkl",
+    "candle-core/mkl",
+] # Intel 加速
+cuda = [
+    "candle-core/cuda",
+    "candle-nn/cuda",
+    "candle-transformers/cuda",
+    # "ort/cuda",
+] # NVIDIA推出的并行计算平台和编程模型，允许开发者利用GPU进行通用计算
+cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
+metal = [
+    "candle-core/metal",
+    "candle-nn/metal",
+] # 苹果的图形和计算API，用于在苹果设备上实现高性能图形渲染和并行计算。
+# ort = ["dep:ort"]
+flash-attn = [
+    "cuda",
+    "candle-transformers/flash-attn",
+    "dep:candle-flash-attn",
+] # 优化后的注意力机制实现，通过分块计算等方法提升Transformer模型的效率。它显著减少了内存占用和计算时间
+accelerate = [
+    "dep:accelerate-src",
+    "candle-core/accelerate",
+    "candle-nn/accelerate",
+    "candle-transformers/accelerate",
+] #  ​​Hugging Face 开发的 accelerate 库​​，它是一个专为 PyTorch 设计的分布式训练加速工具
+rustls-tls = ["reqwest/rustls-tls", "hf-hub/rustls-tls"]

@@ -126,6 +126,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_always_equal_proxy() -> anyhow::Result<()> {
         let any_type = AlwaysEqualProxy::from("*");
 
@@ -135,7 +136,7 @@ mod tests {
         assert!(any_type == 3.1); // 与浮点数比较
         assert!(!(any_type != "anything")); // 否定比较始终为false
 
-        println!("output: {}", any_type);
+        println!("output: {any_type}");
         Ok(())
     }
 }

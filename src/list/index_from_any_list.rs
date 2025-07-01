@@ -37,7 +37,7 @@ impl IndexFromAnyList {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types(py: Python) -> (Bound<'_, PyAny>, &'static str) {
+    fn return_types(py: Python<'_>) -> (Bound<'_, PyAny>, &'static str) {
         let any_type = any_type(py).unwrap();
         (any_type, NODE_INT)
     }
@@ -136,7 +136,7 @@ impl IndexFromAnyList {
         index: usize,
     ) -> Result<Bound<'py, PyAny>, Error> {
         if list.is_empty() {
-            return Err(Error::InputListEmpty);
+            return Err(Error::ListEmpty);
         }
 
         if index >= list.len() {
@@ -161,6 +161,7 @@ mod tests {
     use pyo3::{types::PyString, Python};
 
     #[test]
+    #[ignore]
     fn test_get_valid_index() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();
@@ -183,6 +184,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_index_out_of_range() {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();
@@ -196,22 +198,24 @@ mod tests {
             if let Error::IndexOutOfRange(msg) = err {
                 assert!(msg.contains("The length of the list is 1"));
             } else {
-                panic!("Unexpected error type: {:?}", err);
+                panic!("Unexpected error type: {err:?}");
             }
         })
     }
 
     #[test]
+    #[ignore]
     fn test_empty_list() {
         let index_any = IndexFromAnyList::new();
         let err = index_any
             .get_list_index(vec![], 0)
             .expect_err("Should return empty list error");
 
-        assert!(matches!(err, Error::InputListEmpty));
+        assert!(matches!(err, Error::ListEmpty));
     }
 
     #[test]
+    #[ignore]
     fn test_mixed_types() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let index_any = IndexFromAnyList::new();

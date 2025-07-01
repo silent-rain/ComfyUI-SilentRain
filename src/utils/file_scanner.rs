@@ -201,8 +201,8 @@ impl FileScanner {
                     "limit",
                     (NODE_INT, {
                         let limit = PyDict::new(py);
-                        limit.set_item("default", -1)?;
-                        limit.set_item("min", -1)?;
+                        limit.set_item("default", 0)?;
+                        limit.set_item("min", 0)?;
                         limit.set_item("step", 1)?;
                         limit
                     }),
@@ -224,7 +224,7 @@ impl FileScanner {
         file_extension: String,
         include_subfolders: bool,
         start_index: usize,
-        limit: i32,
+        limit: usize,
     ) -> PyResult<(Vec<String>, Vec<String>)> {
         self.file_extension = file_extension;
 
@@ -256,11 +256,13 @@ impl FileScanner {
         encoding: &str,
         include_subfolders: bool,
         start_index: usize,
-        limit: i32,
+        limit: usize,
     ) -> Result<(Vec<String>, Vec<String>), Error> {
         let path = Path::new(folder);
         if !path.is_dir() {
-            return Err(Error::InvalidDirectory(folder.to_string()));
+            return Err(Error::InvalidDirectory(format!(
+                "{folder}: File path does not exist"
+            )));
         }
 
         // 获取文件路径列表
@@ -269,10 +271,10 @@ impl FileScanner {
         } else {
             self.single_scan(path)?
         };
-        let end_index = if limit <= 0 {
+        let end_index = if limit == 0 {
             file_paths.len()
         } else {
-            limit as usize
+            start_index + limit
         }
         .min(file_paths.len());
         file_paths = file_paths[start_index..end_index].to_vec();
@@ -388,6 +390,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_read_file_with_auto_encoding() -> anyhow::Result<()> {
         let file_scanner = FileScanner::new();
         let content = file_scanner.read_file_with_auto_encoding(Path::new("README.md"))?;

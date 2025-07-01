@@ -29,8 +29,10 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
-          - runner: ubuntu-22.04
-            target: x86
+            manylinux: 2_28
+          # - runner: ubuntu-22.04
+          #   target: x86
+          #   manylinux: 2_28
         python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
@@ -38,38 +40,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # 从 Cargo.toml 提取包名和版本号
-      - name: Extract package info
-        id: package-info # 必须定义id
-        run: |
-          NAME=$(grep -A1 '^\[package\]' Cargo.toml | grep '^name =' | cut -d '"' -f2 | tr '-' '_' | tr -d '\n')  # 替换下划线
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
-          echo "${NAME} ${VERSION}"
-          echo "PACKAGE_NAME=${NAME}s" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
-
-      # - name: Get version from tag
-      #   run: |
-      #     VERSION=$(git describe --tags --abbrev=0)
-      #     echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
-
       - name: Install libraries
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y libssl-dev libssl-dev:i386 python3-dev protobuf-compiler gcc-multilib g++-multilib
-
-      - name: Ensure protoc is in Docker
-        run: |
-          which protoc
-          protoc --version
-          export PROTOC=$(which protoc)
-          echo "PROTOC=$PROTOC" >> $GITHUB_ENV
+          sudo apt-get install -y libssl-dev libssl-dev:i386 python3-dev gcc-multilib gcc-multilib g++-multilib protobuf-compiler
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
-        env:
-          PROTOC: ${{ env.PROTOC }} # 传递环境变量
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python${{ matrix.python-version }}
@@ -100,25 +78,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.target }}
 
-      - name: Extract package info (Windows)
-        shell: pwsh
-        run: |
-          $name = ((Select-String '^\[package\]' -Path Cargo.toml -Context 0,1 | Select-Object -ExpandProperty Context).PostContext | Select-String '^name =').Line -replace 'name = "', '' -replace '"', '' -replace '-', '_'
-          $version = (Select-String '^version =' -Path Cargo.toml).Line -replace 'version = "', '' -replace '"', ''
-          echo "$name $version"
-          echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      # - name: Install protoc
-      #   shell: pwsh
-      #   run: |
-      #     $version = "25.3"
-      #     Invoke-WebRequest -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v$version/protoc-$version-win64.zip" -OutFile "protoc.zip"
-      #     Expand-Archive protoc.zip -DestinationPath "$env:RUNNER_TEMP\protoc"
-      #     $env:PATH += ";$env:RUNNER_TEMP\protoc\bin"
-      #     echo "$env:RUNNER_TEMP\protoc\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-      - name: Install Protocol Buffers (protoc)
+      - name: Install libraries
         run: |
           choco install openssl.light
           choco install protoc
@@ -149,17 +109,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # 从 Cargo.toml 提取包名和版本号
-      - name: Extract package info
-        id: package-info # 必须定义id
-        run: |
-          NAME=$(grep -A1 '^\[package\]' Cargo.toml | grep '^name =' | cut -d '"' -f2 | tr '-' '_' | tr -d '\n')  # 替换下划线
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
-          echo "${NAME} ${VERSION}"
-          echo "PACKAGE_NAME=${NAME}" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
-
-      - name: Install Protocol Buffers (protoc)
+      - name: Install libraries
         run: brew install openssl protobuf python@3
 
       - name: Build wheels
@@ -178,8 +128,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    # needs: [linux, windows, macos]
-    needs: [linux]
+    needs: [linux, windows, macos]
     permissions:
       # Use to sign the release artifacts
       id-token: write

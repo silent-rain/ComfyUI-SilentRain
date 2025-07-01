@@ -158,7 +158,7 @@ impl StringList {
                 // 动态输入
                 for i in 1..=max_string_num {
                     optional.set_item(
-                        format!("string_{}", i),
+                        format!("string_{i}"),
                         (NODE_STRING, {
                             let string = PyDict::new(py);
                             // string.set_item("forceInput", false)?;
@@ -259,8 +259,7 @@ impl StringList {
     ) -> PyResult<Vec<String>> {
         if false {
             error!(
-                "check_lazy_status: {:?}  ==== {:?} ==== {:?} ==== {:?}",
-                string_num, delimiter, optional_string_list, kwargs
+                "check_lazy_status: {string_num:?}  ==== {delimiter:?} ==== {optional_string_list:?} ==== {kwargs:?}"
             );
         }
 
@@ -297,7 +296,7 @@ impl StringList {
             let unique_id = kwargs.unique_id()?;
 
             info!("workflow_id: {:#?}", extra_pnginfo.workflow.id);
-            info!("unique_id: {:#?}", unique_id);
+            info!("unique_id: {unique_id:#?}");
 
             let string_num_key = format!("{}_{}", extra_pnginfo.workflow.id, unique_id);
             Self::update_string_key(string_num_key.clone())?;
@@ -305,14 +304,13 @@ impl StringList {
 
             // 打印实例地址的几种方式
             info!("对象地址: {:p}", std::ptr::addr_of!(self)); // 引用变量本身的地址
-            info!("对象地址: {:p}", self); // 引用指向的对象的地址
+            info!("对象地址: {self:p}"); // 引用指向的对象的地址
             info!("对象地址: {:p}", self as *const _); // 引用指向的对象的地址
             info!("对象地址: 0x{:x}", self as *const _ as usize); // 引用指向的对象的地址
         }
 
         error!(
-            "string_num: {:#?}, delimiter: {:#?}, optional_string_list: {:#?}",
-            string_num, delimiter, optional_string_list
+            "string_num: {string_num:#?}, delimiter: {delimiter:#?}, optional_string_list: {optional_string_list:#?}"
         );
 
         let mut new_strings: Vec<String> = Vec::new();
@@ -330,7 +328,7 @@ impl StringList {
         if let Some(kwargs) = kwargs {
             // 指定获取key、value
             for i in 1..=string_num {
-                let any_value = match kwargs.get_item(format!("string_{}", i))? {
+                let any_value = match kwargs.get_item(format!("string_{i}"))? {
                     Some(v) => v,
                     None => continue,
                 };
@@ -400,7 +398,7 @@ impl StringList {
             .map_err(|e| Error::LockError(e.to_string()))?;
         info!("全局 HashMap 内容:");
         for (key, value) in map.iter() {
-            info!("  {}: {}", key, value);
+            info!("{key}: {value}");
         }
 
         Ok(())
@@ -419,8 +417,6 @@ impl StringList {
         let dict = PyDict::new(py);
         dict.set_item("ui", input_dict)?;
         dict.set_item("result", result)?;
-
-        error!("dict: {:#?},", dict,);
 
         Ok(dict)
     }

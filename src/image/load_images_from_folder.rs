@@ -155,8 +155,8 @@ impl LoadImagesFromFolder {
                     "limit",
                     (NODE_INT, {
                         let limit = PyDict::new(py);
-                        limit.set_item("default", -1)?;
-                        limit.set_item("min", -1)?;
+                        limit.set_item("default", 0)?;
+                        limit.set_item("min", 0)?;
                         limit.set_item("step", 1)?;
                         limit
                     }),
@@ -176,7 +176,7 @@ impl LoadImagesFromFolder {
         folder: String,
         include_subfolders: bool,
         start_index: usize,
-        limit: i32,
+        limit: usize,
     ) -> PyResult<(
         Vec<Bound<'py, PyAny>>,
         Vec<Bound<'py, PyAny>>,
@@ -215,7 +215,7 @@ impl LoadImagesFromFolder {
         folder: &str,
         include_subfolders: bool,
         start_index: usize,
-        limit: i32,
+        limit: usize,
     ) -> Result<
         (
             Vec<Bound<'py, PyAny>>,
@@ -228,7 +228,9 @@ impl LoadImagesFromFolder {
     > {
         let path = Path::new(folder);
         if !path.is_dir() {
-            return Err(Error::InvalidDirectory(folder.to_string()));
+            return Err(Error::InvalidDirectory(format!(
+                "{folder}: File path does not exist"
+            )));
         }
 
         // 获取文件路径列表
@@ -258,11 +260,13 @@ impl LoadImagesFromFolder {
         folder: &str,
         include_subfolders: bool,
         start_index: usize,
-        limit: i32,
+        limit: usize,
     ) -> Result<(Vec<PathBuf>, Vec<String>, Vec<String>), Error> {
         let path = Path::new(folder);
         if !path.is_dir() {
-            return Err(Error::InvalidDirectory(folder.to_string()));
+            return Err(Error::InvalidDirectory(format!(
+                "{folder}: File path does not exist"
+            )));
         }
 
         // 获取文件路径列表
@@ -273,10 +277,10 @@ impl LoadImagesFromFolder {
         };
 
         // 截取指定范围的路径
-        let end_index = if limit <= 0 {
+        let end_index = if limit == 0 {
             file_paths.len()
         } else {
-            limit as usize
+            start_index + limit
         }
         .min(file_paths.len());
         file_paths = file_paths[start_index..end_index].to_vec();

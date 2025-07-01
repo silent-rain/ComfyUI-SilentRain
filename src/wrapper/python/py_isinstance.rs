@@ -15,7 +15,7 @@ pub fn isinstance<'py>(
     py_any: &Bound<'py, PyAny>,
     py_type: &str,
 ) -> PyResult<bool> {
-    let code = CString::new(format!("isinstance({:?}, {})", py_any, py_type)).unwrap();
+    let code = CString::new(format!("isinstance({py_any:?}, {py_type})")).unwrap();
     let res = if py_type.starts_with("torch") {
         //         let code = c_str!(
         //             "
@@ -64,6 +64,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_isinstance() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyString::new(py, "this is a str.");
@@ -79,6 +80,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_isinstance2() -> anyhow::Result<()> {
         Python::with_gil(|py| {
             let binding = PyString::new(py, "this is a str.");

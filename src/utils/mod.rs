@@ -9,6 +9,9 @@ pub use bridge_anything::BridgeAnything;
 mod workflow_info;
 pub use workflow_info::WorkflowInfo;
 
+mod batch_rename;
+pub use batch_rename::BatchRename;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,

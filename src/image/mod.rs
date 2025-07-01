@@ -12,6 +12,12 @@ pub use image_resolution2::ImageResolution2;
 mod load_images_from_folder;
 pub use load_images_from_folder::LoadImagesFromFolder;
 
+mod save_images;
+pub use save_images::SaveImages;
+
+mod save_image_text;
+pub use save_image_text::SaveImageText;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,

@@ -20,7 +20,7 @@ pub const NODE_SEED_MAX: u64 = 10000000;
 
 /// 任意类型
 #[pyfunction]
-pub fn any_type(py: Python) -> PyResult<Bound<'_, pyo3::PyAny>> {
+pub fn any_type(py: Python<'_>) -> PyResult<Bound<'_, pyo3::PyAny>> {
     let code = c_str!(
         "class AlwaysEqualProxy(str):
             def __eq__(self, _):

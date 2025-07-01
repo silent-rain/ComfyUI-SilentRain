@@ -3,16 +3,27 @@
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    // 标准库错误处理
     #[error("io error, {0}")]
     Io(std::io::Error),
     #[error("parse int error, {0}")]
-    ParseIntError(std::num::ParseIntError),
-
+    ParseIntError(#[from] std::num::ParseIntError),
+    #[error("system time error, {0}")]
+    SystemTimeError(#[from] std::time::SystemTimeError),
+    // std::sync::poison::rwlock
+    #[error("lock error, {0}")]
+    LockError(String),
+    // std::sync::once_lock::OnceLock
+    #[error("once lock error, {0}")]
+    OnceLock(String),
     #[error("option none, {0}")]
     OptionNone(String),
 
-    #[error("invalid directory, {0}")]
-    InvalidDirectory(String),
+    #[error("serde json error, {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error("regex error, {0}")]
+    RegexError(#[from] regex::Error),
+
     #[error("encode error, {0}")]
     Encode(String),
     #[error("decode error, {0}")]
@@ -23,10 +34,9 @@ pub enum Error {
     TypeConversion(String),
     #[error("type downcast failed, {0}")]
     DowncastFailed(String),
-    #[error("lock error, {0}")]
-    LockError(String),
-    #[error("the input list is empty")]
-    InputListEmpty,
+
+    #[error("the list is empty")]
+    ListEmpty,
     #[error("index out of range, {0}")]
     IndexOutOfRange(String),
     #[error("error in obtaining list items at specified index")]
@@ -43,17 +53,24 @@ pub enum Error {
 
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),
+    #[error("invalid tensor shape, {0}")]
+    InvalidTensorShape(String),
     #[error("numpy error, {0}")]
     NotContiguousError(#[from] numpy::NotContiguousError),
     #[error("strum error, {0}")]
     ParseEnumString(String),
 
-    #[error("creating image buffer error")]
-    ImageBuffer,
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),
-    #[error("file path not exist, {0}")]
-    FilePathNotExist(String),
+    #[error("creating image buffer error")]
+    ImageBuffer,
+    #[error("unsupported number of channels: {0}")]
+    UnsupportedNumberOfChannels(u32),
+    #[error("png encoding error, {0}")]
+    PngEncodingError(#[from] png::EncodingError),
+
+    #[error("invalid directory, {0}")]
+    InvalidDirectory(String),
     #[error("invalid parameter, {0}")]
     InvalidParameter(String),
 }
@@ -61,11 +78,5 @@ pub enum Error {
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::Io(e)
-    }
-}
-
-impl From<std::num::ParseIntError> for Error {
-    fn from(e: std::num::ParseIntError) -> Self {
-        Error::ParseIntError(e)
     }
 }

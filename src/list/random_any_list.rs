@@ -36,7 +36,7 @@ impl RandomAnyList {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types(py: Python) -> (Bound<'_, PyAny>, &'static str) {
+    fn return_types(py: Python<'_>) -> (Bound<'_, PyAny>, &'static str) {
         let any_type = any_type(py).unwrap();
         (any_type, NODE_INT)
     }

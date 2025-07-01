@@ -32,7 +32,7 @@ impl BridgeAnything {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types(py: Python) -> (Bound<'_, PyAny>,) {
+    fn return_types(py: Python<'_>) -> (Bound<'_, PyAny>,) {
         let any_type = any_type(py).unwrap();
         (any_type,)
     }
