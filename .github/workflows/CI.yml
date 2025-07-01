@@ -55,7 +55,7 @@ jobs:
           manylinux: ${{ matrix.platform.manylinux }}
           # container: off # Set to off to disable manylinux docker build and build on the host instead.
           before-script-linux: |
-            sudo apt-get install -y protobuf-compiler
+            apt-get install -y protobuf-compiler
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
