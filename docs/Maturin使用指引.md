@@ -39,3 +39,5 @@ maturin upload
 ## 相关文档
 
 - [maturin使用指南](https://www.maturin.rs/)
+- [PyO3/maturin-action](https://github.com/PyO3/maturin-action)
+- [marketplace/actions/maturin-action](https://github.com/marketplace/actions/maturin-action)
