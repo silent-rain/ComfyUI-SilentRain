@@ -29,24 +29,24 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            architecture: x64
           - runner: ubuntu-22.04
             target: i686-unknown-linux-gnu
-            architecture: x86
         python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.platform.architecture }}
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install libraries
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y libssl-dev libssl-dev:i386 python3-dev gcc-multilib g++-multilib protobuf-compiler
+          sudo apt-get install -y libssl-dev libssl-dev:i386 \
+            gcc-multilib g++-multilib \
+            intel-mkl-core:i386 \
+            python3-dev protobuf-compiler
 
       - name: Install Rust target
         run: |
@@ -88,10 +88,13 @@ jobs:
         run: |
           choco install openssl.light
           choco install protoc
-          choco install intel-openmp
-          echo "C:\\Program Files (x86)\\Intel\\oneAPI\\compiler\\latest\\windows\\redist\\intel64_win\\compiler" >> $GITHUB_PATH
-          echo "C:\\Program Files (x86)\\Intel\\oneAPI\\compiler\\latest\\windows\\lib" >> $GITHUB_PATH
-          echo "LIB=C:\\Program Files (x86)\\Intel\\oneAPI\\compiler\\latest\\windows\\lib;$LIB" >> $GITHUB_ENV
+
+      - name: Install Intel MKL (Windows)
+        if: matrix.platform.target == 'i686-pc-windows-gnu' || matrix.platform.target == 'x86_64-pc-windows-gnu'
+        run: |
+          choco install intel-oneapi-mkl-devel -y
+          echo "MKLROOT=C:\Program Files (x86)\Intel\oneAPI\mkl\latest" >> $env:GITHUB_ENV
+          echo "LIB=$env:MKLROOT\lib\intel64;$env:LIB" >> $env:GITHUB_ENV
 
       - name: Install Rust target
         run: |
