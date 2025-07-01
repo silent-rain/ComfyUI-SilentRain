@@ -120,6 +120,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install libraries
+        run: brew install openssl protobuf python@3
+
       - name: Install Rust target
         run: |
           rustup target add ${{ matrix.platform.target }}
