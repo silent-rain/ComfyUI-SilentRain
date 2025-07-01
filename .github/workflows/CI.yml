@@ -43,7 +43,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y libssl-dev libssl-dev:i386 python3-dev protobuf-compiler gcc-multilib g++-multilib
+          sudo apt-get install -y libssl-dev libssl-dev:i386 python3-dev gcc-multilib g++-multilib protobuf-compiler
 
       - name: Install Rust target
         run: |
