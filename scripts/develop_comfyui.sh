@@ -10,34 +10,24 @@ ComfyUI=~/code/ComfyUI/custom_nodes
 root=$(cd "$(dirname ${0})/../";pwd)
 echo "====================== root:${root} ======================"
 
-# switch venv
-echo "switch venv ..."
-source .venv/bin/activate
 
 # build
-echo "build whl ..."
-maturin build
+./scripts/build.sh
 
-cd target/wheels
 
-# 解压Python包
-echo "unzip ${App} whl ..."
-unzip ${App}-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
-
-# 将 ${App} 移动到 ${ComfyUI} 的自定义节点目录下
+# 将 ${App} 拷贝到 ${ComfyUI} 的自定义节点目录下
 echo "develop ${App} to ComfyUI path ..."
-\cp -r ./${App} ${ComfyUI}/
+\cp -r ./nodes/${App} ${ComfyUI}/
+
 
 # 检查是否安装成功
-echo "comfyui new node ..."
-tree ${ComfyUI}/${App}
+echo "ls comfyui custom nodes ..."
+ls -hl ${ComfyUI}/${App}
 
 echo -e "\n"
 
-echo "comfyui node dir list ..."
-ls -hl ${ComfyUI}/${App}
+echo "tree comfyui custom nodes ..."
+tree ${ComfyUI}/${App}
 
-# 删除解压的文件
-rm -rf ${App} ${App}-*.dist-info
 
-echo -e "\nDone"
+echo -e "\nDevelop Done"

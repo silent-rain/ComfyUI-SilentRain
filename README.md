@@ -1,16 +1,46 @@
 # ComfyUI-SilentRain
 
-一个使用Rust语言实现ComfyUI自定义节点的尝试。
+本项目是基于Rust语言开发的ComfyUI自定义节点集合，旨在高效扩展comfyui生态。核心优势包括：
 
-## 相关文档
+- **高性能计算**：Rust实现核心逻辑，保障内存安全与执行效率
+- **无缝集成**：提供标准化接口与ComfyUI原生节点深度兼容
+- **模块化架构**：支持灵活扩展与功能定制
+- **预置功能集**：包含图像处理、文本生成等AI任务常用节点
+
+项目配备完善的技术文档与部署方案，适合具备Rust/ComfyUI基础的开发者快速上手。
+
+## 编译
+
+### 环境搭建与编译文档
 
 - [环境搭建](docs/环境搭建.md)
 - [Maturin使用指引](docs/Maturin使用指引.md)
 
-## 使用
+### 编译与本地部署
+
+```shell
+git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
+
+cd ComfyUI-SilentRain
+
+# 编译
+./scripts/build.sh
+
+# 部署到comfyui中(注意调整comfyui安装路径)
+./scripts/develop_comfyui.sh
+
+# 提交到master分支
+# 将nodes/comfyui_silentrain提交到master分支, 后续考虑拆分
+```
+
+## ComfyUI 使用
 
 ```shell
 cd ComfyUI/custom_nodes/
 
 git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
 ```
+
+## 工作流示例
+
+- [工作流示例](workflow)

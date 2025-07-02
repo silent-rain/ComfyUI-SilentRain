@@ -7,13 +7,31 @@ root=$(cd "$(dirname ${0})/../";pwd)
 echo "====================== root:${root} ======================"
 
 App=comfyui_silentrain
-Project=${root}/nodes
+nodesDir=${root}/nodes
+PythonVersion=3.12
 
+# App 版本号, 从 Cargo.toml 提取包名和版本号
+AppVersion=$(grep '^version =' Cargo.toml | cut -d '"' -f2  | tr -d '\n')
+echo "App version: ${AppVersion}"
 
 # nodes 目录
-if [ ! -d ${Project} ]; then 
-    echo "mkdir ${Project}"
-    mkdir ${Project}
+if [ ! -d ${nodesDir} ]; then 
+    echo "mkdir ${nodesDir}"
+    mkdir ${nodesDir}
+fi
+
+# 检查虚拟环境
+echo "check venv ..."
+if [ ! -d .venv ]; then
+    echo "create venv ..."
+    # 安装
+    pipx install uv
+
+    # 安装Python版本
+    uv python install ${PythonVersion}
+
+    # 创建虚拟环境
+    uv venv --python ${PythonVersion}
 fi
 
 
@@ -29,27 +47,32 @@ cd target/wheels
 
 # 解压Python包
 echo "unzip ${App} whl ..."
-unzip ${App}-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
+# zipFile=${App}-${AppVersion}-cp312-cp312-manylinux_2_34_x86_64.whl
+zipFile=$(find . -name "${App}-*.whl" | head -n 1)
+echo "zip file: ${zipFile}"
 
-# 将 ${App} 移动到 ${Project} 的自定义节点目录下
-echo "develop ${App} to Project path ..."
-\cp -r ./${App} ${Project}/
+unzip ${zipFile}
 
-
-echo -e "\n"
-
-# 检查是否安装成功
-echo "comfyui new node ..."
-tree ${Project}/${App}
-
+# 将 ${App} 移动到 ${nodesDir} 的自定义节点目录下
+echo "develop ${App} to ${nodesDir} ..."
+\cp -r ./${App} ${nodesDir}/
 
 echo -e "\n"
 
+echo "ls nodes dir ..."
+ls -hl ${nodesDir}/${App}
 
-echo "comfyui node dir list ..."
-ls -hl ${Project}/${App}
+echo -e "\n"
+
+echo "tree nodes dir ..."
+tree ${nodesDir}/
+
+echo -e "\n"
+
 
 # 删除解压的文件
 rm -rf ${App} ${App}-*.dist-info
 
-echo -e "\nDone"
+echo -e "\nBuild Done"
+
+echo -e "\n"
