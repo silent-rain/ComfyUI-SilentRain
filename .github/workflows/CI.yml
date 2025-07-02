@@ -55,7 +55,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   windows:
@@ -89,7 +89,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   macos:
@@ -118,7 +118,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   release:
@@ -142,7 +142,7 @@ jobs:
           path: release-artifacts
 
       - name: Debug files
-        run: ls -R release-artifacts/**/*
+        run: ls -R release-artifacts/*
 
       - name: Verify artifacts
         run: |
