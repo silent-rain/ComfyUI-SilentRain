@@ -10,8 +10,8 @@ on:
     branches:
       - main
       - master
-    tags:
-      - "*" # 当推送v开头的标签时触发
+    # tags:
+    #   - "v*" # 当推送v开头的标签时触发
   pull_request:
   workflow_dispatch:
 
