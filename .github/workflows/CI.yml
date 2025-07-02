@@ -18,9 +18,6 @@ on:
 permissions:
   contents: read
 
-# env:
-#   PACKAGE_NAME: comfyui_silentrain # 全局环境变量，所有 job/step 都可以用
-
 jobs:
   linux:
     runs-on: ${{ matrix.platform.runner }}
@@ -58,7 +55,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   windows:
@@ -92,7 +89,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   macos:
@@ -121,7 +118,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.python-version }}-${{ github.run_id }}
+          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
   release:
@@ -138,10 +135,26 @@ jobs:
       attestations: write
     steps:
       - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Debug files
+        run: ls -R release-artifacts/*
+
+      - name: Verify artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find release-artifacts -type f
+          echo "Total wheel files: $(find release-artifacts -name '*.whl' | wc -l)"
+
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "wheels-*/*"
+          subject-path: "release-artifacts/**/*.whl"
+
       - uses: softprops/action-gh-release@v1
         with:
-          files: wheels-*/*
+          files: release-artifacts/**/*.whl
+          tag_name: ${{ github.ref_name }}
