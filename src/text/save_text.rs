@@ -86,6 +86,13 @@ impl SaveText {
         (false,)
     }
 
+    // 输出节点, 可选
+    #[classattr]
+    #[pyo3(name = "OUTPUT_NODE")]
+    fn output_node() -> bool {
+        true
+    }
+
     // 节点分类
     #[classattr]
     #[pyo3(name = "CATEGORY")]
