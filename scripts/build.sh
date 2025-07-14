@@ -55,7 +55,11 @@ unzip ${zipFile}
 
 # 将 ${App} 移动到 ${nodesDir} 的自定义节点目录下
 echo "develop ${App} to ${nodesDir} ..."
-\cp -r ./${App} ${nodesDir}/
+rm -rf ${nodesDir}/${App} ${nodesDir}/${App}.libs ${nodesDir}/${App}-*.dist-info
+
+\mv -f ./${App} ${nodesDir}/
+\mv -f ./${App}.libs ${nodesDir}/
+\mv -f ./${App}-*.dist-info ${nodesDir}/
 
 echo -e "\n"
 
@@ -71,7 +75,7 @@ echo -e "\n"
 
 
 # 删除解压的文件
-rm -rf ${App} ${App}-*.dist-info
+rm -rf ${App} ${App}.libs ${App}-*.dist-info
 
 echo -e "\nBuild Done"
 
