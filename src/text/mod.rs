@@ -18,6 +18,9 @@ pub use save_text::{SaveText, SaveTextMode};
 mod regular_string;
 pub use regular_string::RegularString;
 
+mod load_kontext_presets_assistant;
+pub use load_kontext_presets_assistant::LoadKontextPresetsAssistant;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
