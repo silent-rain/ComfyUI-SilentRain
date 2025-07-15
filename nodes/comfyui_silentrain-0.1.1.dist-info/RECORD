@@ -1,7 +1,6 @@
 comfyui_silentrain-0.1.1.dist-info/METADATA,sha256=1qWVmiTnyt6EP4mU5d0IwoMzw99nS3fJnqioNAPVAFQ,1721
 comfyui_silentrain-0.1.1.dist-info/WHEEL,sha256=7FgAcpQES0h1xhfN9Ugve9FTUilU6sRAr1WJ5ph2cuw,108
 comfyui_silentrain-0.1.1.dist-info/licenses/LICENSE,sha256=rReBomQr7_imraBcbMNLSlZ_GK0yohsPGqmueaLNC7c,1068
-comfyui_silentrain.libs/libiomp5-18625c2d.so,sha256=2-8hMjznpwpr5eBW1uuB4Y2N9aq0tZc2LcJBEjWcWK0,1930457
 comfyui_silentrain/__init__.py,sha256=b4dqv_gkFLZBvy7T9Ef0EFaCMF0XFWdh6qBVXDSxdlk,155
-comfyui_silentrain/comfyui_silentrain.cpython-312-x86_64-linux-gnu.so,sha256=KYTZcAvzPQM_wUni--xxTolq8GfCRjiJmg596NcoOfg,13230433
+comfyui_silentrain/comfyui_silentrain.cpython-312-x86_64-linux-gnu.so,sha256=TCojLVfYOysJ-jlZoN_TTPOgrss-k9Qyg1CvQ3cHcUs,15261200
 comfyui_silentrain-0.1.1.dist-info/RECORD,,

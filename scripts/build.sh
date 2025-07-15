@@ -63,13 +63,8 @@ rm -rf ${nodesDir}/${App} ${nodesDir}/${App}.libs ${nodesDir}/${App}-*.dist-info
 
 echo -e "\n"
 
-echo "ls nodes dir ..."
-ls -hl ${nodesDir}/${App}
-
-echo -e "\n"
-
 echo "tree nodes dir ..."
-tree ${nodesDir}/
+tree -h ${nodesDir}/
 
 echo -e "\n"
 

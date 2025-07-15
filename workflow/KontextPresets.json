@@ -1,0 +1,437 @@
+{
+  "id": "dc68d21b-5c17-4d60-b029-66d9dd25f750",
+  "revision": 0,
+  "last_node_id": 17,
+  "last_link_id": 13,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadKontextPresetsAssistant",
+      "pos": [
+        500,
+        130
+      ],
+      "size": [
+        312.3404235839844,
+        78
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "Prompt",
+          "name": "Prompt",
+          "type": "STRING",
+          "links": [
+            8
+          ]
+        },
+        {
+          "label": "Prompt_Zh",
+          "name": "Prompt_Zh",
+          "type": "STRING",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadKontextPresetsAssistant"
+      },
+      "widgets_values": [
+        "无痕融合"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "LoadKontextBlePresetsAssistant",
+      "pos": [
+        500,
+        630
+      ],
+      "size": [
+        336.4644470214844,
+        78
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "Prompt",
+          "name": "Prompt",
+          "type": "STRING",
+          "links": [
+            5
+          ]
+        },
+        {
+          "label": "Prompt_Zh",
+          "name": "Prompt_Zh",
+          "type": "STRING",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadKontextBlePresetsAssistant"
+      },
+      "widgets_values": [
+        "作曲家传送(Teleport Komposer)"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        630
+      ],
+      "size": [
+        370,
+        180
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.\nTeleport the subject to a random location, scenario and/or style. Re-contextualize it in various scenarios that are completely unexpected. Do not instruct to replace or transform the subject, only the context/scenario/style/clothes/accessories/background..etc.\nYour response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions."
+      ]
+    },
+    {
+      "id": 9,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        860
+      ],
+      "size": [
+        370,
+        170
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。\n将拍摄对象传送到随机位置、场景和/或风格。在各种完全出乎意料的场景中重新将其置于上下文中。不要指示替换或转换主题，只指示上下文/场景/风格/衣服/配饰/背景..等。\n您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        130
+      ],
+      "size": [
+        370,
+        180
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.\nThis image is a composite with minor inconsistencies between the head and body. Your task is to generate instructions for a subtle but master-level integration. Focus on creating a photorealistic and utterly convincing final image. The instructions should detail: 1. **Micro-Lighting Adjustment**: Fine-tune the lighting and shadows around the neck and jawline to create a perfect match. 2. **Skin Tone & Texture Unification**: Describe the process of unifying the skin tones for a seamless look, and more importantly, harmonizing the micro-textures like pores, fine hairs, and film grain across the blended area. 3. **Edge Blending Perfection**: Detail how to create an invisible transition at the neckline, making it appear as if it was never separate.\nYour response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions."
+      ]
+    },
+    {
+      "id": 12,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        360
+      ],
+      "size": [
+        370,
+        170
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。\n这张图像是一个头部和身体之间有轻微不一致的合成图。你的任务是生成微妙但大师级整合的指令。专注于创建一个照片级真实且完全令人信服的最终图像。指令应详细说明：1. **微光调整**：微调颈部和下颌线周围的光线和阴影，创造完美匹配。2. **肤色和纹理统一**：描述统一肤色以获得无缝外观的过程，更重要的是，协调混合区域的微观纹理，如毛孔、细小毛发和胶片颗粒。3. **边缘混合完美**：详细说明如何在颈部线条创建隐形过渡，使其看起来好像从未分离过。\n您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        1360
+      ],
+      "size": [
+        370,
+        170
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "将图片转化为极简主义风格.\n\n同时保持原有构图.\n\n万物移除 只需修复图片中的白色蒙版区域，其他区域不应进行任何更改."
+      ]
+    },
+    {
+      "id": 15,
+      "type": "ShowText|pysssss",
+      "pos": [
+        900,
+        1130
+      ],
+      "size": [
+        370,
+        180
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "Convert the image into a minimalist style.\n\nwhile maintaining the same composition.\n\nrepair only the white masked areas in the picture, no changes should be made in other areas."
+      ]
+    },
+    {
+      "id": 16,
+      "type": "LoadKontextPresets",
+      "pos": [
+        500,
+        1140
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "Prompt",
+          "name": "Prompt",
+          "type": "STRING",
+          "links": [
+            12
+          ]
+        },
+        {
+          "label": "Prompt_Zh",
+          "name": "Prompt_Zh",
+          "type": "STRING",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadKontextPresets"
+      },
+      "widgets_values": [
+        "极简主义风格",
+        "保持构图",
+        "万物移除"
+      ]
+    }
+  ],
+  "links": [
+    [
+      5,
+      3,
+      0,
+      7,
+      0,
+      "STRING"
+    ],
+    [
+      6,
+      3,
+      1,
+      9,
+      0,
+      "STRING"
+    ],
+    [
+      8,
+      1,
+      0,
+      11,
+      0,
+      "STRING"
+    ],
+    [
+      9,
+      1,
+      1,
+      12,
+      0,
+      "STRING"
+    ],
+    [
+      12,
+      16,
+      0,
+      15,
+      0,
+      "STRING"
+    ],
+    [
+      13,
+      16,
+      1,
+      14,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9867414743202474,
+      "offset": [
+        -342.3765393803969,
+        -240.28051059697373
+      ]
+    },
+    "frontendVersion": "1.21.7",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

@@ -13,7 +13,10 @@ use crate::{
         RandomAnyList, ShuffleAnyList,
     },
     logic::BatchFloat,
-    text::{RegularString, SaveText, StringList, StringListToSting, TextBox, TextToList},
+    text::{
+        LoadKontextBlePresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
+        RegularString, SaveText, StringList, StringListToSting, TextBox, TextToList,
+    },
     utils::{BatchRename, BridgeAnything, FileScanner, WorkflowInfo},
 };
 
@@ -54,6 +57,21 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "RegularString",
             py.get_type::<RegularString>(),
             "Sr Regular String",
+        ),
+        NodeRegister(
+            "LoadKontextPresets",
+            py.get_type::<LoadKontextPresets>(),
+            "Sr Load Kontext Presets",
+        ),
+        NodeRegister(
+            "LoadKontextPresetsAssistant",
+            py.get_type::<LoadKontextPresetsAssistant>(),
+            "Sr Load Kontext Presets Assistant",
+        ),
+        NodeRegister(
+            "LoadKontextBlePresetsAssistant",
+            py.get_type::<LoadKontextBlePresetsAssistant>(),
+            "Sr Load Kontext Ble Presets Assistant",
         ),
         // list
         NodeRegister(
