@@ -1,0 +1,508 @@
+{
+    "style_conversions": [
+        {
+            "name": "极简主义风格",
+            "brief": "Convert the image into a minimalist style",
+            "brief_zh": "将图片转化为极简主义风格"
+        },
+        {
+            "name": "极简主义艺术风格",
+            "brief": "Convert the image into a minimalist art style",
+            "brief_zh": "将此图像转换为极简主义艺术风格"
+        },
+        {
+            "name": "未来主义风格",
+            "brief": "Convert the image into a futurism style",
+            "brief_zh": "将图片转化为未来主义风格"
+        },
+        {
+            "name": "超现实主义风格",
+            "brief": "Convert the image into a surrealism style",
+            "brief_zh": "将图片转化为超现实主义风格"
+        },
+        {
+            "name": "中国风",
+            "brief": "Convert the image into a Chinese style",
+            "brief_zh": "将图片转化为中国风风格"
+        },
+        {
+            "name": "转绘写实",
+            "brief": "Convert to a realistic art style",
+            "brief_zh": "转绘写实"
+        },
+        {
+            "name": "转绘3D",
+            "brief": "convert it to 3D",
+            "brief_zh": "转绘3D"
+        },
+        {
+            "name": "转绘2D",
+            "brief": "convert it to 2D",
+            "brief_zh": "转绘2D"
+        },
+        {
+            "name": "皮克斯风格",
+            "brief": "Convert this photo to Pixar style",
+            "brief_zh": "将这张照片转为皮克斯画风"
+        },
+        {
+            "name": "吉卜力风格",
+            "brief": "Help me convert it to Ghibli style",
+            "brief_zh": "帮我把它转换成吉卜力风格"
+        },
+        {
+            "name": "史努比卡通风格",
+            "brief": "convert it to Snoopy cartoon style",
+            "brief_zh": "将图片转换成史努比卡通风格"
+        },
+        {
+            "name": "水彩画风格",
+            "brief": "Convert the image into a watercolor painting style",
+            "brief_zh": "将图片转化为水彩画风格"
+        },
+        {
+            "name": "赛博朋克风格",
+            "brief": "Convert the image into a cyberpunk style",
+            "brief_zh": "将图片转化为赛博朋克风格"
+        },
+        {
+            "name": "蒸汽朋克风格",
+            "brief": "Convert the image into a steampunk style",
+            "brief_zh": "将图片转化为蒸汽朋克风格"
+        },
+        {
+            "name": "低多边形风格",
+            "brief": "Convert the image into a low poly style",
+            "brief_zh": "将图片转化为低多边形风格"
+        },
+        {
+            "name": "浮世绘风格",
+            "brief": "Convert the image into a ukiyo-e style",
+            "brief_zh": "将图片转化为浮世绘风格"
+        },
+        {
+            "name": "像素艺术风格",
+            "brief": "Convert the image into a pixel art style",
+            "brief_zh": "将图片转化为像素艺术风格"
+        },
+        {
+            "name": "新艺术风格",
+            "brief": "Convert the image into an art nouveau style",
+            "brief_zh": "将图片转化为新艺术风格"
+        },
+        {
+            "name": "哥特式风格",
+            "brief": "Convert the image into a gothic style",
+            "brief_zh": "将图片转化为哥特式风格"
+        },
+        {
+            "name": "巴洛克风格",
+            "brief": "Convert the image into a baroque style",
+            "brief_zh": "将图片转化为巴洛克风格"
+        },
+        {
+            "name": "动漫风格",
+            "brief": "Convert the image into an anime style",
+            "brief_zh": "将图片转化为动漫风格"
+        },
+        {
+            "name": "3D渲染风格",
+            "brief": "Convert the image into a 3D rendered style",
+            "brief_zh": "将图片转化为3D渲染风格"
+        },
+        {
+            "name": "CG动画风格",
+            "brief": "Convert the image into a CG animation style",
+            "brief_zh": "将图片转化为CG动画风格"
+        },
+        {
+            "name": "水墨画风格",
+            "brief": "Convert the image into an ink wash painting style",
+            "brief_zh": "将图片转化为水墨画风格"
+        },
+        {
+            "name": "古典画风格",
+            "brief": "Convert the image into a classical painting style",
+            "brief_zh": "将图片转化为古典画风格"
+        },
+        {
+            "name": "平面插画风格",
+            "brief": "Convert the image into a flat illustration style",
+            "brief_zh": "将图片转化为平面插画风格"
+        },
+        {
+            "name": "荧光绘画风格",
+            "brief": "Convert the image into a fluorescent painting style",
+            "brief_zh": "将图片转化为荧光绘画风格"
+        },
+        {
+            "name": "彩铅风格",
+            "brief": "Convert the image into a colored pencil style",
+            "brief_zh": "将图片转化为彩铅风格"
+        },
+        {
+            "name": "手办风格",
+            "brief": "Convert the image into a figurine style",
+            "brief_zh": "将图片转化为手办风格"
+        },
+        {
+            "name": "二次元风格",
+            "brief": "Convert the image into a 2D anime style",
+            "brief_zh": "将图片转化为二次元风格"
+        },
+        {
+            "name": "莫奈风格",
+            "brief": "Convert the image into a Monet style",
+            "brief_zh": "将图片转化为莫奈风格"
+        },
+        {
+            "name": "毕加索风格",
+            "brief": "Convert the image into a Picasso style",
+            "brief_zh": "将图片转化为毕加索风格"
+        },
+        {
+            "name": "梵高风格",
+            "brief": "Convert the image into a Van Gogh style",
+            "brief_zh": "将图片转化为梵高风格"
+        },
+        {
+            "name": "马蒂斯风格",
+            "brief": "Convert the image into a Matisse style",
+            "brief_zh": "将图片转化为马蒂斯风格"
+        },
+        {
+            "name": "伦勃朗风格",
+            "brief": "Convert the image into a Rembrandt style",
+            "brief_zh": "将图片转化为伦勃朗风格"
+        },
+        {
+            "name": "复古动漫风格",
+            "brief": "Convert the image into a retro anime style",
+            "brief_zh": "将图片转化为复古动漫风格"
+        },
+        {
+            "name": "复古海报风格",
+            "brief": "Convert the image into a vintage poster style",
+            "brief_zh": "将图片转化为复古海报风格"
+        },
+        {
+            "name": "波普艺术风格",
+            "brief": "Convert the image into a pop art style",
+            "brief_zh": "将此图像转换为波普艺术风格"
+        },
+        {
+            "name": "马赛克艺术风格",
+            "brief": "Convert the image into a mosaic art style",
+            "brief_zh": "将此图像转换为马赛克艺术风格"
+        },
+        {
+            "name": "抽象艺术风格",
+            "brief": "Convert the image into an abstract art style",
+            "brief_zh": "将此图像转换为抽象艺术风格"
+        },
+        {
+            "name": "拼贴艺术风格",
+            "brief": "Convert the image into a collage art style",
+            "brief_zh": "将此图像转换为拼贴艺术风格"
+        },
+        {
+            "name": "木炭艺术风格",
+            "brief": "Convert the image into a charcoal art style",
+            "brief_zh": "将此图像转换为木炭艺术风格"
+        },
+        {
+            "name": "富有表现力的艺术风格",
+            "brief": "Convert the image into an expressive art style",
+            "brief_zh": "将此图像转换为富有表现力的艺术风格"
+        },
+        {
+            "name": "印象派艺术风格",
+            "brief": "Convert the image into an impressionist art style",
+            "brief_zh": "将此图像转换为印象派艺术风格"
+        },
+        {
+            "name": "水粉艺术风格",
+            "brief": "Convert the image into a gouache art style",
+            "brief_zh": "将此图像转换为水粉艺术风格"
+        },
+        {
+            "name": "卡通刺绣艺术风格",
+            "brief": "Transform into a cartoon embroidery style, turn the picture into an embroidery style with a black background",
+            "brief_zh": "转化为卡通刺绣风格，将图片转化为黑色背景的刺绣风格"
+        },
+        {
+            "name": "真实漫画插图风格",
+            "brief": "Convert the image into an illustration style realcomic",
+            "brief_zh": "将图片转化为真实漫画插图风格"
+        },
+        {
+            "name": "素描风格",
+            "brief": "Convert the image to a pencil sketch style",
+            "brief_zh": "将图片转为素描"
+        },
+        {
+            "name": "油画风格",
+            "brief": "Convert the image to an oil painting style",
+            "brief_zh": "将图片转为油画"
+        },
+        {
+            "name": "水彩风格",
+            "brief": "Convert the image to a watercolor painting style",
+            "brief_zh": "将图片转为水彩"
+        },
+        {
+            "name": "卡通风格",
+            "brief": "Convert the image to a cartoon style",
+            "brief_zh": "将图片转为卡通"
+        },
+        {
+            "name": "黑白风格",
+            "brief": "Convert the image to black and white",
+            "brief_zh": "将图片转为黑白"
+        },
+        {
+            "name": "低保真胶片风格",
+            "brief": "Convert the image into a lo-fi film style with mild grain, light leaks, and timestamp '18:57:04'",
+            "brief_zh": "将图片转化为低保真胶片风格，带有温和的胶片颗粒、漏光效果和时间戳'18:57:04'"
+        },
+        {
+            "name": "剥离胶片风格",
+            "brief": "Convert the image into a peel-apart film style with retro color shifts and edge effects",
+            "brief_zh": "将图片转化为剥离胶片风格，带有复古色彩偏移和边缘效果"
+        },
+        {
+            "name": "宝丽来风格",
+            "brief": "Convert the image into a Polaroid style with white border and vintage tone",
+            "brief_zh": "将图片转化为宝丽来风格，带有白色边框和复古色调"
+        }
+    ],
+    "preservations": [
+        {
+            "name": "保持绘画风格",
+            "brief": "while maintaining the same painting style",
+            "brief_zh": "同时保持绘画的原有风格"
+        },
+        {
+            "name": "保持色彩风格",
+            "brief": "while maintaining the same color scheme",
+            "brief_zh": "同时保持原有的色彩风格"
+        },
+        {
+            "name": "保持字体风格",
+            "brief": "while maintaining the same font style",
+            "brief_zh": "同时保持相同的字体风格"
+        },
+        {
+            "name": "保持服装风格",
+            "brief": "while maintaining the same clothing style",
+            "brief_zh": "同时保持服装的原有风格"
+        },
+        {
+            "name": "保持构图",
+            "brief": "while maintaining the same composition",
+            "brief_zh": "同时保持原有构图"
+        },
+        {
+            "name": "保持细节特征",
+            "brief": "while maintaining the same fine details",
+            "brief_zh": "同时保持原有的细节特征"
+        },
+        {
+            "name": "保留特征",
+            "brief": "while maintaining the same facial features, hairstyle, and expression",
+            "brief_zh": "保持相同的面部特征、发型和表情"
+        },
+        {
+            "name": "保持背景",
+            "brief": "while maintaining the same background",
+            "brief_zh": "同时保持原有背景"
+        },
+        {
+            "name": "保持画面平衡",
+            "brief": "while maintaining the same visual balance",
+            "brief_zh": "同时保持画面的视觉平衡"
+        },
+        {
+            "name": "保持光影效果",
+            "brief": "while maintaining the same lighting and shadows",
+            "brief_zh": "同时保持原有的光影效果"
+        },
+        {
+            "name": "保持材质质感",
+            "brief": "while maintaining the same material textures",
+            "brief_zh": "同时保持原有的材质质感"
+        },
+        {
+            "name": "保持画面氛围",
+            "brief": "while maintaining the same mood and atmosphere",
+            "brief_zh": "同时保持原有的画面氛围"
+        },
+        {
+            "name": "保持环境氛围",
+            "brief": "while maintaining the same environmental atmosphere",
+            "brief_zh": "同时保持原有的环境氛围"
+        },
+        {
+            "name": "保持镜头视角",
+            "brief": "while maintaining the same camera angle and perspective",
+            "brief_zh": "同时保持原有的镜头视角"
+        },
+        {
+            "name": "保持动作姿态",
+            "brief": "while maintaining the same pose and movement",
+            "brief_zh": "同时保持原有的动作姿态"
+        },
+        {
+            "name": "保持人物比例",
+            "brief": "while maintaining the same character proportions",
+            "brief_zh": "同时保持人物原有比例"
+        }
+    ],
+    "other": [
+        {
+            "name": "去除红框范围内马赛克",
+            "brief": "remove mosaic within the red box and restore the repaired area to show clear figures' bodies and clothing",
+            "brief_zh": "去除红框范围内的马赛克并修复区域内的图像，显示清晰的人物身体和衣服"
+        },
+        {
+            "name": "去马赛克",
+            "brief": "remove mosaic and restore the repaired area to show clear figures' bodies and clothing",
+            "brief_zh": "去除马赛克并修复区域内的图像，显示清晰的人物身体和衣服"
+        },
+        {
+            "name": "模糊图像高清化",
+            "brief": "enhance image clarity while preserving original content and details",
+            "brief_zh": "将模糊图像高清化，保持原有内容和细节"
+        },
+        {
+            "name": "相机拍摄效果",
+            "brief": "Convert the image into a realistic color photo style as if taken with a camera",
+            "brief_zh": "将图片转化为相机拍摄的真实彩色照片效果"
+        },
+        {
+            "name": "照片打光",
+            "brief": "Transform the image into a sunset with soft lighting, while keeping the details and features of the characters unchanged",
+            "brief_zh": "将画面变成落日时分，柔和的光线，保持人物细节和特征不变"
+        },
+        {
+            "name": "定向阳光效果",
+            "brief": "Add directional sunlight from window source. Increase brightness on lit areas. Create hard shadows with sharp edges. Set warm white color temperature. Add visible light rays and dust particles in beam",
+            "brief_zh": "添加来自窗户光源的定向阳光。增加照明区域的亮度。创建具有锐利边缘的硬阴影。设置暖白色色温。在光束中添加可见光线和灰尘颗粒"
+        },
+        {
+            "name": "美甲设计灵感",
+            "brief": "Replace the fingernails of the characters with artistic graphic nails of cartoon different fruits",
+            "brief_zh": "用卡通不同水果的艺术图形指甲代替人物的指甲"
+        },
+        {
+            "name": "人物发型设计参考",
+            "brief": "Replace the hairstyle of the characters with Wool curl perm",
+            "brief_zh": "用羊毛卷发烫发代替角色的发型"
+        },
+        {
+            "name": "毛茸茸材质替换",
+            "brief": "replace logo with a furrey texture and green background",
+            "brief_zh": "用毛茸茸的纹理和绿色背景替换徽标"
+        },
+        {
+            "name": "修复老照片",
+            "brief": "repair damaged photos while keeping the character unchanged",
+            "brief_zh": "修复破损照片，保持人物不变"
+        },
+        {
+            "name": "生成三视图",
+            "brief": "generate three views for the model in the picture, front, side, and back, keeping the actions, clothing, and facial features completely consistent. White background.",
+            "brief_zh": "为图中的模型生成三视图，包括正面、侧面和背面，保持动作、服装和面部特征完全一致。白色背景。"
+        },
+        {
+            "name": "IP转换三视图",
+            "brief": "convert the IP in the image into three views: front, side, and back",
+            "brief_zh": "将图中的IP转换为三视图：正面、侧面和背面"
+        },
+        {
+            "name": "提取线稿",
+            "brief": "extract image line drafts, use smooth black and white lines to represent, retain contour lines, white background, and keep the facial features, clothing details, and posture of the characters in the image unchanged",
+            "brief_zh": "提取图片线稿，用流畅的黑白线条表现，保留轮廓线，白色底，保持图中人物面容及服装细节、姿态不变"
+        },
+        {
+            "name": "线稿上色",
+            "brief": "fill the draft with appropriate colors, watercolor or light color style, and draw it on textured watercolor paper",
+            "brief_zh": "填充线稿，将草稿图填充上合适的颜色，水彩画，淡彩风格，绘制在带纹理的水彩纸上"
+        },
+        {
+            "name": "全风格线稿上色",
+            "brief": "fill black and white line draft images with colors,(The subject remains unchanged)",
+            "brief_zh": "用颜色填充黑白线条草稿图像（主题保持不变）"
+        },
+        {
+            "name": "深度图",
+            "brief": "create depth maps for images",
+            "brief_zh": "制作图像的深度图"
+        },
+        {
+            "name": "黑白老照片上色",
+            "brief": "color this photo",
+            "brief_zh": "给这张照片上色"
+        },
+        {
+            "name": "照片高清上色",
+            "brief": "color and high-definition process this photo into a modern one, while keeping the facial adjustments of the person unchanged",
+            "brief_zh": "给这张照片上色及高清处理成现代照片，并保持人物面部调整不变"
+        },
+        {
+            "name": "万物移除",
+            "brief": "repair only the white masked areas in the picture, no changes should be made in other areas",
+            "brief_zh": "万物移除 只需修复图片中的白色蒙版区域，其他区域不应进行任何更改"
+        },
+        {
+            "name": "移除黑色区域",
+            "brief": "remove the black area, add the background, and leave everything else unchanged",
+            "brief_zh": "移除黑色区域，补充好背景，其余都保持不变"
+        },
+        {
+            "name": "图片去除水印",
+            "brief": "remove all the watermarks or texts logo",
+            "brief_zh": "图片去除水印｜水印消除 移除所有水印或文字标志"
+        },
+        {
+            "name": "生成企业形象照",
+            "brief": "generate an enterprise profile picture with office background, slightly blurred, high definition person in formal attire facing camera",
+            "brief_zh": "生成企业形象照 根据人物生成企业简介图片，背景设置为办公环境，略微模糊，人物以高清晰度呈现，穿着正式服装，上身，直接面对镜头，以正式的方式呈现。无水印"
+        },
+        {
+            "name": "模特动作摆拍",
+            "brief": "model's sunglasses halfway to nose bridge, one hand supporting, looking at lens from above glasses",
+            "brief_zh": "模特动作摆拍｜模特展示 模特墨镜半滑至鼻梁，模特单手轻托，眼神从镜片上方看镜头"
+        },
+        {
+            "name": "生成美式学位照",
+            "brief": "update outfit and background to American graduation photo while keeping facial features unchanged",
+            "brief_zh": "生成美式学位照 同一个人的特写上半身美式毕业肖像，面对镜头，穿着黑色学术礼服和带流苏的毕业帽，背景为纯蓝色。保持角色的面部特征、发型和表情不变；只需更新服装和背景，以匹配正式的美国毕业照"
+        },
+        {
+            "name": "模特眼镜展示",
+            "brief": "wear the glasses on the right side on the model's face, no deformation, material unchanged, high quality",
+            "brief_zh": "模特眼镜大全｜产品展示 右侧的眼镜戴在模特的脸上。玻璃不得变形，材料不得改变，必须具有高质量"
+        },
+        {
+            "name": "模特眼镜侧面拍摄",
+            "brief": "wear the glasses on the right side on the model's face, side shot, no deformation, material unchanged, high quality",
+            "brief_zh": "模特眼镜大全｜产品展示 右侧的眼镜戴在模特的脸上。玻璃不得变形，材料不得改变，必须具有高质量。侧面拍摄"
+        },
+        {
+            "name": "模特眼镜全身展示",
+            "brief": "wear the glasses on the right side on the model's face, side shot, enlarge 4x to show full body, no deformation, material unchanged, high quality",
+            "brief_zh": "模特眼镜大全｜产品展示 右侧的眼镜戴在模特的脸上。玻璃不得变形，材料不得改变，必须具有高质量。侧面拍摄 图像扩展 请将图像扩大4倍，显示人物的全身"
+        },
+        {
+            "name": "图像全身扩展",
+            "brief": "enlarge the image by 4 times to display the full body of the character",
+            "brief_zh": "图像全身扩展｜图像处理 将图像扩大4倍以显示人物全身，保持其他元素不变"
+        },
+        {
+            "name": "通用场景图片扩展",
+            "brief": "expand the image to show more context or environment around the subject while maintaining composition balance",
+            "brief_zh": "通用场景图片扩展｜图像处理 在保持画面构图平衡的前提下，扩展图像以展示主体周围更多环境或背景信息"
+        }
+    ]
+}
