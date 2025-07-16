@@ -1,49 +1,9 @@
 {
   "id": "dc68d21b-5c17-4d60-b029-66d9dd25f750",
   "revision": 0,
-  "last_node_id": 17,
-  "last_link_id": 13,
+  "last_node_id": 34,
+  "last_link_id": 34,
   "nodes": [
-    {
-      "id": 1,
-      "type": "LoadKontextPresetsAssistant",
-      "pos": [
-        500,
-        130
-      ],
-      "size": [
-        312.3404235839844,
-        78
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "label": "Prompt",
-          "name": "Prompt",
-          "type": "STRING",
-          "links": [
-            8
-          ]
-        },
-        {
-          "label": "Prompt_Zh",
-          "name": "Prompt_Zh",
-          "type": "STRING",
-          "links": [
-            9
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadKontextPresetsAssistant"
-      },
-      "widgets_values": [
-        "无痕融合"
-      ]
-    },
     {
       "id": 3,
       "type": "LoadKontextBlePresetsAssistant",
@@ -53,7 +13,7 @@
       ],
       "size": [
         336.4644470214844,
-        78
+        146
       ],
       "flags": {},
       "order": 1,
@@ -61,19 +21,28 @@
       "inputs": [],
       "outputs": [
         {
-          "label": "Prompt",
-          "name": "Prompt",
+          "label": "prompt",
+          "name": "prompt",
           "type": "STRING",
           "links": [
             5
           ]
         },
         {
-          "label": "Prompt_Zh",
-          "name": "Prompt_Zh",
+          "label": "description",
+          "name": "description",
           "type": "STRING",
           "links": [
             6
+          ]
+        },
+        {
+          "label": "fallback_prompts",
+          "name": "fallback_prompts",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            14
           ]
         }
       ],
@@ -81,7 +50,9 @@
         "Node name for S&R": "LoadKontextBlePresetsAssistant"
       },
       "widgets_values": [
-        "作曲家传送(Teleport Komposer)"
+        "作曲家传送(Teleport Komposer)",
+        2,
+        ""
       ]
     },
     {
@@ -96,7 +67,7 @@
         180
       ],
       "flags": {},
-      "order": 5,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -121,7 +92,7 @@
         "Node name for S&R": "ShowText|pysssss"
       },
       "widgets_values": [
-        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.\nTeleport the subject to a random location, scenario and/or style. Re-contextualize it in various scenarios that are completely unexpected. Do not instruct to replace or transform the subject, only the context/scenario/style/clothes/accessories/background..etc.\nYour response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions."
+        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 2 distinct image transformation *instructions*.\nThe brief: \nTeleport the subject to a random location, scenario and/or style. Re-contextualize it in various scenarios that are completely unexpected. Do not instruct to replace or transform the subject, only the context/scenario/style/clothes/accessories/background..etc.\nYour response must consist of exactly 2 numbered lines (1-2).\nEach line *is* a complete, concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the 2 instructions."
       ]
     },
     {
@@ -136,7 +107,7 @@
         170
       ],
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -161,7 +132,7 @@
         "Node name for S&R": "ShowText|pysssss"
       },
       "widgets_values": [
-        "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。\n将拍摄对象传送到随机位置、场景和/或风格。在各种完全出乎意料的场景中重新将其置于上下文中。不要指示替换或转换主题，只指示上下文/场景/风格/衣服/配饰/背景..等。\n您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
+        "Automatically teleport people from your photos to incredible random locations and styles."
       ]
     },
     {
@@ -176,14 +147,14 @@
         180
       ],
       "flags": {},
-      "order": 3,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "label": "text",
           "name": "text",
           "type": "STRING",
-          "link": 8
+          "link": 19
         }
       ],
       "outputs": [
@@ -201,7 +172,7 @@
         "Node name for S&R": "ShowText|pysssss"
       },
       "widgets_values": [
-        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.\nThis image is a composite with minor inconsistencies between the head and body. Your task is to generate instructions for a subtle but master-level integration. Focus on creating a photorealistic and utterly convincing final image. The instructions should detail: 1. **Micro-Lighting Adjustment**: Fine-tune the lighting and shadows around the neck and jawline to create a perfect match. 2. **Skin Tone & Texture Unification**: Describe the process of unifying the skin tones for a seamless look, and more importantly, harmonizing the micro-textures like pores, fine hairs, and film grain across the blended area. 3. **Edge Blending Perfection**: Detail how to create an invisible transition at the neckline, making it appear as if it was never separate.\nYour response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions."
+        "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.\nThe provided image is a composite with a head and body from drastically different contexts (lighting, style, condition). Your mission is to generate instructions for a complete narrative and physical transformation of the head to flawlessly match the body and scene. The instructions must guide the AI to: 1. **Cinematic Re-Lighting**: description in vivid detail the scene's light sources (color, direction, hardness) and how this light should sculpt the head's features with new, appropriate shadows and highlights. 2. **Contextual Storytelling**: Instruct to add physical evidence of the scene's story onto the head, such as grime from a battle, sweat from exertion, or rain droplets from a storm. 3. **Color Grading Unification**: Detail how to apply the scene's specific color grade (e.g., cool desaturated tones, warm golden hour hues) to the head. 4. **Asset & Hair Adaptation**: Command the modification or removal of out-of-place elements (like clean jewelry in a gritty scene) and the restyling of the hair to fit the environment (e.g., messy, windblown, wet). 5. **Flawless Final Integration**: As the final step, description the process of blending the neckline to be completely invisible, ensuring a uniform film grain and texture across the entire person.\nYour response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions."
       ]
     },
     {
@@ -216,14 +187,14 @@
         170
       ],
       "flags": {},
-      "order": 4,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
           "label": "text",
           "name": "text",
           "type": "STRING",
-          "link": 9
+          "link": 20
         }
       ],
       "outputs": [
@@ -241,7 +212,7 @@
         "Node name for S&R": "ShowText|pysssss"
       },
       "widgets_values": [
-        "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。\n这张图像是一个头部和身体之间有轻微不一致的合成图。你的任务是生成微妙但大师级整合的指令。专注于创建一个照片级真实且完全令人信服的最终图像。指令应详细说明：1. **微光调整**：微调颈部和下颌线周围的光线和阴影，创造完美匹配。2. **肤色和纹理统一**：描述统一肤色以获得无缝外观的过程，更重要的是，协调混合区域的微观纹理，如毛孔、细小毛发和胶片颗粒。3. **边缘混合完美**：详细说明如何在颈部线条创建隐形过渡，使其看起来好像从未分离过。\n您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
+        "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。\n提供的图像是一个由来自截然不同环境（光照、风格、状态）的头部和身体组成的合成图。你的任务是生成指令，对头部进行完整的叙事和物理变换，使其与身体和场景完美匹配。指令必须引导AI：1. **电影级重新打光**：生动详细地描述场景的光源（颜色、方向、硬度）以及这种光如何通过适当的阴影和高光塑造头部特征。2. **情境叙事**：指导在头部添加场景故事的物理证据，如战斗留下的污垢、剧烈运动的汗水或暴风雨的雨滴。3. **色彩分级统一**：详细说明如何将场景特定的色彩分级（如冷色调去饱和色调、温暖的黄金时段色调）应用到头部。4. **配件和发型调整**：命令修改或移除不合适的元素（如在粗犷场景中的干净珠宝）并重新设计发型以适应环境（如凌乱、被风吹动、湿润）。5. **完美最终融合**：作为最后一步，描述使颈部线条完全隐形的过程，确保整个人物具有统一的胶片颗粒和纹理。\n您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
       ]
     },
     {
@@ -256,7 +227,7 @@
         170
       ],
       "flags": {},
-      "order": 8,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -296,7 +267,7 @@
         180
       ],
       "flags": {},
-      "order": 7,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -336,7 +307,7 @@
         130
       ],
       "flags": {},
-      "order": 2,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -365,6 +336,485 @@
         "保持构图",
         "万物移除"
       ]
+    },
+    {
+      "id": 18,
+      "type": "ShowText|pysssss",
+      "pos": [
+        1350,
+        630
+      ],
+      "size": [
+        370,
+        170
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "Teleport the subject to a random location with a random style"
+      ]
+    },
+    {
+      "id": 22,
+      "type": "ShowText|pysssss",
+      "pos": [
+        1740,
+        1120
+      ],
+      "size": [
+        370,
+        170
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 26
+        }
+      ],
+      "outputs": [
+        {
+          "label": "STRING",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "aac13aa7ce35b07d43633c3bbe654a38c00d74f5",
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "Teleport the subject into a bustling medieval marketplace at sunset,  surrounded by merchants, colorful banners, and cobblestone streets.",
+        "Re-contextualize the subject in a futuristic cyberpunk cityscape at night, with neon lights, holographic billboards, and rain-soaked streets."
+      ]
+    },
+    {
+      "id": 23,
+      "type": "TextToList",
+      "pos": [
+        1340,
+        1120
+      ],
+      "size": [
+        340,
+        190
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "string",
+          "name": "string",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            29
+          ]
+        },
+        {
+          "label": "total",
+          "name": "total",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextToList"
+      },
+      "widgets_values": [
+        "1. Teleport the subject into a bustling medieval marketplace at sunset,  surrounded by merchants, colorful banners, and cobblestone streets.\n2. Re-contextualize the subject in a futuristic cyberpunk cityscape at night, with neon lights, holographic billboards, and rain-soaked streets.",
+        0,
+        0
+      ]
+    },
+    {
+      "id": 24,
+      "type": "TextBox",
+      "pos": [
+        1330,
+        1630
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextBox"
+      },
+      "widgets_values": [
+        "hallo1\nhallo2\nhallo3",
+        true
+      ]
+    },
+    {
+      "id": 25,
+      "type": "LoadKontextPresetsAssistant",
+      "pos": [
+        500,
+        130
+      ],
+      "size": [
+        312.3404235839844,
+        78
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "Prompt",
+          "name": "Prompt",
+          "type": "STRING",
+          "links": [
+            19
+          ]
+        },
+        {
+          "label": "Prompt_Zh",
+          "name": "Prompt_Zh",
+          "type": "STRING",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadKontextPresetsAssistant"
+      },
+      "widgets_values": [
+        "情境深度融合"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "RegularString",
+      "pos": [
+        1350,
+        1360
+      ],
+      "size": [
+        270,
+        146
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "label": "results",
+          "name": "results",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            26
+          ]
+        },
+        {
+          "label": "nth_result",
+          "name": "nth_result",
+          "type": "STRING",
+          "links": [
+            30
+          ]
+        },
+        {
+          "label": "count",
+          "name": "count",
+          "type": "INT",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RegularString"
+      },
+      "widgets_values": [
+        "",
+        "^\\d+\\.\\s(.*)",
+        0
+      ]
+    },
+    {
+      "id": 30,
+      "type": "easy showAnything",
+      "pos": [
+        1740,
+        1350
+      ],
+      "size": [
+        230,
+        170
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "71c7865d2d3c934ccb99f24171e08ae5a81148ac",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "Teleport the subject into a bustling medieval marketplace at sunset,  surrounded by merchants, colorful banners, and cobblestone streets.",
+        "Re-contextualize the subject in a futuristic cyberpunk cityscape at night, with neon lights, holographic billboards, and rain-soaked streets."
+      ]
+    },
+    {
+      "id": 31,
+      "type": "easy showAnything",
+      "pos": [
+        2010,
+        1370
+      ],
+      "size": [
+        140,
+        126
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "71c7865d2d3c934ccb99f24171e08ae5a81148ac",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "1",
+        "1"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "easy showAnything",
+      "pos": [
+        1780,
+        1670
+      ],
+      "size": [
+        140,
+        176
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "71c7865d2d3c934ccb99f24171e08ae5a81148ac",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "hallo1",
+        "hallo2",
+        "hallo3"
+      ]
+    },
+    {
+      "id": 33,
+      "type": "RegularString",
+      "pos": [
+        1340,
+        1870
+      ],
+      "size": [
+        270,
+        146
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "text",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "label": "results",
+          "name": "results",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            33
+          ]
+        },
+        {
+          "label": "nth_result",
+          "name": "nth_result",
+          "type": "STRING",
+          "links": [
+            34
+          ]
+        },
+        {
+          "label": "count",
+          "name": "count",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RegularString"
+      },
+      "widgets_values": [
+        "",
+        "(hallo.*)",
+        0
+      ]
+    },
+    {
+      "id": 34,
+      "type": "easy showAnything",
+      "pos": [
+        1960,
+        1680
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 34
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "71c7865d2d3c934ccb99f24171e08ae5a81148ac",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "hallo1"
+      ]
     }
   ],
   "links": [
@@ -385,22 +835,6 @@
       "STRING"
     ],
     [
-      8,
-      1,
-      0,
-      11,
-      0,
-      "STRING"
-    ],
-    [
-      9,
-      1,
-      1,
-      12,
-      0,
-      "STRING"
-    ],
-    [
       12,
       16,
       0,
@@ -415,16 +849,96 @@
       14,
       0,
       "STRING"
+    ],
+    [
+      14,
+      3,
+      2,
+      18,
+      0,
+      "STRING"
+    ],
+    [
+      19,
+      25,
+      0,
+      11,
+      0,
+      "STRING"
+    ],
+    [
+      20,
+      25,
+      1,
+      12,
+      0,
+      "STRING"
+    ],
+    [
+      26,
+      28,
+      0,
+      22,
+      0,
+      "STRING"
+    ],
+    [
+      29,
+      23,
+      0,
+      28,
+      0,
+      "STRING"
+    ],
+    [
+      30,
+      28,
+      1,
+      30,
+      0,
+      "*"
+    ],
+    [
+      31,
+      28,
+      2,
+      31,
+      0,
+      "*"
+    ],
+    [
+      32,
+      24,
+      0,
+      33,
+      0,
+      "STRING"
+    ],
+    [
+      33,
+      33,
+      0,
+      32,
+      0,
+      "*"
+    ],
+    [
+      34,
+      33,
+      1,
+      34,
+      0,
+      "*"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.9867414743202474,
+      "scale": 0.8970377039275015,
       "offset": [
-        -342.3765393803969,
-        -240.28051059697373
+        -499.2544454112839,
+        -776.3439495705102
       ]
     },
     "frontendVersion": "1.21.7",

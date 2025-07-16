@@ -1,73 +1,91 @@
 {
-    "prefix": "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly 1 distinct image transformation *instructions*.",
-    "prefix_zh": "你是一名创意提示工程师。你的任务是分析提供的图像并生成1条独特的图像转换*指令*。",
+    "prefix": "You are a creative prompt engineer. Your mission is to analyze the provided image and generate exactly {{NUM_PROMPTS}} distinct image transformation *instructions*.\nThe brief: ",
     "presets": [
         {
             "name": "作曲家传送(Teleport Komposer)",
+            "description": "Automatically teleport people from your photos to incredible random locations and styles.",
             "brief": "Teleport the subject to a random location, scenario and/or style. Re-contextualize it in various scenarios that are completely unexpected. Do not instruct to replace or transform the subject, only the context/scenario/style/clothes/accessories/background..etc.",
-            "brief_zh": "将拍摄对象传送到随机位置、场景和/或风格。在各种完全出乎意料的场景中重新将其置于上下文中。不要指示替换或转换主题，只指示上下文/场景/风格/衣服/配饰/背景..等。"
+            "fallback_prompts": ["Teleport the subject to a random location with a random style"]
         },
         {
             "name": "移动摄像机(Move Camera)",
+            "description": "Move the camera to reveal new aspects of a scene",
             "brief": "Move the camera to reveal new aspects of the scene. Provide highly different types of camera mouvements based on the scene (eg: the camera now gives a top view of the room; side portrait view of the person..etc ).",
-            "brief_zh": "移动摄像机以显示场景的新方面。根据场景提供高度不同类型的摄像机移动（例如：摄像机现在提供房间的俯视图;人物的侧面肖像视图..等等）。"
+            "fallback_prompts":["Zoom out to a bird's-eye view, capturing the entire room", "Move the camera to a low angle, looking up at the subject from the floor", "Rotate the camera to a side portrait view", "Zoom the camera very far from the subject to reveal the surroundings", "Show a macro view of the subject", "Randomly move the camera to a new position"]
         },
         {
             "name": "重新打光(Relight)",
+            "description": "Relight your photos.",
             "brief": "Suggest new lighting settings for the image. Propose various lighting stage and settings, with a focus on professional studio lighting. Some suggestions should contain dramatic color changes, alternate time of the day, remove or include some new natural lights...etc",
-            "brief_zh": "为图像建议新的光照设置。提出各种灯光舞台和设置，重点是专业的工作室灯光。一些建议应该包含戏剧性的颜色变化、一天中的交替时间、删除或包含一些新的自然光......等"
+            "fallback_prompts": ["Adjust the lighting to simulate late afternoon sunlight streaming through a forest, with dappled shadows and a warm, golden glow.", "Change the lighting to a dramatic, low-key studio setup with a single spotlight from below, casting intense shadows and highlighting facial contours.", "Set the lighting to mimic soft, diffused light from a cloudy day, with a large softbox overhead and a reflector below to brighten the face evenly.", "Create a moody, cinematic atmosphere with a single, strong backlight and a dark, diffused fill light, emphasizing the subject's silhouette and adding depth.", "Adjust the lighting to simulate soft, natural light from a large window to the left, with a reflector on the right to gently fill in shadows, creating a balanced, professional portrait look.", "Change the lighting to a dramatic, high-contrast setup with a single, strong light source from the top right, casting deep shadows and emphasizing facial features.", "Set the lighting to mimic soft, even light from a large octagonal softbox directly in front, with a smaller fill light from below to lift the chin and create a flattering, diffused effect.", "The subject is now in a futuristic, high-fashion scene with bright, cool blue LED lights from above and below, casting sharp, angular shadows and a modern, edgy atmosphere."]
         },
         {
             "name": "产品(Product)",
+            "description": "Turn your photos into professional product photos.",
             "brief": "Turn this image into the style of a professional product photo. Describe a variety of scenes (simple packshot or the item being used), so that it could show different aspects of the item in a highly professional catalog. Suggest a variety of scenes, light settings and camera angles/framings, zoom levels, etc.",
-            "brief_zh": "将此图像转换为专业产品照片的风格。描述各种场景（简单的 packshot 或正在使用的项目），以便它可以在高度专业的目录中显示项目的不同方面。建议各种场景、光照设置和摄像机角度/取景、缩放级别等。"
+            "fallback_prompts": ["Turn the photo into a professional product photo"]
         },
         {
             "name": "缩放(Zoom)",
+            "description": "Zoom in on a subject in your photos.",
             "brief": "Zoom {{SUBJECT}} of the image. If a subject is provided, zoom on it. Otherwise, zoom on the main subject of the image. Provide different level of zooms.",
-            "brief_zh": "缩放图像的 {{SUBJECT}}。如果提供了主题，请放大它。否则，请放大图像的主要主体。提供不同级别的缩放。"
+            "fallback_prompts": ["Zoom on the subject"]
         },
         {
             "name": "着色(Colorize)",
+            "description": "Colorize your photos.",
             "brief": "Colorize the image. Provide different color styles / restoration guidance.",
-            "brief_zh": "为图像着色。提供不同颜色样式 / 修复指导。"
+            "fallback_prompts": ["Colorize the image"]
         },
         {
             "name": "电影海报(Movie Poster)",
+            "description": "Turn your photos into movie posters.",
             "brief": "Create a movie poster with the subjects of this image as the main characters. Take a random genre (action, comedy, horror, etc) and make it look like a movie poster. Sometimes, the user would provide a title for the movie (not always). If a title is provided, try to fit the scene to the title, otherwise get inspired by elements of the image to make up a movie. Make sure the title is stylized and add some taglines too. Add lots of text like quotes and other text we typically see in movie posters.",
-            "brief_zh": "创建此图像的主体为主角的电影海报。随机选择一种类型（动作、喜剧、恐怖等），使其看起来像电影海报。有时，用户会为电影提供标题（并非总是如此）。在本例中，用户提供了：。否则，您可以根据图像编造标题。如果提供了标题，请尝试使场景适合标题，否则从图像元素中获得灵感来组成电影。确保标题是风格化的，并添加一些标语。添加大量文本，例如引文和我们通常在电影海报中看到的其他文本。"
+            "fallback_prompts":["Turn the photo into a movie poster with the title"]
         },
         {
             "name": "卡通化(Cartoonify)",
+            "description": "Turn your photos into cartoons.",
             "brief": "Turn this image into the style of a cartoon or manga or drawing. Include a reference of style, culture or time (eg: mangas from the 90s, thick lined, 3D pixar, etc)",
-            "brief_zh": "将此图像转换为卡通、漫画或绘画的风格。包括风格、文化或时间的参考（例如：90 年代的漫画、粗线、3D 皮克斯等）"
+            "fallback_prompts": ["Turn the photo into a cartoon"]
         },
         {
             "name": "删除文本(Remove Text)",
+            "description": "Remove text from your photos.",
             "brief": "Remove all text from the image.",
-            "brief_zh": "从图像中删除所有文本。"
+            "fallback_prompts": ["Remove all text from the image"]
+        },
+        {
+            "name": "万物移除(Remove anything)",
+            "description": "Remove anything from your photos.",
+            "brief": "Remove {{SUBJECT}} completely from the image.\n    Provide different levels of removal of related elements (supports, structures, similar items..etc).",
+            "fallback_prompts": ["Remove unwanted elements from the image"]
         },
         {
             "name": "理发(Haircut)",
+            "description": "Turn your photos into cartoons.",
             "brief": "Change the haircut of the subject. Suggest a variety of haircuts, styles, colors, etc. Adapt the haircut to the subject's characteristics so that it looks natural. Describe how to visually edit the hair of the subject so that it has this new haircut.",
-            "brief_zh": "更改被摄体的发型。建议各种发型、款式、颜色等。根据拍摄对象的特征调整发型，使其看起来自然。描述如何直观地编辑主题的头发，使其具有此新发型。"
+            "fallback_prompts":["Turn the photo into a cartoon"]
         },
         {
             "name": "健美运动人员(Bodybuilder)",
+            "description": "Turn your photos into bodybuilders.",
             "brief": "Ask to largely increase the muscles of the subjects while keeping the same pose and context. Describe visually how to edit the subjects so that they turn into bodybuilders and have these exagerated large muscles: biceps, abdominals, triceps, etc. You may change the clothse to make sure they reveal the overmuscled, exagerated body.",
-            "brief_zh": "要求在保持相同姿势和背景的同时大幅增加主体的肌肉。直观地描述如何编辑受试者，使他们变成健美运动员并拥有这些夸张的大肌肉：二头肌、腹部、肱三头肌等。您可以更换衣服以确保它们露出肌肉过多、过度膨胀的身体。"
+            "fallback_prompts": ["Turn the photo into a bodybuilder"]
         },
         {
             "name": "移除家具(Remove Furniture)",
+            "description": "Remove furniture from your photos.",
             "brief": "Remove all furniture and all appliances from the image. Explicitely mention to remove lights, carpets, curtains, etc if present.",
-            "brief_zh": "从图像中删除所有家具和所有电器。明确提及移除灯、地毯、窗帘等（如果有）。"
+            "fallback_prompts": ["Remove all furniture from the image"]
         },
         {
             "name": "室内设计(Interior Design)",
+            "description": "Redo the interior design of your photos.",
             "brief": "You are an interior designer. Redo the interior design of this image. Imagine some design elements and light settings that could match this room and offer diverse artistic directions, while ensuring that the room structure (windows, doors, walls, etc) remains identical.",
-            "brief_zh": "您是一名室内设计师。重做此图像的室内设计。想象一下一些设计元素和灯光设置，它们可以匹配这个房间并提供不同的艺术方向，同时确保房间结构（窗户、门、墙壁等）保持不变。"
+            "fallback_prompts": ["Redo the interior design of the image"]
         }
     ],
-    "suffix": "Your response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions.",
+    "suffix": "Your response must consist of exactly {{NUM_PROMPTS}} numbered lines (1-{{NUM_PROMPTS}}).\nEach line *is* a complete, concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the {{NUM_PROMPTS}} instructions.",
     "suffix_zh": "您的回复需为简洁的图像编辑AI指令。不得添加任何对话文本、解释或偏离；仅限指令"
 }

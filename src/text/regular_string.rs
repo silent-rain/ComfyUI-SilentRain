@@ -76,10 +76,10 @@ impl RegularString {
             dict.set_item("required", {
                 let required = PyDict::new(py);
                 required.set_item(
-                    "string",
+                    "text",
                     (NODE_STRING, {
-                        let string = PyDict::new(py);
-                        string
+                        let text = PyDict::new(py);
+                        text
                     }),
                 )?;
                 required.set_item(
@@ -111,11 +111,11 @@ impl RegularString {
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
-        string: &str,
+        text: &str,
         pattern: &str,
         index: usize,
     ) -> PyResult<(Vec<String>, String, usize)> {
-        let results = self.regular_string(string, pattern, index);
+        let results = self.regular_string(text, pattern, index);
 
         match results {
             Ok(v) => Ok(v),
@@ -135,22 +135,22 @@ impl RegularString {
     /// 正则字符串
     fn regular_string(
         &self,
-        string: &str,
+        text: &str,
         pattern: &str,
         index: usize,
     ) -> Result<(Vec<String>, String, usize), Error> {
-        let re = regex::Regex::new(pattern)?;
-        let matches: Vec<String> = re
-            .find_iter(string)
-            .map(|m| m.as_str().to_string())
+        let re_pattern = regex::Regex::new(pattern)?;
+        let matches: Vec<String> = re_pattern
+            .captures_iter(text) // 用 captures_iter 取分组
+            .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
             .collect();
-        let index = if index > matches.len() {
-            matches.len()
-        } else {
-            index
-        };
 
-        let nth_result = matches[index].to_string();
+        if matches.is_empty() {
+            return Err(Error::NoMatchFound);
+        }
+
+        let index = index.min(matches.len() - 1); // 更安全的索引处理
+        let nth_result = matches[index].clone(); // 直接返回匹配文本
         let count = matches.len();
 
         Ok((matches, nth_result, count))
