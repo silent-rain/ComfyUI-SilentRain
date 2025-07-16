@@ -3,6 +3,7 @@ pub mod error;
 pub mod register;
 pub mod wrapper;
 
+pub mod conditioning;
 pub mod image;
 pub mod list;
 pub mod logic;
