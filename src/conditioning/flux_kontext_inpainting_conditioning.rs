@@ -3,12 +3,13 @@
 //! 引用: https://github.com/ZenAI-Vietnam/ComfyUI-Kontext-Inpainting
 //!
 
-use log::error;
+use candle_core::pickle::Object;
+use log::{error, info};
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
+    types::{PyAnyMethods, PyDict, PyList, PyType},
+    Bound, Py, PyAny, PyErr, PyObject, PyResult, Python,
 };
 use serde::{Deserialize, Serialize};
 
@@ -131,12 +132,14 @@ impl FluxKontextInpaintingConditioning {
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
-        conditioning: &str,
-        pixels: &str,
-        mask: &str,
+        conditioning: Bound<'py, PyAny>,
+        vae: Bound<'py, PyAny>,
+        pixels: Bound<'py, PyAny>,
+        mask: Bound<'py, PyAny>,
         noise_mask: bool,
-    ) -> PyResult<(String, String)> {
-        let results = self.get_preset(conditioning, pixels, mask, noise_mask);
+    ) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>)> {
+        info!("kontextInpaint: {:#?}", conditioning);
+        let results = self.encode(py, conditioning, vae, pixels, mask, noise_mask);
 
         match results {
             Ok(v) => Ok(v),
@@ -153,14 +156,18 @@ impl FluxKontextInpaintingConditioning {
 }
 
 impl FluxKontextInpaintingConditioning {
-    /// 获取预设
-    fn get_preset(
+    /// Encode the conditioning and pixels into a latent vector
+    fn encode<'py>(
         &self,
-        conditioning: &str,
-        pixels: &str,
-        mask: &str,
+        py: Python<'py>,
+        conditioning: Bound<'py, PyAny>,
+        vae: Bound<'py, PyAny>,
+        pixels: Bound<'py, PyAny>,
+        mask: Bound<'py, PyAny>,
         noise_mask: bool,
-    ) -> Result<(String, String), Error> {
-        Ok(())
+    ) -> Result<(Bound<'py, PyAny>, Bound<'py, PyAny>), Error> {
+        let x = PyList::empty(py).into_any();
+        let y = PyList::empty(py).into_any();
+        Ok((x, y))
     }
 }

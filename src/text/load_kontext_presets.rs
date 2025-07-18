@@ -84,6 +84,12 @@ impl LoadKontextPresets {
     }
 
     #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
+    }
+
+    #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
 

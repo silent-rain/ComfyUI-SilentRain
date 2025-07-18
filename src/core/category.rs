@@ -11,4 +11,4 @@ pub const CATEGORY_LIST: &str = "SilentRain/List";
 /// 图片
 pub const CATEGORY_IMAGE: &str = "SilentRain/Image";
 /// 条件
-pub const CATEGORY_CONDITIONING: &str = "SilentRain/Conditioning";
+pub const CATEGORY_CONDITIONING: &str = "SilentRain/conditioning";
