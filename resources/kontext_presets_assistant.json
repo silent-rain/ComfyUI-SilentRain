@@ -4,19 +4,26 @@
     "presets": [
         {
             "name": "情境深度融合",
-            "description": "",
+            "description": "Perform comprehensive visual adjustments and narrative integration on a composite image (with head and body from different backgrounds) to make it appear natural and unified",
             "brief": "The provided image is a composite with a head and body from drastically different contexts (lighting, style, condition). Your mission is to generate instructions for a complete narrative and physical transformation of the head to flawlessly match the body and scene. The instructions must guide the AI to: 1. **Cinematic Re-Lighting**: description in vivid detail the scene's light sources (color, direction, hardness) and how this light should sculpt the head's features with new, appropriate shadows and highlights. 2. **Contextual Storytelling**: Instruct to add physical evidence of the scene's story onto the head, such as grime from a battle, sweat from exertion, or rain droplets from a storm. 3. **Color Grading Unification**: Detail how to apply the scene's specific color grade (e.g., cool desaturated tones, warm golden hour hues) to the head. 4. **Asset & Hair Adaptation**: Command the modification or removal of out-of-place elements (like clean jewelry in a gritty scene) and the restyling of the hair to fit the environment (e.g., messy, windblown, wet). 5. **Flawless Final Integration**: As the final step, description the process of blending the neckline to be completely invisible, ensuring a uniform film grain and texture across the entire person.",
-            "brief_zh": "提供的图像是一个由来自截然不同环境（光照、风格、状态）的头部和身体组成的合成图。你的任务是生成指令，对头部进行完整的叙事和物理变换，使其与身体和场景完美匹配。指令必须引导AI：1. **电影级重新打光**：生动详细地描述场景的光源（颜色、方向、硬度）以及这种光如何通过适当的阴影和高光塑造头部特征。2. **情境叙事**：指导在头部添加场景故事的物理证据，如战斗留下的污垢、剧烈运动的汗水或暴风雨的雨滴。3. **色彩分级统一**：详细说明如何将场景特定的色彩分级（如冷色调去饱和色调、温暖的黄金时段色调）应用到头部。4. **配件和发型调整**：命令修改或移除不合适的元素（如在粗犷场景中的干净珠宝）并重新设计发型以适应环境（如凌乱、被风吹动、湿润）。5. **完美最终融合**：作为最后一步，描述使颈部线条完全隐形的过程，确保整个人物具有统一的胶片颗粒和纹理。"
+            "brief_zh": "提供的图像是一个由来自截然不同环境（光照、风格、状态）的头部和身体组成的合成图。你的任务是生成指令，对头部进行完整的叙事和物理变换，使其与身体和场景完美匹配。指令必须引导AI：1. **电影级重新打光**：生动详细地描述场景的光源（颜色、方向、硬度）以及这种光如何通过适当的阴影和高光塑造头部特征。2. **情境叙事**：指导在头部添加场景故事的物理证据，如战斗留下的污垢、剧烈运动的汗水或暴风雨的雨滴。3. **色彩分级统一**：详细说明如何将场景特定的色彩分级（如冷色调去饱和色调、温暖的黄金时段色调）应用到头部。4. **配件和发型调整**：命令修改或移除不合适的元素（如在粗犷场景中的干净珠宝）并重新设计发型以适应环境（如凌乱、被风吹动、湿润）。5. **完美最终融合**：作为最后一步，描述使颈部线条完全隐形的过程，确保整个人物具有统一的胶片颗粒和纹理。",
+            "fallback_prompts": []
+        },
+        {
+            "name": "超现实生物融合",
+            "description": "Perform anatomical and environmental integration of a mythical creature's head with a human body in a rainforest setting",
+            "brief": "The provided image features a disjointed composite of a reptilian dragon head and a human body. Transform the dragon head into a bioluminescent forest spirit with seamless integration. Follow these steps: 1. **Bioluminescent Lighting Design**: Establish three light sources - (1) ambient cyan glow (5600K, 120° softbox) from above mimicking bioluminescent fungi, (2) directional amber backlight (3200K, 45° snoot) through foliage, (3) reflective green underglow (4000K, 85° fill) from the forest floor. 2. **Organic Texture Overlay**: Add moss growth (3px procedural displacement) along cervical vertebrae, scale patterns (Voronoi noise with 0.7 scale) transitioning to human skin pores at the jawline. 3. **Environmental Storytelling**: Imprint mud splatter (angular 0.5mm radius) on cheekbones, rainwater runoff channels (0.2mm width) down neck, and residual leaves (procedural foliage generator) entangled in hair. 4. **Anatomical Reconciliation**: Reshape dragon horns into vascularized antlers (subsurface scattering radius 1.2mm), transform serrated teeth into human molars with dental calculus deposits (height map amplitude 0.03mm). 5. **Final Ecological Blend**: Implement atmospheric perspective (haze density 0.15 at 10m) and motion blur (velocity 12px) on falling leaves to match 1/60s shutter speed.",
+            "brief_zh": "提供的图像包含一个分裂的合成体：爬虫类龙首与人体的不协调组合。需将龙首转化为雨林发光森林精魄并实现无缝融合。执行以下步骤：1. **生物发光光照设计**：建立三组光源——(1) 上方仿生菌类发光的5600K冷调环境光(120°柔光箱)，(2) 树叶间隙3200K琥珀色逆光(45°聚光罩)，(3) 地面反射4000K绿光补光(85°填充)。2. **有机纹理叠加**：沿颈椎生长3px程序化苔藓位移贴图，鳞片图案(Voronoi噪声0.7比例)渐变至下颌的人类毛孔，下颌线处添加泥渍(0.5mm角半径)。3. **环境叙事**：颧骨刻划0.2mm雨痕沟壑，颈部添加雨水径流通道，发间缠绕程序化生成落叶。4. **解剖重构**：将龙角重塑为血管化鹿角(次表面散射半径1.2mm)，锯齿状牙齿转为带牙结石的人类臼齿(高度图振幅0.03mm)。5. **生态融合**：实施大气透视(10米处雾密度0.15)及落叶1/60秒快门速度运动模糊(速度12px)。"
         },
         {
             "name": "无痕融合",
-            "description": "",
+            "description": "Seamless integration of head and body.",
             "brief": "This image is a composite with minor inconsistencies between the head and body. Your task is to generate instructions for a subtle but master-level integration. Focus on creating a photorealistic and utterly convincing final image. The instructions should detail: 1. **Micro-Lighting Adjustment**: Fine-tune the lighting and shadows around the neck and jawline to create a perfect match. 2. **Skin Tone & Texture Unification**: description the process of unifying the skin tones for a seamless look, and more importantly, harmonizing the micro-textures like pores, fine hairs, and film grain across the blended area. 3. **Edge Blending Perfection**: Detail how to create an invisible transition at the neckline, making it appear as if it was never separate.",
             "brief_zh": "这张图像是一个头部和身体之间有轻微不一致的合成图。你的任务是生成微妙但大师级整合的指令。专注于创建一个照片级真实且完全令人信服的最终图像。指令应详细说明：1. **微光调整**：微调颈部和下颌线周围的光线和阴影，创造完美匹配。2. **肤色和纹理统一**：描述统一肤色以获得无缝外观的过程，更重要的是，协调混合区域的微观纹理，如毛孔、细小毛发和胶片颗粒。3. **边缘混合完美**：详细说明如何在颈部线条创建隐形过渡，使其看起来好像从未分离过。"
         },
         {
             "name": "场景传送",
-            "description": "",
+            "description": "Replace the background of the image subject",
             "brief": "Imagine the main subject of the image is suddenly teleported to a completely different and unexpected environment, while maintaining their exact pose. Your instruction should description this new, richly detailed scene. For example, a person in a business suit is now standing in the middle of an enchanted, glowing forest, or a beachgoer is now on a futuristic spaceship bridge. The instruction must detail how the new environment's lighting and atmosphere should realistically affect the subject.",
             "brief_zh": "想象图像的主体突然被传送到一个完全不同且意想不到的环境中，同时保持他们确切的姿势。你的指令应描述这个新的、细节丰富的场景。例如，一个穿着商务套装的人现在站在一个魔法般发光的森林中央，或者一个海滩游客现在站在未来主义的宇宙飞船驾驶舱中。指令必须详细说明新环境的光线和氛围应如何真实地影响主体。"
         },
@@ -94,93 +101,153 @@
         },
         {
             "name": "季节变换",
-            "description": "",
+            "description": "Describe a unique seasonal scene",
             "brief": "Transform the entire scene to be convincingly set in a different season, focusing on atmospheric and sensory details. Propose a season and description its effects. For example: 'Plunge the scene into a deep, quiet Autumn. Change all foliage to rich tones of crimson and gold. Litter the ground with fallen leaves. The air should feel crisp, and the light should have a low, golden quality. Adjust the subject's clothing to include a cozy sweater or light jacket.'",
             "brief_zh": "将整个场景转换为具有强烈季节感的画面，需指定季节并描述细节效果。例如：'营造深秋静谧感：将所有树叶变为绯红与金黄，地面铺满落叶，空气清冽光线昏黄，人物服装改为针织毛衣或薄外套'"
         },
         {
             "name": "时光旅人",
-            "description": "",
+            "description": "Adjust the age change of the character",
             "brief": "Visibly and realistically age or de-age the main subject, as if we are seeing them at a different stage of their life. For an older version, description 'adding fine lines around the eyes and mouth, silver strands woven into the hair, and the subtle wisdom in their expression.' For a younger version, description 'smoothing the skin to a youthful glow, restoring the hair's original vibrant color, and capturing a sense of bright-eyed optimism'.",
             "brief_zh": "真实呈现主体在不同人生阶段的面貌。老化版本需描述：'眼角嘴角添加细纹，发间掺入银丝，神情透出睿智'；年轻化版本需描述：'肌肤恢复光泽，发色还原鲜亮，眼神充满朝气'"
         },
         {
             "name": "材质置换",
-            "description": "",
+            "description": "Replace the material of the subject",
             "brief": "Re-imagine the main subject as a masterfully crafted sculpture made from an unexpected material, keeping their pose intact. description the new material's properties in detail. For example: 'Transform the subject into a statue carved from a single piece of dark, polished obsidian. description its glossy, reflective surface, how it catches the light, and the subtle, natural imperfections within the stone.'",
             "brief_zh": "将主体重塑为特定材质雕塑（保持原姿势），需详述材质特性。例如：'用整块黑曜石雕刻：描述其抛光表面如何反光，光线在石料天然纹理中的流动感'"
         },
         {
             "name": "微缩世界",
-            "description": "",
+            "description": "Create a miniature version of the scene",
             "brief": "Convert the entire scene into a charming and highly detailed miniature model world, as if viewed through a tilt-shift lens. description the visual effects needed: 'Apply a very shallow depth of field to blur the top and bottom of the image, making the scene look tiny. Sharpen the details and boost the color saturation to enhance the artificial, toy-like appearance of all subjects and objects.'",
             "brief_zh": "将场景转化为精致的微缩模型世界（类似移轴摄影效果）。需描述：'用极浅景深虚化画面上下边缘，增强细节锐度与色彩饱和度，营造玩具般的拟真感'"
         },
         {
             "name": "幻想领域",
-            "description": "",
+            "description": "Transform the scene into a fantasy world",
             "brief": "Transport the entire scene and its subject into a specific, richly detailed fantasy or sci-fi universe. description the complete aesthetic overhaul. For example: 'Re-imagine the scene in a Steampunk universe. All modern technology is replaced with intricate brass and copper machinery, full of gears and steam pipes. The subject's clothing is transformed into Victorian-era attire with leather and brass accessories.'",
             "brief_zh": "将整个场景置入特定幻想/科幻世界观。需完整描述美学改造，例如：'蒸汽朋克世界观：现代科技变为黄铜齿轮与蒸汽管道，人物服装改为维多利亚时代皮革镶铜配饰'"
         },
         {
             "name": "衣橱改造",
-            "description": "",
+            "description": "Redo the outfit of the subject",
             "brief": "Give the subject a complete fashion makeover into a specific, well-defined style, keeping the background and pose the same. description the entire outfit in detail. For example: 'Dress the subject in a 'Dark Academia' aesthetic: a tweed blazer, a dark turtleneck sweater, tailored trousers, and leather brogues. Add an accessory like a vintage leather satchel or a pair of classic spectacles.'",
             "brief_zh": "为人物打造特定风格的完整造型（保持背景姿势）。需详述全套着装，例如：'暗黑学院风：花呢西装、高领毛衣、修身长裤、雕花皮鞋，搭配复古皮包或圆框眼镜等配饰'"
         },
         {
             "name": "艺术风格模仿",
-            "description": "",
+            "description": "Copy the style of a specific artist",
             "brief": "Repaint the entire image in the unmistakable style of a famous art movement. Be descriptive and evocative. For example: 'Transform the image into a Post-Impressionist painting in the style of Van Gogh, using thick, swirling brushstrokes (impasto), vibrant, emotional colors, and a dynamic sense of energy and movement in every element.'",
             "brief_zh": "用标志性艺术流派风格重绘图像。需生动描述，例如：'后印象派梵高风格：厚涂漩涡笔触，强烈情感色彩，所有元素都充满动态能量感'"
         },
         {
             "name": "蓝图视角",
-            "description": "",
+            "description": "Create a technical blueprint of the scene",
             "brief": "Convert the image into a detailed and aesthetically pleasing technical blueprint. description the visual transformation: 'Change the background to a classic cyanotype-blue. Redraw the main subject and key objects using clean, white, schematic outlines. Overlay the image with fictional measurement lines, annotations, and technical callouts to complete the architectural drawing effect.'",
             "brief_zh": "将图像转化为精美技术蓝图。描述视觉转换：'背景改为经典蓝晒色调，用白色简练轮廓线重绘主体与关键物体，叠加虚构的尺寸标注、技术说明文字，营造完整建筑制图效果'"
         },
         {
             "name": "添加倒影",
-            "description": "",
+            "description": "Add a reflection to the scene",
             "brief": "Introduce a new, reflective surface into the scene to create a more dynamic and compelling composition. description the placement and quality of the reflection. For example: 'After a rain shower, the street is now covered in a thin layer of water, creating a stunning, mirror-like reflection of the subject and the moody, illuminated sky above. The reflection should be slightly distorted by ripples in the water.'",
             "brief_zh": "在场景中添加反光表面以增强动态构图。需描述反射位置与质感，例如：'雨后街道形成水膜，倒映主体与阴郁天空，水面波纹造成轻微变形扭曲'"
         },
         {
             "name": "像素艺术",
-            "description": "",
+            "description": "Transform the image into a 16-bit pixel art",
             "brief": "Deconstruct the image into the charming, retro aesthetic of 16-bit era pixel art. description the technical and artistic constraints: 'Reduce the entire image to a limited color palette of 64 colors. Redraw all shapes and subjects with sharp, aliased pixel edges. Use dithering patterns to create gradients and shading, capturing the authentic look and feel of a classic Super Nintendo game.'",
             "brief_zh": "将图像解构为16位元像素艺术。描述技术限制：'将色彩缩减至64色，所有形体用锯齿状像素边缘呈现，采用抖动算法创造渐变与阴影，还原超任游戏的经典质感'"
         },
         {
             "name": "铅笔手绘",
-            "description": "",
+            "description": "Transform the image into a pencil sketch",
             "brief": "You are a master of pencil sketching. Write prompt words to transform the picture into a pencil sketch style based on the image content. The description needs to be precise and detailed, and avoid describing content unrelated to the task.",
             "brief_zh": "作为铅笔素描大师，根据图像内容撰写提示词转换为素描风格。描述需精确详细，避免涉及无关内容"
         },
         {
             "name": "油画风格",
-            "description": "",
+            "description": "Convert the image to oil painting style",
             "brief": "Transform the provided image into an oil painting style. description the brushwork, color palette, and overall mood to achieve an authentic oil - painting aesthetic. For example, use thick, impasto brushstrokes to add texture, choose a rich and vibrant color palette typical of oil paintings, and create a moody or vivid atmosphere according to the scene.",
             "brief_zh": "将图像转为油画风格。需描述笔触、配色与整体氛围：'使用厚涂技法增加纹理，选择典型油画的浓郁色彩，根据场景营造阴郁或明快的气氛'"
         },
         {
-            "name": "扩展图像",
-            "description": "在保持原始图像构图和风格的基础上，向四周扩展画面内容。需描述扩展部分的细节，如背景延伸、环境补充或新元素添加。",
-            "brief": "Expand the image while preserving original composition and style. Describe extended areas with detail: 'Extend background with matching scenery, add environmental elements or new subjects that seamlessly integrate with existing content.'",
-            "brief_zh": "在保持原图构图与风格前提下扩展画面。需描述扩展部分细节：'用匹配的场景延伸背景，添加与环境融合的新元素或主体'"
+            "name": "风格精准迁移",
+            "description": "Transform the overall style of an image subject (e.g., artistic genre, era style, or custom aesthetic) to a target style while preserving the subject's identity and scene coherence.",
+            "brief": "The provided image features a subject with a current style that needs to be transitioned to a specified target style (e.g., Baroque oil painting, cyberpunk neon, watercolor sketch). Your task is to generate step-by-step instructions for a nuanced style migration. The instructions must guide the AI to: 1. **Style Feature Extraction**: Identify key visual elements of the target style (brushstroke texture, color palette, compositional rules, and iconic motifs) and map them to the subject's existing features (facial structure, clothing details, pose). 2. **Lighting & Color Alignment**: Adjust the subject's lighting dynamics (intensity, direction, softness) and color grading to match the target style's atmospheric tone—e.g., warm, diffused light for a Renaissance portrait or harsh, monochromatic highlights for a retro poster. 3. **Texture Synthesis**: Detail how to overlay the target style's surface textures (e.g., oil paint impasto, digital glitch artifacts, charcoal smudging) onto the subject while maintaining depth and avoiding flat, artificial results. 4. **Identity Preservation**: Command the AI to retain critical identity markers (facial landmarks, unique accessories, signature expressions) to prevent misrecognition post-style transfer. 5. **Scene Consistency Verification**: Ensure the styled subject integrates naturally with the original background by adjusting perspective, scale, and ambient light interactions (e.g., reflections on clothing matching the style's material realism).",
+            "brief_zh": "提供的图像主体当前风格需要过渡到指定目标风格（如巴洛克油画、赛博朋克霓虹、水彩素描）。你的任务是生成细致的风格迁移指令。指令需引导AI完成：1. **风格特征提取**：识别目标风格的核心视觉元素（笔触质感、配色方案、构图规则、标志性母题），并将其映射到主体的现有特征（面部结构、服装细节、姿势）。2. **光影与色彩适配**：调整主体的光照强度（亮度、方向、柔和度）和色彩分级，匹配目标风格的氛围基调——例如文艺复兴肖像的暖调柔光，或复古海报的高反差单色高光。3. **纹理合成**：详细说明如何将目标风格的表面纹理（如油画厚涂、数字故障痕迹、炭笔涂抹）叠加到主体，同时保持深度感，避免扁平化、人工感结果。4. **身份特征保留**：命令AI保留关键身份标识（面部特征点、独特配饰、标志性表情），防止风格转换后主体辨识度丢失。5. **场景一致性验证**：通过调整透视、比例和光影交互（如服装反光与风格材质真实度匹配），确保风格化后的主体与原始背景自然融合。"
         },
         {
-            "name": "随机换背景",
-            "description": "将图像主体保留，替换为随机生成或指定的新背景。",
-            "brief": "Replace the original background with a new one while keeping the subject intact. description the background characteristics: 'Generate or select a background that contrasts or complements the subject, ensuring visual harmony without overpowering the main focus.'",
-            "brief_zh": "保留主体替换背景。描述背景特征：'生成或选择与主体形成对比或互补的背景，确保视觉和谐且不喧宾夺主'"
+            "name": "年龄动态调整",
+            "description": "Realistically alter the apparent age of a human subject while preserving facial identity and structural coherence.",
+            "brief": "Given an image of a person, your task is to generate instructions to adjust their apparent age to a target range (e.g., 10 years younger, 20 years older) with photorealistic precision. The instructions must address both physical changes and contextual consistency. Key steps include: 1. **Facial Anatomy Modification**: Detail targeted adjustments to age-specific features—e.g., reducing wrinkles and sagging for younger ages (adjusting collagen distribution, smoothing nasolabial folds) or adding deep creases, sunspots, and jowls for older ages (enhancing periorbital hollows, thinning lips). 2. **Skin Texture & Tone Evolution**: Describe how skin texture transitions with age—smoother, more even tone for youth (reducing pore visibility, softening acne scars) versus coarser, drier texture for older ages (adding sun damage, uneven pigmentation, and fine lines around the eyes). 3. **Hair & Scalp Adaptation**: Command adjustments to hair density, color, and style to match the target age—thicker, fuller hair for youth (reducing gray strands) or thinner, grayer hair with receding hairlines for older ages (adding natural strand separation and scalp visibility). 4. **Facial Structure Preservation**: Ensure core identity markers (eye shape, nose bridge, jawline) remain unchanged to maintain recognizability across age transitions. 5. **Contextual Environment Matching**: Guide the AI to adjust secondary elements (clothing style, background props) to align with the target age’s typical aesthetic—e.g., trendy streetwear for a younger subject or classic formal attire for an older subject.",
+            "brief_zh": "给定一张人物图像，你的任务是生成指令，以摄影级精度将人物的表观年龄调整到目标范围（如年轻10岁、年老20岁）。指令需同时处理生理变化和场景一致性，关键步骤包括：1. **面部解剖结构调整**：详细说明针对年龄特征的具体调整——如年轻化需减少皱纹和下垂（调节胶原蛋白分布、平滑鼻唇沟），老龄化需增加深层皱纹、老年斑和下颌赘肉（加深眼窝凹陷、淡化嘴唇）。2. **皮肤纹理与色调演变**：描述皮肤纹理随年龄的自然过渡——年轻皮肤更光滑均匀（减少毛孔可见度、软化痤疮疤痕），年长皮肤更粗糙干燥（添加日晒损伤、不均色素沉着、眼周细纹）。3. **头发与头皮适配**：命令调整头发密度、颜色和风格以匹配目标年龄——年轻群体头发更浓密（减少白发），年长群体头发更稀疏灰白（添加自然发丝分离感和头皮可见度）。4. **面部结构保留**：确保核心身份特征（眼型、鼻梁、下颌线）不变，维持跨年龄转换的辨识度。5. **场景环境匹配**：引导AI调整次要元素（服装风格、背景道具）以契合目标年龄的典型审美——如年轻群体的潮流街头装，或年长群体的经典正装。"
         },
         {
-            "name": "高清化",
-            "description": "提升图像分辨率和细节清晰度，减少噪点和模糊。",
-            "brief": "Enhance image resolution and detail clarity. description the upscaling process: 'Apply advanced upscaling algorithms to increase resolution while preserving sharpness, reduce noise and artifacts, and restore fine details lost in compression.'",
-            "brief_zh": "提升图像分辨率与细节清晰度。描述升频过程：'应用高级升频算法提高分辨率同时保持锐度，减少噪点和伪影，恢复压缩中丢失的细微细节'"
+            "name": "服装智能适配",
+            "description": "Seamlessly replace a subject's clothing with a target garment while maintaining anatomical accuracy and scene plausibility.",
+            "brief": "This image features a subject wearing current clothing that needs to be replaced with a specified target garment (e.g., formal suit, casual hoodie, historical robe). Your task is to generate instructions for a realistic clothing swap. The instructions must ensure the new garment fits the subject’s body type, aligns with the scene’s context, and interacts naturally with lighting and environment. Key requirements include: 1. **Body Contour Adaptation**: Detail how to adjust the target garment’s fit (sleeve length, waistline, hemline) to match the subject’s measurements—e.g., tapering sleeves for slender arms, adjusting shoulder pads for a broader frame. 2. **Fabric & Texture Realism**: Describe the material properties of the target garment (silk sheen, denim roughness, wool thickness) and how they should respond to lighting (e.g., silk reflecting highlights, denim absorbing light). 3. **Wear & Tear Consistency**: Command the addition of natural imperfections (wrinkles from movement, creases from sitting, loose threads) to the new garment to match the scene’s activity level—e.g., a hiking jacket with mud stains, a party dress with subtle snags. 4. **Color & Pattern Integration**: Ensure the target garment’s color palette and patterns harmonize with the subject’s existing accessories (jewelry, bags) and background elements (wall colors, foliage) to avoid visual discord. 5. **Posture & Movement Simulation**: Guide the AI to adjust the garment’s drape based on the subject’s pose—e.g., a flowing gown billowing in wind, a blazer creasing naturally at the elbows when standing.",
+            "brief_zh": "图像中的主体穿着当前服装，需替换为指定目标服装（如正装西装、休闲连帽衫、古装长袍）。你的任务是生成真实换装的指令。指令需确保新服装贴合主体体型、符合场景语境，并与光影和环境自然交互。关键要求包括：1. **体型轮廓适配**：详细说明如何调整目标服装的尺寸（袖长、腰线、衣长）以匹配主体身材——例如为纤细手臂收窄袖口，为宽肩调整垫肩。2. **面料与纹理真实感**：描述目标服装的材质特性（丝绸光泽、牛仔粗糙度、羊毛厚度），以及它们如何响应光照（如丝绸反射高光，牛仔吸收光线）。3. **穿着痕迹一致性**：命令添加自然磨损（活动产生的褶皱、久坐留下的折痕、松散线头），使新服装与场景活动强度匹配——例如徒步夹克沾泥渍，派对裙有细微勾丝。4. **色彩与图案融合**：确保目标服装的配色和图案与主体现有配饰（珠宝、包袋）及背景元素（墙面颜色、植物）协调，避免视觉冲突。5. **姿势与动作模拟**：引导AI根据主体姿势调整服装垂坠感——例如风吹动的长裙翻飞，站立时西装自然垂落的肘部褶皱。"
+        },
+        {
+            "name": "超分辨率重建",
+            "description": "Intelligently enhance image resolution while restoring physical details and environmental context",
+            "brief": "Given a blurred image requiring super-resolution, generate step-by-step instructions for photorealistic reconstruction. The instructions must guide AI to: 1. **Blur Type Identification** - Classify motion blur/defocus blur/quantization blur through edge detection algorithms 2. **Physical Feature Restoration** - Reconstruct lost details using physics-based simulation (e.g., cloth dynamics for garments, subsurface scattering for skin) 3. **Multi-Scale Texture Synthesis** - Apply wavelet transform for frequency-domain detail enhancement 4. **Contextual Consistency Check** - Verify object boundaries and material interactions against scene physics 5. **Optical Effects Integration** - Add realistic lens artifacts (chromatic aberration, bokeh) matching original capture conditions",
+            "brief_zh": "针对模糊图片进行智能超分辨率重建，生成摄影级修复指令。指令需引导AI完成：1. **模糊类型识别** - 通过边缘检测算法判断运动模糊/失焦模糊/量化模糊类型 2. **物理特征还原** - 使用基于物理的模拟重建丢失细节（如布料动力学、皮肤次表面散射） 3. **多尺度纹理合成** - 应用小波变换进行频域细节增强 4. **场景一致性验证** - 根据物理规律验证物体边界与材质交互 5. **光学效果整合** - 添加符合原始拍摄条件的镜头像差（色散、焦外光斑）"
+        },
+        {
+            "name": "全景动态扩展",
+            "description": "Intelligently expand image boundaries with contextual coherence and physical realism",
+            "brief": "Given a partial-body image requiring full-body extension, generate step-by-step instructions for anatomically accurate scene expansion. The instructions must guide AI to: 1. **Spatial Context Analysis** - Determine expansion direction (horizontal/vertical) using vanishing point detection and environmental reference analysis 2. **Anatomical Preservation** - Maintain proportional integrity through physics-based simulation (cloth dynamics, gravity simulation) 3. **Environmental Storytelling** - Create contextual extensions with visual depth cues (road perspective gradients, crowd density algorithms) 4. **Lighting Continuity** - Seamlessly blend existing lighting using ray-traced shadow projection and atmospheric scattering 5. **Material Consistency** - Apply procedural texture generation matching original surface properties (pavement wear patterns, foliage distribution)",
+            "brief_zh": "针对半身照扩展需求，生成摄影级场景扩展指令。指令需引导AI完成：1. **空间语境分析** - 通过消失点检测和环境参照分析确定扩展方向 2. **人体结构保留** - 通过物理模拟保持比例完整 3. **环境叙事构建** - 添加纵深线索（道路透视梯度、人群密度算法） 4. **光影连续性** - 使用光线追踪阴影投射实现光照融合 5. **材质一致性** - 程序化生成匹配原始属性的表面材质"
+        },
+        {
+            "name": "动态光影捕捉",
+            "description": "Generate instructions for capturing dynamic light effects in photography",
+            "brief": "Command AI to simulate advanced camera techniques for motion and light: 1. **Long Exposure Magic**: Specify '30-sec exposure' with moving elements (e.g., car light trails, flowing water) and static anchors (buildings, mountains). Require smooth silky textures and color-blended trails. 2. **High-Speed Freeze**: Demand '1/8000s shutter speed' to capture splashing droplets or bird wings, emphasizing air ripples and texture details visible under macro lighting. 3. **Golden Hour Enhancement**: Define 'sun altitude 10°' with warm/cool split toning (e.g., shadows: teal 215°, highlights: orange 45°), adding lens flare effects matching specific optics (e.g., Nikon 24-70mm f/2.8).",
+            "brief_zh": "生成动态光影拍摄指令：1. **长曝光魔法**：指定“30秒曝光”配合运动元素（车轨/流水）与静态锚点（建筑/山体），要求丝滑质感与色彩融合轨迹；2. **高速凝固**：要求“1/8000秒快门”捕捉飞溅水珠/鸟翼，强调空气涟漪与微观纹理；3. **黄金时刻强化**：定义“太阳高度10°”配合青橙色调分离（阴影青215°/高光橙45°），添加匹配镜头的眩光效果（如尼康24-70mm f/2.8）。"
+        },
+        {
+            "name": "人像精修大师",
+            "description": "Professional portrait retouching instructions for Photoshop AI",
+            "brief": "Guide AI to execute studio-grade retouching: 1. **Skin Texture Preservation**: Command 'frequency separation' with high-pass layer (radius 3px) for pore detail retention, while removing blemishes via healing brush at 70% opacity. 2. **Dodge & Burn Sculpting**: Specify shadow/highlight adjustment layers with luminosity masks, contouring cheekbones with softlight brushes (flow:15%). 3. **Eye Enhancement**: Require iris sharpening (Unsharp Mask: 20%, radius 1.5px) and catchlight reflection matching studio softbox positioning.",
+            "brief_zh": "专业级人像精修指令：1. **肤质保留**：要求“频率分离”配合高通层（半径3px）保留毛孔，用70%不透明度修复工具去瑕疵；2. **光影雕刻**：指定明度蒙版配合柔光笔刷（流量15%）进行颧骨塑形；3. **眼部增强**：要求虹膜锐化（USM：20%/半径1.5px）并匹配柔光箱位置的眼神光反射。"
+        },
+        {
+            "name": "老照片复活术",
+            "description": "Restore damaged historical photos with AI reconstruction",
+            "brief": "Instruct AI to perform multi-stage restoration: 1. **Damage Analysis**: Auto-detect scratches, stains, and fading areas using histogram analysis (threshold: 15-245). 2. **Content-Aware Repair**: Command 'patch tool with source from undamaged symmetrical regions' for fabric patterns and facial features. 3. **Colorization Logic**: Apply era-specific color palettes (e.g., 1950s Kodachrome saturation curve) with manual hue adjustment layers for skin tones (C:0 M:15 Y:20 K:0).",
+            "brief_zh": "老照片修复指令：1. **损伤分析**：通过直方图（阈值15-245）自动检测划痕/污渍/褪色区；2. **智能修复**：命令“从对称未损区域取样”修补织物纹理与五官；3. **科学上色**：应用时代色板（如1950年代柯达饱和曲线），手动调整肤色层（C:0 M:15 Y:20 K:0）。"
+        },
+        {
+            "name": "超现实场景融合",
+            "description": "Create impossible reality scenes through seamless compositing",
+            "brief": "Direct AI to merge discordant elements: 1. **Perspective Alignment**: Force vanishing point matching (e.g., foreground subject at 24mm lens vs background at 85mm) using grid distortion warp. 2. **Atmospheric Unification**: Add 'depth-based haze' (opacity: 20% at 100m distance) and unified light direction (e.g., backlight at 315° azimuth). 3. **Shadow Physics**: Generate ground contact shadows with blur gradient matching time-of-day (midday: sharpness 5px, dusk: 15px blur).",
+            "brief_zh": "超现实合成指令：1. **透视校准**：强制消失点匹配（前景24mm镜头/背景85mm）；2. **氛围统一**：添加“基于景深的雾效”（100米处20%不透明度）与统一光源方向（如315°方位逆光）；3. **物理级投影**：生成地面接触阴影并匹配时间模糊梯度（正午锐度5px/黄昏模糊15px）。"
+        },
+        {
+            "name": "电商产品精修",
+            "description": "E-commerce product image enhancement protocol",
+            "brief": "Precision instructions for commercial visuals: 1. **Specular Control**: Define highlight reflection shapes matching softbox types (strip: linear 60×10cm, octa: circular Ø80cm). 2. **Material Rendering**: Differentiate textures via micro-contrast (metal: clarity +30, fabric: clarity -15). 3. **Color Accuracy**: Enforce CMYK gamut check with Pantone reference (e.g., logo red: PMS 185C ΔE<2).",
+            "brief_zh": "电商产品精修指令：1. **高光控制**：定义反射形状匹配柔光箱类型（长条箱：60×10cm线性/八角箱：Ø80cm圆形）；2. **材质表现**：通过微反差区分材质（金属：清晰度+30/织物：-15）；3. **色准保障**：强制执行CMYK色域检查并匹配潘通色（如Logo红：PMS 185C ΔE<2）。"
+        },
+        {
+            "name": "时空压缩大师",
+            "description": "AI-generated timelapse effects from single prompt",
+            "brief": "Command video synthesis with temporal compression: 1. **Motion Path Design**: Plot cloud movement vectors (speed: 200% normal) and star trail rotation arcs (duration: 2hrs simulated). 2. **Botanical Growth Logic**: Program plant expansion algorithms (e.g., vine growth rate: 1cm/frame). 3. **Light Transition**: Enforce golden hour to blue hour gradient matching latitude-specific twilight duration.",
+            "brief_zh": "AI延时摄影指令：1. **运动轨迹设计**：规划云层移动矢量（速度200%）与星轨旋转弧度（模拟2小时）；2. **植物生长逻辑**：编程藤蔓扩张算法（如1cm/帧）；3. **光线过渡**：强制黄金时刻到蓝调时刻渐变匹配当地纬度暮光时长。"
+        },
+        {
+            "name": "显微级锐化",
+            "description": "Sub-pixel detail enhancement without artifacts",
+            "brief": "Instructions for lossless magnification: 1. **Frequency-Specific Sharpening**: Apply high-pass filter (radius 0.8px) exclusively to texture zones identified by AI segmentation. 2. **Micro-Contrast Boosting**: Use luminosity masks to amplify edge transitions below 5px width. 3. **Noise Synthesis**: Generate film grain matching original ISO grain pattern (e.g., Ilford HP5 at ISO 400).",
+            "brief_zh": "无损细节增强指令：1. **频段锐化**：对AI识别的纹理区应用高通滤镜（半径0.8px）；2. **微反差提升**：用明度蒙版强化5px内边缘过渡；3. **噪点合成**：生成匹配原片ISO的胶片颗粒（如Ilford HP5 @ ISO 400）。"
+        },
+        {
+            "name": "三维布光重建",
+            "description": "Virtual studio lighting redesign",
+            "brief": "Redefine illumination in post-production: 1. **Virtual Light Placement**: Position virtual fixtures (e.g., key light: 45° left at 5500K, fill: 30% intensity). 2. **Reflection Engineering**: Calculate specular highlights on curved surfaces using Fresnel equations. 3. **Global Illumination**: Simulate light bounce with radiosity algorithms (bounce count: 3).",
+            "brief_zh": "虚拟布光指令：1. **光源定位**：布置虚拟灯具（主光：左45° 5500K，补光强度30%）；2. **反射控制**：用菲涅尔方程计算曲面高光；3. **全局光照**：模拟光线反弹（反弹次数：3次）。"
         }
     ],
     "suffix": "Your response must consist of concise instruction ready for the image editing AI. Do not add any conversational text, explanations, or deviations; only the instructions.",
