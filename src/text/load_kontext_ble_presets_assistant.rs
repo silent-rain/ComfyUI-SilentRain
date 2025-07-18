@@ -159,10 +159,12 @@ impl LoadKontextBlePresetsAssistant {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("LoadKontextPresetsAssistant error, {e}");
-                if let Err(e) =
-                    self.send_error(py, "LoadKontextPresetsAssistant".to_string(), e.to_string())
-                {
+                error!("LoadKontextBlePresetsAssistant error, {e}");
+                if let Err(e) = self.send_error(
+                    py,
+                    "LoadKontextBlePresetsAssistant".to_string(),
+                    e.to_string(),
+                ) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
@@ -188,7 +190,7 @@ impl LoadKontextBlePresetsAssistant {
 
             let prompt =
                 preset_assistant.prefix + "\n" + &preset.brief + "\n" + &preset_assistant.suffix;
-            
+
             let prompt = prompt
                 .replace("{{NUM_PROMPTS}}", &num_prompts.to_string())
                 .replace("{{SUBJECT}}", subject);

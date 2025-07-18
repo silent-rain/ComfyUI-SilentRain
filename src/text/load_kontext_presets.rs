@@ -172,9 +172,8 @@ impl LoadKontextPresets {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("LoadKontextPresetsAssistant error, {e}");
-                if let Err(e) =
-                    self.send_error(py, "LoadKontextPresetsAssistant".to_string(), e.to_string())
+                error!("LoadKontextPresets error, {e}");
+                if let Err(e) = self.send_error(py, "LoadKontextPresets".to_string(), e.to_string())
                 {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
