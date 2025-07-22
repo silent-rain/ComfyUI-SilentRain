@@ -3,28 +3,46 @@
 //! 引用: https://github.com/ZenAI-Vietnam/ComfyUI-Kontext-Inpainting
 //!
 
-use candle_core::pickle::Object;
-use log::{error, info};
+use std::collections::HashMap;
+
+use candle_core::{Device, IndexOp, Tensor};
+use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyList, PyType},
-    Bound, Py, PyAny, PyErr, PyObject, PyResult, Python,
+    types::{PyDict, PyDictMethods, PyList, PyType},
+    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     core::category::CATEGORY_CONDITIONING,
     error::Error,
-    wrapper::comfyui::{
-        types::{NODE_BOOLEAN, NODE_CONDITIONING, NODE_IMAGE, NODE_LATENT, NODE_MASK, NODE_VAE},
-        PromptServer,
+    wrapper::{
+        comfy::{
+            node_helpers::{
+                conditioning_set_values, conditionings_py2rs, conditionings_rs2py, latent_rs2py,
+                Conditioning,
+            },
+            vae::Vae,
+        },
+        comfyui::{
+            types::{
+                NODE_BOOLEAN, NODE_CONDITIONING, NODE_IMAGE, NODE_LATENT, NODE_MASK, NODE_VAE,
+            },
+            PromptServer,
+        },
+        torch::{
+            nn::functional::{interpolate, InterpolationMode},
+            tensor::TensorWrapper,
+        },
     },
 };
 
 /// Flux Kontext Inpainting Conditioning
 #[pyclass(subclass)]
-pub struct FluxKontextInpaintingConditioning {}
+pub struct FluxKontextInpaintingConditioning {
+    device: Device,
+}
 
 impl PromptServer for FluxKontextInpaintingConditioning {}
 
@@ -32,7 +50,9 @@ impl PromptServer for FluxKontextInpaintingConditioning {}
 impl FluxKontextInpaintingConditioning {
     #[new]
     fn new() -> Self {
-        Self {}
+        Self {
+            device: Device::Cpu,
+        }
     }
 
     #[classattr]
@@ -132,20 +152,23 @@ impl FluxKontextInpaintingConditioning {
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
-        conditioning: Bound<'py, PyAny>,
+        conditioning: Bound<'py, PyList>,
         vae: Bound<'py, PyAny>,
         pixels: Bound<'py, PyAny>,
         mask: Bound<'py, PyAny>,
         noise_mask: bool,
-    ) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>)> {
-        info!("kontextInpaint: {:#?}", conditioning);
+    ) -> PyResult<(Bound<'py, PyList>, Bound<'py, PyDict>)> {
         let results = self.encode(py, conditioning, vae, pixels, mask, noise_mask);
 
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("kontextInpaint error, {e}");
-                if let Err(e) = self.send_error(py, "kontextInpaint".to_string(), e.to_string()) {
+                error!("FluxKontextInpaintingConditioning error, {e}");
+                if let Err(e) = self.send_error(
+                    py,
+                    "FluxKontextInpaintingConditioning".to_string(),
+                    e.to_string(),
+                ) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
@@ -157,17 +180,223 @@ impl FluxKontextInpaintingConditioning {
 
 impl FluxKontextInpaintingConditioning {
     /// Encode the conditioning and pixels into a latent vector
+    ///
+    /// pixels: [B, H, W, C]
+    /// mask: [B, H, W]
     fn encode<'py>(
         &self,
         py: Python<'py>,
-        conditioning: Bound<'py, PyAny>,
+        conditioning: Bound<'py, PyList>,
         vae: Bound<'py, PyAny>,
         pixels: Bound<'py, PyAny>,
         mask: Bound<'py, PyAny>,
         noise_mask: bool,
-    ) -> Result<(Bound<'py, PyAny>, Bound<'py, PyAny>), Error> {
-        let x = PyList::empty(py).into_any();
-        let y = PyList::empty(py).into_any();
-        Ok((x, y))
+    ) -> Result<(Bound<'py, PyList>, Bound<'py, PyDict>), Error> {
+        // py params to rust
+        let conditionings = conditionings_py2rs(conditioning, &self.device)?;
+        let vae = Vae::new(vae)?;
+        let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
+        let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
+
+        let x = pixels.dims()[1] / 8 * 8;
+        let y = pixels.dims()[2] / 8 * 8;
+
+        let mut mask = interpolate(
+            py,
+            &Self::reshape_mask(&mask)?, // [B, H, W] -> [B, 1, H, W]
+            Some((pixels.dims()[1], pixels.dims()[2])),
+            None::<f32>,
+            InterpolationMode::Bilinear,
+            None,
+            None,
+            false,
+        )?;
+
+        let orig_pixels = pixels.clone();
+        let mut pixels = orig_pixels.clone();
+        if pixels.dims()[1] != x || pixels.dims()[2] != y {
+            let x_offset = (pixels.dims()[1] % 8) / 2;
+            let y_offset = (pixels.dims()[2] % 8) / 2;
+
+            pixels = pixels
+                .narrow(1, x_offset, x)? // 第1维: height [x_offset : x_offset+x]
+                .narrow(2, y_offset, y)?; // 第2维: width [y_offset : y_offset+y]
+            mask = mask
+                .narrow(1, x_offset, x)? // 第1维: height [x_offset : x_offset+x]
+                .narrow(2, y_offset, y)?; // 第2维: width [y_offset : y_offset+y]
+        }
+
+        // 计算反转并四舍五入的掩码（形状: [B, H, W]）
+        let mut m = mask.round()?; // 四舍五入 [3]
+        m = (1.0 - m)?; // 反转掩码
+        m = m.squeeze(1)?; // 移除通道维度 [B, 1, H, W] -> [B, H, W]
+
+        // 拆分通道（形状: [B, H, W, 1] * 3）
+        let channels = pixels.chunk(3, 3)?;
+
+        // 处理每个通道
+        let processed = channels
+            .into_iter()
+            .map(|ch| {
+                let ch = ch.squeeze(3)?; // 移除通道维度
+                let ch = (ch - 0.5)?;
+                let ch = ch.broadcast_mul(&m)?;
+                (ch + 0.5)?.unsqueeze(3) // 恢复通道维度
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // 重组张量
+        let pixels = Tensor::cat(&processed, 3)?; // 形状恢复为 [1,1024,1024,3]
+
+        let concat_latent = vae.encode(py, &pixels)?;
+        let orig_latent = vae.encode(py, &orig_pixels)?;
+
+        let pixels_latent = self._encode_latent(py, &vae, orig_pixels)?;
+
+        let c = conditioning_set_values(
+            conditionings,
+            HashMap::from([
+                ("concat_latent_image".to_string(), concat_latent),
+                ("concat_mask".to_string(), mask.clone()),
+            ]),
+            false,
+        )?;
+
+        let conditionings = self._concat_conditioning_latent(c, Some(pixels_latent))?;
+
+        let mut out_latent = HashMap::new();
+        out_latent.insert("samples".to_string(), orig_latent);
+        if noise_mask {
+            out_latent.insert("noise_mask".to_string(), mask);
+        }
+
+        let conditionings_py = conditionings_rs2py(py, conditionings)?;
+        let out_latent_py = latent_rs2py(py, out_latent)?;
+
+        Ok((conditionings_py, out_latent_py))
+    }
+
+    /// mask reshape
+    /// [B, H, W] -> [B, 1, H, W]
+    fn reshape_mask(mask: &Tensor) -> Result<Tensor, Error> {
+        let dims: &[usize] = mask.dims(); // 获取当前形状 [d0, d1, ..., dn]
+
+        // 检查至少2维
+        if dims.len() < 2 {
+            return Err(Error::InvalidTensorShape(
+                "Tensor must have ≥2 dimensions".to_string(),
+            ));
+        }
+
+        // 计算新形状
+        let total_elements: usize = dims.iter().product();
+        let last_two_dims = dims[dims.len() - 2] * dims[dims.len() - 1];
+        let inferred_dim = total_elements / last_two_dims; // 等效于Python的-1
+
+        let new_shape = [
+            inferred_dim,         // 自动计算的维度
+            1,                    // 新增的维度
+            dims[dims.len() - 2], // 倒数第2维
+            dims[dims.len() - 1], // 最后1维
+        ];
+
+        Ok(mask.reshape(&new_shape)?)
+    }
+
+    // /// Get the conditioning
+    // fn get_conditioning<'py>(
+    //     &self,
+    //     conditioning: Bound<'py, PyList>,
+    // ) -> Result<Vec<Conditioning>, Error> {
+    //     let mut conditionings = Vec::with_capacity(conditioning.len());
+    //     for conditioning_item in conditioning.iter() {
+    //         let py_tensor = conditioning_item.get_item(0)?;
+    //         let tensor = TensorWrapper::<f32>::new(&py_tensor, &self.device)?.into_tensor();
+
+    //         let dict_any = conditioning_item.get_item(1)?;
+    //         let dict_py = dict_any
+    //             .downcast::<PyDict>()
+    //             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
+
+    //         // py dict to rust map
+    //         let mut dict_rs = HashMap::new();
+    //         for (k, v) in dict_py {
+    //             let k_rs = k.to_string();
+    //             let v_rs = TensorWrapper::<f32>::new(&v, &self.device)?.into_tensor();
+    //             dict_rs.insert(k_rs, v_rs);
+    //         }
+
+    //         conditionings.push(Conditioning(tensor, dict_rs));
+    //     }
+
+    //     Ok(conditionings)
+    // }
+
+    // /// rs conditioning to py list
+    // fn _conditioning_to_list<'py>(
+    //     py: Python<'py>,
+    //     conditioning: Vec<Conditioning>,
+    // ) -> Result<Bound<'py, PyList>, Error> {
+    //     let mut list = Vec::new();
+    //     for Conditioning(tensor, conditioning_dict) in conditioning.iter() {
+    //         let tensor_py = TensorWrapper::<f32>::from_tensor(tensor.clone()).to_py_tensor(py)?;
+    //         let dict_py = PyDict::new(py);
+    //         for (k, v) in conditioning_dict {
+    //             let tensor_py = TensorWrapper::<f32>::from_tensor(v.clone()).to_py_tensor(py)?;
+    //             dict_py.set_item(k, tensor_py)?;
+    //         }
+
+    //         let elements = vec![tensor_py, dict_py.into_any()];
+    //         let ele_list = PyList::new(py, elements)?;
+
+    //         list.push(ele_list);
+    //     }
+
+    //     let results = PyList::new(py, list)?;
+    //     Ok(results)
+    // }
+
+    // /// out_latent to py dict
+    // fn _out_latent_to_dict<'py>(
+    //     py: Python<'py>,
+    //     out_latent: HashMap<String, Tensor>,
+    // ) -> Result<Bound<'py, PyDict>, Error> {
+    //     let dict = PyDict::new(py);
+    //     for (k, v) in out_latent {
+    //         let tensor_py = TensorWrapper::<f32>::from_tensor(v.clone()).to_py_tensor(py)?;
+    //         dict.set_item(k, tensor_py)?;
+    //     }
+    //     Ok(dict)
+    // }
+
+    /// Encode the pixels into a latent vector
+    /// pixels[:, :, :, :3]  # shape: [B, H, W, 3]
+    fn _encode_latent<'py>(
+        &self,
+        py: Python<'py>,
+        vae: &Vae,
+        pixels: Tensor,
+    ) -> Result<HashMap<String, Tensor>, Error> {
+        let rgb_pixels = pixels.i((.., .., .., ..3))?;
+        let t = vae.encode(py, &rgb_pixels)?;
+        Ok(HashMap::from([("samples".to_string(), t)]))
+    }
+
+    /// Concatenate the conditioning and latent vector
+    fn _concat_conditioning_latent(
+        &self,
+        conditioning: Vec<Conditioning>,
+        latent: Option<HashMap<String, Tensor>>,
+    ) -> Result<Vec<Conditioning>, Error> {
+        let mut conditioning = conditioning.clone();
+        if let Some(latent) = latent {
+            conditioning = conditioning_set_values(
+                conditioning,
+                HashMap::from([("reference_latents".to_string(), latent["samples"].clone())]),
+                true,
+            )?;
+        }
+
+        Ok(conditioning)
     }
 }
