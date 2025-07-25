@@ -16,7 +16,7 @@ use crate::{
     wrapper::{
         comfy::utils::common_upscale,
         comfyui::{types::any_type, PromptServer},
-        python::isinstance,
+        python::isinstance_by_torch,
         torch::tensor::TensorWrapper,
     },
 };
@@ -134,7 +134,7 @@ impl ListToBatch {
         // 判断 list 中是否为图片
         let item = &list[0];
         // 图片
-        if isinstance(py, item, "torch.Tensor")? {
+        if isinstance_by_torch(py, item, "torch.Tensor")? {
             // 将列表转换为图片批次
             let images = self
                 .image_list_to_batch(py, &list)

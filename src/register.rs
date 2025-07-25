@@ -18,7 +18,7 @@ use crate::{
         LoadKontextBlePresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
         RegularString, SaveText, StringList, StringListToSting, TextBox, TextToList,
     },
-    utils::{BatchRename, BridgeAnything, FileScanner, WorkflowInfo},
+    utils::{BatchRename, BridgeAnything, ConsoleDebug, FileScanner, WorkflowInfo},
 };
 
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
@@ -43,6 +43,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "BatchRename",
             py.get_type::<BatchRename>(),
             "Sr Batch Rename",
+        ),
+        NodeRegister(
+            "ConsoleDebug",
+            py.get_type::<ConsoleDebug>(),
+            "Sr Console Debug",
         ),
         // text
         NodeRegister("TextBox", py.get_type::<TextBox>(), "Sr Text Box"),

@@ -12,6 +12,9 @@ pub use workflow_info::WorkflowInfo;
 mod batch_rename;
 pub use batch_rename::BatchRename;
 
+mod console_debug;
+pub use console_debug::ConsoleDebug;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
