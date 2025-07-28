@@ -2,14 +2,14 @@
 name = "comfyui_silentrain"
 description = "Ecological extension of comfyui using Rust language."
 license = { file = "LICENSE" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = ["torch>=2.5.1"]
+dependencies = ["comfy-cli>=1.4.1", "numpy>=2.2.6", "torch>=2.7.1"]
 
 
 [build-system]

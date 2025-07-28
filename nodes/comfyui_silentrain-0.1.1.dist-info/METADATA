@@ -4,10 +4,11 @@ Version: 0.1.1
 Classifier: Programming Language :: Rust
 Classifier: Programming Language :: Python :: Implementation :: CPython
 Classifier: Programming Language :: Python :: Implementation :: PyPy
-Requires-Dist: torch>=2.5.1
+Requires-Dist: numpy>=2.2.6
+Requires-Dist: torch>=2.7.1
 License-File: LICENSE
 Summary: Ecological extension of comfyui using Rust language.
-Requires-Python: >=3.8
+Requires-Python: >=3.10
 Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
 Project-URL: Repository, https://github.com/silent-rain/ComfyUI-SilentRain
 

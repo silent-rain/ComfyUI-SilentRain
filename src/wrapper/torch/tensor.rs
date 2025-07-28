@@ -5,6 +5,7 @@
 use std::marker::PhantomData;
 
 use candle_core::{DType, Device, Shape, Tensor, WithDType};
+use log::info;
 use numpy::{
     ndarray::{Dim, IxDynImpl},
     Element, PyArray, PyArrayDyn, PyArrayMethods, PyReadonlyArray, PyUntypedArrayMethods,
@@ -80,25 +81,36 @@ where
         torch_tensor: &Bound<'py, PyAny>,
         device: &Device,
     ) -> Result<Tensor, Error> {
-        // 1. 获取 numpy 数组
-        let np = torch_tensor.call_method0("numpy")?;
+        // 获取 numpy 数组
+        let mut np = torch_tensor.call_method0("numpy")?;
 
-        // 2. 使用 downcast 而不是 extract
-        let arr = np
+        // 使用 downcast 而不是 extract
+        let mut arr = np
             .downcast::<PyArrayDyn<T>>()
             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
 
-        // 3. 获取形状
+        // 确保数组连续
+        if !arr.is_contiguous() {
+            info!("torch tensor is not contiguous");
+
+            // 创建连续副本
+            np = np.call_method0("copy")?;
+            info!("create a torch tensor copy");
+
+            arr = np
+                .downcast::<PyArrayDyn<T>>()
+                .map_err(|e| Error::PyDowncastError(e.to_string()))?;
+        }
+
+        // 获取形状
         let shape = arr.shape().to_vec();
 
-        // 4. 获取数据切片
+        // 获取数据切片
         let data = arr.to_vec()?;
 
-        // 5. 创建 tensor
+        // 创建 tensor
         let tensor = Tensor::from_vec(data, shape, device)
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
-
-        // 6. 返回 Tensor
         Ok(tensor)
     }
 

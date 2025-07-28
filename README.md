@@ -44,4 +44,5 @@ git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
 ## 工作流示例
 
 - [工作流示例](workflow)
+- [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - [节点注册](https://registry.comfy.org)
