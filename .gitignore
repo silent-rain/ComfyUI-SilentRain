@@ -18,3 +18,7 @@ dist/
 #.idea/
 
 .venv
+
+# build
+nodes/node.zip
+nodes/.ruff_cache
