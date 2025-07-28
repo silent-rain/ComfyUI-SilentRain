@@ -21,13 +21,13 @@ pyo3 = { version = "0.25.1", features = [
     # "macros",
     # "abi3-py312",
 ] }
-numpy = "0.25" # rust-numpy
+numpy = "0.25.0" # rust-numpy
 pythonize = "0.25.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象
 # pyo3-async-runtimes = { version = "0.25.0", features = [
 #     "attributes",
 #     "tokio-runtime",
 # ] } # 用于与 Python 的 Asyncio 库和 Rust 的异步运行时进行互操作的实用程序。
-dict_derive = "0.6" # Derive FromPyObject 自动将 Python 字典转换为 Rust 结构体
+dict_derive = "0.6.0" # Derive FromPyObject 自动将 Python 字典转换为 Rust 结构体
 # pyo3-log = "0.12.4" # 从 Rust 到 Python 日志记录的桥梁
 # pyo3-arrow pyo3 的轻量级Apache Arrow集成。
 # pyo3-bytes = "0.3.0" # bytes 转换

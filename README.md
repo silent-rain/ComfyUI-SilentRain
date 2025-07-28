@@ -41,7 +41,14 @@ cd ComfyUI/custom_nodes/
 git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
 ```
 
+## 发版
+
+```shell
+uv run comfy node publish
+```
+
 ## 工作流示例
 
 - [工作流示例](workflow)
+- [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - [节点注册](https://registry.comfy.org)

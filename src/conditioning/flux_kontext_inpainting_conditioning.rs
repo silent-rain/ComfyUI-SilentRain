@@ -21,7 +21,7 @@ use crate::{
         comfy::{
             node_helpers::{
                 conditioning_set_values, conditionings_py2rs, conditionings_rs2py, latent_rs2py,
-                Conditioning,
+                Conditioning, ConditioningEtx,
             },
             vae::Vae,
         },
@@ -198,6 +198,8 @@ impl FluxKontextInpaintingConditioning {
         let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
         let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
 
+        error!("1111");
+
         let x = pixels.dims()[1] / 8 * 8;
         let y = pixels.dims()[2] / 8 * 8;
 
@@ -256,8 +258,14 @@ impl FluxKontextInpaintingConditioning {
         let c = conditioning_set_values(
             conditionings,
             HashMap::from([
-                ("concat_latent_image".to_string(), concat_latent),
-                ("concat_mask".to_string(), mask.clone()),
+                (
+                    "concat_latent_image".to_string(),
+                    ConditioningEtx::Tensor(concat_latent),
+                ),
+                (
+                    "concat_mask".to_string(),
+                    ConditioningEtx::Tensor(mask.clone()),
+                ),
             ]),
             false,
         )?;
@@ -303,72 +311,6 @@ impl FluxKontextInpaintingConditioning {
         Ok(mask.reshape(&new_shape)?)
     }
 
-    // /// Get the conditioning
-    // fn get_conditioning<'py>(
-    //     &self,
-    //     conditioning: Bound<'py, PyList>,
-    // ) -> Result<Vec<Conditioning>, Error> {
-    //     let mut conditionings = Vec::with_capacity(conditioning.len());
-    //     for conditioning_item in conditioning.iter() {
-    //         let py_tensor = conditioning_item.get_item(0)?;
-    //         let tensor = TensorWrapper::<f32>::new(&py_tensor, &self.device)?.into_tensor();
-
-    //         let dict_any = conditioning_item.get_item(1)?;
-    //         let dict_py = dict_any
-    //             .downcast::<PyDict>()
-    //             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
-
-    //         // py dict to rust map
-    //         let mut dict_rs = HashMap::new();
-    //         for (k, v) in dict_py {
-    //             let k_rs = k.to_string();
-    //             let v_rs = TensorWrapper::<f32>::new(&v, &self.device)?.into_tensor();
-    //             dict_rs.insert(k_rs, v_rs);
-    //         }
-
-    //         conditionings.push(Conditioning(tensor, dict_rs));
-    //     }
-
-    //     Ok(conditionings)
-    // }
-
-    // /// rs conditioning to py list
-    // fn _conditioning_to_list<'py>(
-    //     py: Python<'py>,
-    //     conditioning: Vec<Conditioning>,
-    // ) -> Result<Bound<'py, PyList>, Error> {
-    //     let mut list = Vec::new();
-    //     for Conditioning(tensor, conditioning_dict) in conditioning.iter() {
-    //         let tensor_py = TensorWrapper::<f32>::from_tensor(tensor.clone()).to_py_tensor(py)?;
-    //         let dict_py = PyDict::new(py);
-    //         for (k, v) in conditioning_dict {
-    //             let tensor_py = TensorWrapper::<f32>::from_tensor(v.clone()).to_py_tensor(py)?;
-    //             dict_py.set_item(k, tensor_py)?;
-    //         }
-
-    //         let elements = vec![tensor_py, dict_py.into_any()];
-    //         let ele_list = PyList::new(py, elements)?;
-
-    //         list.push(ele_list);
-    //     }
-
-    //     let results = PyList::new(py, list)?;
-    //     Ok(results)
-    // }
-
-    // /// out_latent to py dict
-    // fn _out_latent_to_dict<'py>(
-    //     py: Python<'py>,
-    //     out_latent: HashMap<String, Tensor>,
-    // ) -> Result<Bound<'py, PyDict>, Error> {
-    //     let dict = PyDict::new(py);
-    //     for (k, v) in out_latent {
-    //         let tensor_py = TensorWrapper::<f32>::from_tensor(v.clone()).to_py_tensor(py)?;
-    //         dict.set_item(k, tensor_py)?;
-    //     }
-    //     Ok(dict)
-    // }
-
     /// Encode the pixels into a latent vector
     /// pixels[:, :, :, :3]  # shape: [B, H, W, 3]
     fn _encode_latent<'py>(
@@ -392,7 +334,10 @@ impl FluxKontextInpaintingConditioning {
         if let Some(latent) = latent {
             conditioning = conditioning_set_values(
                 conditioning,
-                HashMap::from([("reference_latents".to_string(), latent["samples"].clone())]),
+                HashMap::from([(
+                    "reference_latents".to_string(),
+                    ConditioningEtx::Tensors(vec![latent["samples"].clone()]),
+                )]),
                 true,
             )?;
         }

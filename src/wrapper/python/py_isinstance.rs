@@ -8,6 +8,20 @@ use pyo3::{
     Bound, PyAny, PyResult, Python,
 };
 
+/// Instance judgment of torch
+/// py_type: torch.Tensor
+#[pyfunction]
+pub fn isinstance_by_torch<'py>(
+    py: Python<'py>,
+    py_any: &Bound<'py, PyAny>,
+    py_type: &str,
+) -> PyResult<bool> {
+    let py_type = py_type.replace("torch.", "");
+    let torch_module = py.import("torch")?;
+    let tensor = torch_module.getattr(py_type)?;
+    isinstance_py(py, py_any, &tensor)
+}
+
 /// Python `isinstance` function wrapper with proper implementation
 #[pyfunction]
 pub fn isinstance<'py>(
@@ -16,32 +30,13 @@ pub fn isinstance<'py>(
     py_type: &str,
 ) -> PyResult<bool> {
     let code = CString::new(format!("isinstance({py_any:?}, {py_type})")).unwrap();
-    let res = if py_type.starts_with("torch") {
-        //         let code = c_str!(
-        //             "
-        // import torch
-
-        // tensor = torch.Tensor
-        //             "
-        //         );
-        //         py.run(code, None, None)?;
-
-        //         let code = CString::new(format!("isinstance({:?}, {})", py_any, "tensor")).unwrap();
-        //         py.eval(&code, None, None)?
-
-        let torch_module = py.import("torch")?;
-        let tensor = torch_module.getattr("Tensor")?;
-        return isinstance2(py, py_any, &tensor);
-    } else {
-        py.eval(&code, None, None)?
-    };
-
+    let res = py.eval(&code, None, None)?;
     res.extract()
 }
 
 /// Python `isinstance` function wrapper with proper implementation
 #[pyfunction]
-pub fn isinstance2<'py>(
+pub fn isinstance_py<'py>(
     py: Python<'py>,
     py_any: &Bound<'py, PyAny>,
     py_type: &Bound<'py, PyAny>,
@@ -89,7 +84,7 @@ mod tests {
             let binding = py_any.get_type();
             let py_type = binding.as_any();
 
-            let result = isinstance2(py, py_any, py_type).unwrap();
+            let result = isinstance_py(py, py_any, py_type).unwrap();
             assert!(result);
 
             {
@@ -99,7 +94,7 @@ mod tests {
                 let binding = py_any.get_type();
                 let py_type = binding.as_any();
 
-                let result = isinstance2(py, py_any, py_type).unwrap();
+                let result = isinstance_py(py, py_any, py_type).unwrap();
                 assert!(!result);
             }
         });

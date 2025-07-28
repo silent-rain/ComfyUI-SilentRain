@@ -1,0 +1,19 @@
+[project]
+name = "silentrain"
+description = "Ecological extension of comfyui using Rust language."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = [
+    "numpy>=2.2.6",
+    "torch>=2.7.1",
+] # Filled in from requirements.txt
+
+[project.urls]
+Repository = "https://github.com/silent-rain/ComfyUI-SilentRain"
+#  Used by Comfy Registry https://registry.comfy.org
+
+[tool.comfy]
+PublisherId = "silent-rain"
+DisplayName = "ComfyUI-SilentRain"
+Icon = ""
+includes = []

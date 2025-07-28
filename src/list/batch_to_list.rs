@@ -16,7 +16,7 @@ use crate::{
     error::Error,
     wrapper::{
         comfyui::{types::any_type, PromptServer},
-        python::isinstance,
+        python::isinstance_by_torch,
         torch::tensor::TensorWrapper,
     },
 };
@@ -104,7 +104,7 @@ impl BatchToList {
         batch: Bound<'py, PyAny>,
     ) -> PyResult<(Bound<'py, PyAny>,)> {
         // 图片
-        if isinstance(py, &batch, "torch.Tensor")? {
+        if isinstance_by_torch(py, &batch, "torch.Tensor")? {
             let image_list = self
                 .image_batch_to_list(py, &batch)
                 .map_err(|e| PyErr::new::<PyRuntimeError, _>(e.to_string()))?;
