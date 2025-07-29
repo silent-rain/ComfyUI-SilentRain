@@ -198,8 +198,6 @@ impl FluxKontextInpaintingConditioning {
         let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
         let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
 
-        error!("1111");
-
         let x = pixels.dims()[1] / 8 * 8;
         let y = pixels.dims()[2] / 8 * 8;
 

@@ -66,7 +66,7 @@ hf-hub = { version = "0.4", default-features = false, features = [
     "rustls-tls",
 ] } # 与 huggingface hub 集成
 tokenizers = "0.21" # 标记文本
-parquet = "55.0" # 列式存储数据文件格式
+parquet = "55.2" # 列式存储数据文件格式
 image = "0.25"
 png = "0.17" # 用于读取和写入 PNG 图像
 # ndarray = "0.16"                                         # 用于多维数组
