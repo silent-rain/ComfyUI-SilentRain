@@ -4,6 +4,7 @@ Version: 0.1.1
 Classifier: Programming Language :: Rust
 Classifier: Programming Language :: Python :: Implementation :: CPython
 Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Dist: comfy-cli>=1.4.1
 Requires-Dist: numpy>=2.2.6
 Requires-Dist: torch>=2.7.1
 License-File: LICENSE
@@ -55,8 +56,15 @@ cd ComfyUI/custom_nodes/
 git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
 ```
 
+## 发版
+
+```shell
+uv run comfy node publish
+```
+
 ## 工作流示例
 
 - [工作流示例](workflow)
+- [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - [节点注册](https://registry.comfy.org)
 
