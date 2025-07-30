@@ -1,12 +1,14 @@
 //! Flux Kontext Inpainting Conditioning
 //!
+//! Flux Kontext Inpainting Conditioning 的 Rust 实现。
+//!
 //! 引用: https://github.com/ZenAI-Vietnam/ComfyUI-Kontext-Inpainting
 //!
 
 use std::collections::HashMap;
 
 use candle_core::{Device, IndexOp, Tensor};
-use log::error;
+use log::{error, info};
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -21,7 +23,7 @@ use crate::{
         comfy::{
             node_helpers::{
                 conditioning_set_values, conditionings_py2rs, conditionings_rs2py, latent_rs2py,
-                Conditioning, ConditioningEtx,
+                print_conditionings_shape, Conditioning, ConditioningEtx,
             },
             vae::Vae,
         },
@@ -53,6 +55,12 @@ impl FluxKontextInpaintingConditioning {
         Self {
             device: Device::Cpu,
         }
+    }
+
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
     }
 
     #[classattr]
@@ -198,14 +206,21 @@ impl FluxKontextInpaintingConditioning {
         let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
         let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
 
-        error!("1111");
+        info!("raw mask: {:?}", mask.dims());
+        info!("raw pixels: {:?}", pixels.dims());
+
+        print_conditionings_shape(&conditionings)?;
 
         let x = pixels.dims()[1] / 8 * 8;
         let y = pixels.dims()[2] / 8 * 8;
 
+        // 在第 1 维度上插入一个新的维度, [B, H, W] -> [B, 1, H, W]
+        let mask = mask.unsqueeze(1)?;
+        info!("unsqueeze mask: {:?}", mask.dims());
+
         let mut mask = interpolate(
             py,
-            &Self::reshape_mask(&mask)?, // [B, H, W] -> [B, 1, H, W]
+            &mask,
             Some((pixels.dims()[1], pixels.dims()[2])),
             None::<f32>,
             InterpolationMode::Bilinear,
@@ -213,6 +228,7 @@ impl FluxKontextInpaintingConditioning {
             None,
             false,
         )?;
+        info!("interpolate mask: {:?}", mask.dims());
 
         let orig_pixels = pixels.clone();
         let mut pixels = orig_pixels.clone();
@@ -224,8 +240,8 @@ impl FluxKontextInpaintingConditioning {
                 .narrow(1, x_offset, x)? // 第1维: height [x_offset : x_offset+x]
                 .narrow(2, y_offset, y)?; // 第2维: width [y_offset : y_offset+y]
             mask = mask
-                .narrow(1, x_offset, x)? // 第1维: height [x_offset : x_offset+x]
-                .narrow(2, y_offset, y)?; // 第2维: width [y_offset : y_offset+y]
+                .narrow(2, x_offset, x)? // 第2维: height [x_offset : x_offset+x]
+                .narrow(3, y_offset, y)?; // 第3维: width [y_offset : y_offset+y]
         }
 
         // 计算反转并四舍五入的掩码（形状: [B, H, W]）
@@ -248,12 +264,17 @@ impl FluxKontextInpaintingConditioning {
             .collect::<Result<Vec<_>, _>>()?;
 
         // 重组张量
-        let pixels = Tensor::cat(&processed, 3)?; // 形状恢复为 [1,1024,1024,3]
+        let pixels = Tensor::cat(&processed, 3)?; // 形状恢复为 [B,H,W,3]
+        info!("重组张量 pixels: {:?}", pixels.dims());
 
         let concat_latent = vae.encode(py, &pixels)?;
         let orig_latent = vae.encode(py, &orig_pixels)?;
 
         let pixels_latent = self._encode_latent(py, &vae, orig_pixels)?;
+        info!("pixels_latent: {:?}", pixels_latent["samples"].dims());
+
+        info!("concat_latent_image: {:?}", concat_latent.dims());
+        info!("mask: {:?}", mask.dims());
 
         let c = conditioning_set_values(
             conditionings,
@@ -270,7 +291,11 @@ impl FluxKontextInpaintingConditioning {
             false,
         )?;
 
+        print_conditionings_shape(&c)?;
+
         let conditionings = self._concat_conditioning_latent(c, Some(pixels_latent))?;
+
+        print_conditionings_shape(&conditionings)?;
 
         let mut out_latent = HashMap::new();
         out_latent.insert("samples".to_string(), orig_latent);
@@ -285,8 +310,12 @@ impl FluxKontextInpaintingConditioning {
     }
 
     /// mask reshape
+    /// python 的 reshape 函数的实现
+    ///
+    /// 使用 unsqueeze(1) 替代？
+    ///
     /// [B, H, W] -> [B, 1, H, W]
-    fn reshape_mask(mask: &Tensor) -> Result<Tensor, Error> {
+    fn _reshape_mask(mask: &Tensor) -> Result<Tensor, Error> {
         let dims: &[usize] = mask.dims(); // 获取当前形状 [d0, d1, ..., dn]
 
         // 检查至少2维

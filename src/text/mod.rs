@@ -27,6 +27,9 @@ pub use load_kontext_presets_assistant::LoadKontextPresetsAssistant;
 mod load_kontext_ble_presets_assistant;
 pub use load_kontext_ble_presets_assistant::LoadKontextBlePresetsAssistant;
 
+mod load_wan_presets;
+pub use load_wan_presets::LoadWanPresets;
+
 use pyo3::{
     types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,

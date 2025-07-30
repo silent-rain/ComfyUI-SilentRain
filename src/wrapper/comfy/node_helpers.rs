@@ -3,11 +3,12 @@
 use std::collections::HashMap;
 
 use candle_core::{Device, Tensor};
-use log::error;
+use log::{error, info};
 use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyListMethods},
     Bound, Python,
 };
+use serde::Serialize;
 
 use crate::{
     error::Error,
@@ -23,6 +24,50 @@ pub enum ConditioningEtx {
     Tensor(Tensor),
     Tensors(Vec<Tensor>),
     Float(f32),
+}
+
+impl ConditioningEtx {
+    pub fn dims(&self) -> ConditioningShapeEtx {
+        match self {
+            ConditioningEtx::Tensor(t) => ConditioningShapeEtx::Tensor(t.dims().to_vec()),
+            ConditioningEtx::Tensors(ts) => {
+                let mut t_list = Vec::new();
+                for t in ts.iter() {
+                    let v = t.dims().to_vec();
+                    t_list.push(v);
+                }
+                ConditioningShapeEtx::Tensors(t_list)
+            }
+            ConditioningEtx::Float(v) => ConditioningShapeEtx::Float(*v),
+        }
+    }
+}
+
+/// 条件形状
+#[derive(Debug, Clone, Serialize)]
+pub enum ConditioningShapeEtx {
+    Tensor(Vec<usize>),
+    Tensors(Vec<Vec<usize>>),
+    Float(f32),
+}
+
+/// 条件形状
+#[derive(Debug, Clone, Serialize)]
+pub struct ConditioningShape(
+    pub ConditioningShapeEtx,
+    pub HashMap<String, ConditioningShapeEtx>,
+);
+
+impl Conditioning {
+    /// 条件形状
+    pub fn shape(&self) -> ConditioningShape {
+        let t_shape = self.0.dims().to_vec();
+        let mut shape_dict = HashMap::new();
+        for (k, v) in &self.1 {
+            shape_dict.insert(k.to_string(), v.dims());
+        }
+        ConditioningShape(ConditioningShapeEtx::Tensor(t_shape), shape_dict)
+    }
 }
 
 /// Set values in conditionings
@@ -166,4 +211,15 @@ pub fn latent_rs2py<'py>(
         dict.set_item(k, tensor_py)?;
     }
     Ok(dict)
+}
+
+/// print conditionings shape
+pub fn print_conditionings_shape(conditionings: &[Conditioning]) -> Result<(), Error> {
+    let mut shapes = Vec::new();
+    for conditioning in conditionings.iter() {
+        shapes.push(conditioning.shape());
+    }
+    let results = serde_json::to_string_pretty(&shapes)?;
+    info!("conditionings shape: \n{results}");
+    Ok(())
 }

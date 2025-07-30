@@ -9,7 +9,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = ["comfy-cli>=1.4.1", "numpy>=2.2.6", "torch>=2.7.1"]
+# version = "1.0.1"
+dependencies = [
+    "comfy-cli>=1.4.1",
+    "numpy>=2.2.6",
+    "torch>=2.5.0",
+] # Filled in from requirements.txt
 
 
 [build-system]
@@ -22,10 +27,13 @@ features = ["pyo3/extension-module"]
 
 
 [project.urls]
+Homepage = "https://github.com/silent-rain/ComfyUI-SilentRain"
 Repository = "https://github.com/silent-rain/ComfyUI-SilentRain"
-#  Used by Comfy Registry https://comfyregistry.org
+#  Used by Comfy Registry https://registry.comfy.org
+
 
 [tool.comfy]
-PublisherId = "silentrain"
+PublisherId = "silent-rain"
 DisplayName = "ComfyUI-SilentRain"
 Icon = ""
+includes = []
