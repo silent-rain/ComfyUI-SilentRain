@@ -216,8 +216,6 @@ impl LoadWanPresets {
             }
         }
 
-        error!("results: {results:#?}");
-
         if results.len() == 1 {
             let preset = results[0].clone();
             return Ok((preset.brief.clone(), preset.brief, preset.prompts));
