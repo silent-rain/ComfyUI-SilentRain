@@ -19,26 +19,10 @@ nodesDir=${root}/nodes
 # 编译目录
 buildDir=./target/wheels
 
-# nodes 目录
-if [ ! -d ${nodesDir} ]; then 
-    echo "mkdir ${nodesDir}"
-    mkdir ${nodesDir}
-fi
-
 
 # build
 ./scripts/build.sh
 
-
-# 获取whl文件路径
-echo "find whl file ..."
-whl=$(find ${buildDir} -name "${App}-*.whl" | head -n 1)
-
-
-# 解压Python包
-echo "extract whl file ..."
-unzip -o ${whl} -d ${nodesDir}
-echo -e "\n"
 
 # 将 ${App} 拷贝到 ComfyUI 的自定义节点目录下
 # 删除之前解压目录, 避免出现残留文件.
@@ -52,12 +36,12 @@ fi
 
 
 # 移动到nodes目录.
-echo "mv ${App} to ${ComfyUIDir} ..."
-\mv -f ${nodesDir}/${App} ${ComfyUIDir}/${App}/
-if [ -d ${nodesDir}/${App} ]; then 
-    \mv -f ${nodesDir}/${App}.libs ${ComfyUIDir}/${App}/
+echo "copy ${App} to ${ComfyUIDir} ..."
+\cp -r ${nodesDir}/${App} ${ComfyUIDir}/${App}/
+if [ -d ${nodesDir}/${App}.libs ]; then 
+    \cp -r ${nodesDir}/${App}.libs ${ComfyUIDir}/${App}/
 fi
-\mv -f ${nodesDir}/${App}-*.dist-info ${ComfyUIDir}/${App}/
+\cp -r ${nodesDir}/${App}-*.dist-info ${ComfyUIDir}/${App}/
 echo "from .${App} import *" > ${ComfyUIDir}/${App}/__init__.py
 echo -e "\n"
 

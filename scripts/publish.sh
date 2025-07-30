@@ -25,16 +25,11 @@ echo "switch venv ..."
 source .venv/bin/activate
 
 
-# 获取whl文件路径
-echo "find whl file ..."
-whl=$(find ${buildDir} -name "${App}-*.whl" | head -n 1)
-cp ${whl} ${nodesDir}/
+# build
+./scripts/build.sh
 
-nodeWhl=$(find ${nodesDir} -name "${App}-*.whl" | head -n 1)
-newNodewhl=$(echo ${nodeWhl} | sed 's/-[0-9.]*\(-cp312\)/\1/')
-echo $newNodewhl
-mv ${nodeWhl} ${newNodewhl}
 
+cd ${nodesDir}
 
 # publishing
 uv run comfy node publish

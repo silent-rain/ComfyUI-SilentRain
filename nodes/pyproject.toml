@@ -1,12 +1,11 @@
 [project]
 name = "silentrain"
-description = "Ecological extension of comfyui using Rust language."
+description = "Ecological extension of comfyui using Rust language. only supports Linux."
 version = "1.0.1"
 license = { file = "LICENSE" }
 dependencies = [
     "numpy>=2.2.6",
-    "torch>=2.7.1",
-    "comfyui_silentrain @ file://./comfyui_silentrain-cp312-cp312-manylinux_2_34_x86_64.whl; sys_platform == 'linux'",
+    "torch>=2.5.0",
 ] # Filled in from requirements.txt
 
 [project.urls]

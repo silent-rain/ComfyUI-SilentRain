@@ -22,4 +22,6 @@ dist/
 # build
 nodes/node.zip
 nodes/.ruff_cache
-nodes/comfyui_silentrain-*.whl
+nodes/comfyui_silentrain
+nodes/comfyui_silentrain.libs
+nodes/comfyui_silentrain-1.0.1.dist-info

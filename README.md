@@ -35,10 +35,12 @@ cd ComfyUI-SilentRain
 
 ## ComfyUI 使用
 
-```shell
-cd ComfyUI/custom_nodes/
+ComfyUI Manager中搜索 `ComfyUI-SilentRain` 安装.
 
-git clone git@github.com:silent-rain/ComfyUI-SilentRain.git
+或者使用命令行安装
+
+```shell
+comfy node install silentrain
 ```
 
 ## 发版
