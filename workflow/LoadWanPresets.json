@@ -1,0 +1,449 @@
+{
+  "id": "022a7702-2fbe-47fd-ba82-867013f65cc3",
+  "revision": 0,
+  "last_node_id": 19,
+  "last_link_id": 24,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "easy showAnything",
+      "pos": [
+        1880,
+        1670
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "zoom in"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "easy showAnything",
+      "pos": [
+        2120,
+        1670
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "zoom in"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy showAnything",
+      "pos": [
+        1860,
+        2210
+      ],
+      "size": [
+        210,
+        88
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "Handheld shot,single shot,zoom in"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy showAnything",
+      "pos": [
+        2090,
+        2210
+      ],
+      "size": [
+        220,
+        130
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "模拟手持摄影机的抖动效果，增加真实感和临场感\n聚焦单个主体的中近景镜头，突出人物表情或细节\n镜头缓慢或快速向主体靠近，突出细节或增强情感表达"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "LoadWanPresets",
+      "pos": [
+        1410,
+        1650
+      ],
+      "size": [
+        325.42578125,
+        458
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            7
+          ]
+        },
+        {
+          "label": "description",
+          "name": "description",
+          "type": "STRING",
+          "links": [
+            8
+          ]
+        },
+        {
+          "label": "prompts",
+          "name": "prompts",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadWanPresets"
+      },
+      "widgets_values": [
+        "镜头拉近",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "LoadWanPresets",
+      "pos": [
+        1410,
+        2190
+      ],
+      "size": [
+        325.42578125,
+        458
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            10
+          ]
+        },
+        {
+          "label": "description",
+          "name": "description",
+          "type": "STRING",
+          "links": [
+            11
+          ]
+        },
+        {
+          "label": "prompts",
+          "name": "prompts",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadWanPresets"
+      },
+      "widgets_values": [
+        "镜头拉近",
+        "手持镜头",
+        "单人镜头",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "easy showAnything",
+      "pos": [
+        2360,
+        1670
+      ],
+      "size": [
+        220,
+        304
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "面部特写",
+        "手部细节",
+        "物体聚焦",
+        "眼神特写",
+        "局部放大"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "easy showAnything",
+      "pos": [
+        2350,
+        2210
+      ],
+      "size": [
+        220,
+        196
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 24
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "手持镜头;手持抖动效果;轻微晃动;纪录片风格;临场感;真实感拍摄",
+        "面部特写;人物表情细节;眼神光表现;单人肖像;情感特写",
+        "面部特写;手部细节;物体聚焦;眼神特写;局部放大"
+      ]
+    }
+  ],
+  "links": [
+    [
+      7,
+      9,
+      0,
+      2,
+      0,
+      "*"
+    ],
+    [
+      8,
+      9,
+      1,
+      3,
+      0,
+      "*"
+    ],
+    [
+      10,
+      10,
+      0,
+      5,
+      0,
+      "*"
+    ],
+    [
+      11,
+      10,
+      1,
+      7,
+      0,
+      "*"
+    ],
+    [
+      23,
+      9,
+      2,
+      18,
+      0,
+      "*"
+    ],
+    [
+      24,
+      10,
+      2,
+      19,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9512025679758747,
+      "offset": [
+        -1203.6313275106168,
+        -1464.8311467684748
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
