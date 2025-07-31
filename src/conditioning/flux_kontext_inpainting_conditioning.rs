@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use candle_core::{Device, IndexOp, Tensor};
-use log::{error, info};
+use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -206,9 +206,6 @@ impl FluxKontextInpaintingConditioning {
         let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
         let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
 
-        info!("raw mask: {:?}", mask.dims());
-        info!("raw pixels: {:?}", pixels.dims());
-
         print_conditionings_shape(&conditionings)?;
 
         let x = pixels.dims()[1] / 8 * 8;
@@ -216,7 +213,6 @@ impl FluxKontextInpaintingConditioning {
 
         // 在第 1 维度上插入一个新的维度, [B, H, W] -> [B, 1, H, W]
         let mask = mask.unsqueeze(1)?;
-        info!("unsqueeze mask: {:?}", mask.dims());
 
         let mut mask = interpolate(
             py,
@@ -228,7 +224,6 @@ impl FluxKontextInpaintingConditioning {
             None,
             false,
         )?;
-        info!("interpolate mask: {:?}", mask.dims());
 
         let orig_pixels = pixels.clone();
         let mut pixels = orig_pixels.clone();
@@ -265,16 +260,11 @@ impl FluxKontextInpaintingConditioning {
 
         // 重组张量
         let pixels = Tensor::cat(&processed, 3)?; // 形状恢复为 [B,H,W,3]
-        info!("重组张量 pixels: {:?}", pixels.dims());
 
         let concat_latent = vae.encode(py, &pixels)?;
         let orig_latent = vae.encode(py, &orig_pixels)?;
 
         let pixels_latent = self._encode_latent(py, &vae, orig_pixels)?;
-        info!("pixels_latent: {:?}", pixels_latent["samples"].dims());
-
-        info!("concat_latent_image: {:?}", concat_latent.dims());
-        info!("mask: {:?}", mask.dims());
 
         let c = conditioning_set_values(
             conditionings,
