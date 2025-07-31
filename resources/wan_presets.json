@@ -277,6 +277,54 @@
     ]
   },
   {
+    "identifier": "camera_level",
+    "name": "视角位置(CameraLevel)",
+    "presets": [
+      {
+        "name": "none",
+        "description": "无特定视角设定，使用默认镜头参数",
+        "brief": "",
+        "prompts": ["默认视角", "常规位置"]
+      },
+      {
+        "name": "低角度",
+        "description": "以较低角度拍摄，强调动态或下蹲动作",
+        "brief": "low angle",
+        "prompts": ["角度下移", "动感下蹲", "降低视角", "动态捕捉", "下蹲视角"]
+      },
+      {
+        "name": "高角度",
+        "description": "以较高角度拍摄，强调高处视角或俯拍动作",
+        "brief": "high angle",
+        "prompts": ["视野宽广", "高处视角", "俯拍动作", "高空仰拍", "全景视野"]
+      },
+      {
+        "name": "平视视角",
+        "description": "相机位置与人物相同高度，展现人物真实视角",
+        "brief": "camera on a level",
+        "prompts": ["自然视角", "人物视角", "真实感", "环境观察", "平视角度"]
+      },
+      {
+        "name": "俯视角",
+        "description": "从上方拍摄，强调视角变化和透视关系",
+        "brief": "overhead view",
+        "prompts": ["透视关系", "俯拍视角", "观察视角", "高空俯瞰", "高层视角"]
+      },
+      {
+        "name": "仰视角",
+        "description": "从下方拍摄，强调空间层次和动感元素",
+        "brief": "underfoot view",
+        "prompts": [
+          "仰拍视角",
+          "空间层次",
+          "高空俯瞰",
+          "地面角度",
+          "层次感视角"
+        ]
+      }
+    ]
+  },
+  {
     "identifier": "action",
     "name": "运动动作(Action)",
     "presets": [
@@ -507,6 +555,18 @@
         "description": "表现尴尬或羞愧，适合犯错或害羞场景，通过低头和脸红表现",
         "brief": "embarrassment expression",
         "prompts": ["羞愧面容", "低头姿势", "脸颊泛红", "眼神躲闪", "尴尬神态"]
+      },
+      {
+        "name": "开心",
+        "description": "表现愉快的喜悦，适合轻松或愉快场景，通过开怀大笑和明亮的眼神表现",
+        "brief": "excitement expression",
+        "prompts": ["开心表情", "大笑开心", "明亮眼睛", "张开双臂", "愉快眼神"]
+      },
+      {
+        "name": "好奇",
+        "description": "表现探索或好奇，适合好奇或惊讶场景，通过睁大眼睛和竖起的耳朵表现",
+        "brief": "curiosity expression",
+        "prompts": ["好奇面容", "竖起耳朵", "张嘴惊奇", "睁大眼睛", "探究眼神"]
       }
     ]
   },
@@ -851,6 +911,102 @@
           "森林光柱",
           "科幻光效",
           "神秘光束"
+        ]
+      },
+      {
+        "name": "散射光",
+        "description": "散射的聚光灯光圈，从各个方向产生光影（需要配合光色进行调光）",
+        "brief": "diffusion light",
+        "prompts": [
+          "光圈散射",
+          "环形高光",
+          "艺术光影",
+          "舞台聚光",
+          "舞台效果光"
+        ]
+      },
+      {
+        "name": "全局光",
+        "description": "均匀漫射的光场，提供场景基础亮度",
+        "brief": "environmental light",
+        "prompts": [
+          "全局照明",
+          "环境光照",
+          "基础灯光环境",
+          "默认灯光环境",
+          "通用照明环境"
+        ]
+      },
+      {
+        "name": "阴影光",
+        "description": "辅助光线，照亮被其它主光源投射阴影的部分",
+        "brief": "fill light",
+        "prompts": [
+          "辅助照明",
+          "细节照明",
+          "辅助光照明",
+          "细节照明光",
+          "填充照明光"
+        ]
+      },
+      {
+        "name": "轮廓光",
+        "description": "勾勒出物体边缘光晕，呈现立体高光和阴影效果",
+        "brief": "rim light",
+        "prompts": [
+          "立体照明光",
+          "边框光照明",
+          "轮廓光照明",
+          "环境泛光光",
+          "边缘轮廓光"
+        ]
+      },
+      {
+        "name": "氛围光",
+        "description": "烘托画面氛围，制造整体视觉情绪的照明",
+        "brief": "ambient light",
+        "prompts": [
+          "情绪照明光",
+          "情绪氛围光",
+          "辅助氛围光",
+          "情绪灯光光",
+          "环境灯光光"
+        ]
+      },
+      {
+        "name": "冷光",
+        "description": "产生冷色调的阴影（色温<5100K）",
+        "brief": "cool light",
+        "prompts": [
+          "白冷冷照明",
+          "冰蓝的灯光",
+          "冷光灯照明",
+          "冷光灯光效",
+          "冷色调光线"
+        ]
+      },
+      {
+        "name": "暖光",
+        "description": "产生温暖色调的阴影（色温>5400K）",
+        "brief": "warm light",
+        "prompts": [
+          "白暖暖照明",
+          "暖色调灯光",
+          "温暖的照明",
+          "暖色调照明光",
+          "暖色调光效"
+        ]
+      },
+      {
+        "name": "逆光",
+        "description": "光线照射到物体正后方，形成明暗分离",
+        "brief": "oblique light",
+        "prompts": [
+          "灯光逆光照射",
+          "光线逆光照射",
+          "逆光拍摄照片",
+          "逆光模式摄影",
+          "逆光摄影模式"
         ]
       }
     ]
@@ -1404,6 +1560,102 @@
         "description": "通过后期合成实现人物悬浮效果",
         "brief": "levitation",
         "prompts": ["悬浮效果", "超现实", "梦幻场景", "后期合成"]
+      }
+    ]
+  },
+  {
+    "identifier": "painting_style",
+    "name": "绘画风格(PaintingStyle)",
+    "presets": [
+      {
+        "name": "none",
+        "description": "",
+        "brief": "",
+        "prompts": []
+      },
+      {
+        "name": "油画",
+        "description": "模拟画布上的油彩画作",
+        "brief": "oil painting",
+        "prompts": ["油彩绘画", "画作氛围", "画框背景", "油画风格"]
+      },
+      {
+        "name": "水彩",
+        "description": "模拟画布上的水彩画作",
+        "brief": "watercolor painting",
+        "prompts": ["水彩绘画", "画作氛围", "画框背景", "水彩风格"]
+      },
+      {
+        "name": "布艺",
+        "description": "使用布艺或织物制作背景，模拟画作质感",
+        "brief": "fabric background",
+        "prompts": ["布艺质感", "面料纹理", "柔软纹理", "背景模拟"]
+      },
+      {
+        "name": "木质",
+        "description": "使用木板、木板画或木质纹理制作背景",
+        "brief": "wood background",
+        "prompts": ["木质质感", "木纹纹理", "纹理模拟", "背景材质"]
+      },
+      {
+        "name": "抽象线条",
+        "description": "模拟线条画作，可调整线条粗细",
+        "brief": "abstract lines",
+        "prompts": ["抽象线条", "质感线条", "笔触笔触", "视觉效果"]
+      },
+      {
+        "name": "玻璃杯",
+        "description": "在玻璃杯内填充水并装饰，模拟玻璃质感",
+        "brief": "glass cups",
+        "prompts": ["玻璃质感", "水波纹理", "玻璃瓶子", "玻璃纹理"]
+      },
+      {
+        "name": "木头模型",
+        "description": "使用木头模型或人像填充背景",
+        "brief": "wood background",
+        "prompts": ["木质纹理", "木头纹理", "背景材质", "自然质感"]
+      },
+      {
+        "name": "画框",
+        "description": "使用木质画框装饰背景",
+        "brief": "frame",
+        "prompts": ["木质画框", "装饰边框", "复古风格", "背景装饰"]
+      },
+      {
+        "name": "玻璃反射",
+        "description": "使用光滑的玻璃制造反射效果",
+        "brief": "mirror reflection",
+        "prompts": ["光滑玻璃", "玻璃质感", "光滑效果", "反射效果"]
+      },
+      {
+        "name": "画中画",
+        "description": "使用多张照片拼接制作画中画效果",
+        "brief": "mosaic",
+        "prompts": ["多图拼接", "拼接合成", "照片拼贴", "多图效果"]
+      },
+      {
+        "name": "纹理纹理",
+        "description": "使用布料或纸张作为背景，添加纹理",
+        "brief": "background textures",
+        "prompts": ["纹理背景", "纹理质感", "自然背景", "质感背景"]
+      },
+      {
+        "name": "画廊",
+        "description": "使用不同的画作进行拼接，形成画廊",
+        "brief": "gallery",
+        "prompts": ["拼贴画廊", "艺术风格", "拼接模式", "画廊效果"]
+      },
+      {
+        "name": "艺术边框",
+        "description": "给图片添加抽象和几何图形制作艺术边框",
+        "brief": "abstract bordeř",
+        "prompts": ["几何边框", "装饰边框", "艺术风格", "边框装饰"]
+      },
+      {
+        "name": "黑白",
+        "description": "使用滤镜将图像转换为黑白",
+        "brief": "black and white",
+        "prompts": ["黑白照片", "黑白艺术", "黑白转换", "黑白风格"]
       }
     ]
   }

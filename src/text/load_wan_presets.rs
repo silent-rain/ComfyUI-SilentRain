@@ -143,6 +143,7 @@ impl LoadWanPresets {
         advanced_camera_movement: &str,
         shot_type: &str,
         camera_distance: &str,
+        camera_level: &str,
         action: &str,
         composition: &str,
         emotion: &str,
@@ -155,12 +156,14 @@ impl LoadWanPresets {
         background: &str,
         wedding: &str,
         wedding_photography: &str,
+        painting_style: &str,
     ) -> PyResult<(String, String, Vec<String>)> {
         let preset_dict = HashMap::from([
             ("camera_movement", camera_movement),
             ("advanced_camera_movement", advanced_camera_movement),
             ("shot_type", shot_type),
             ("camera_distance", camera_distance),
+            ("camera_level", camera_level),
             ("action", action),
             ("composition", composition),
             ("emotion", emotion),
@@ -173,6 +176,7 @@ impl LoadWanPresets {
             ("background", background),
             ("wedding", wedding),
             ("wedding_photography", wedding_photography),
+            ("painting_style", painting_style),
         ]);
         let results = self.get_preset(preset_dict);
 
