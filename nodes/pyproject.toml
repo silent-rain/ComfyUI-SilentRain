@@ -1,5 +1,5 @@
 [project]
-name = "silentrain"
+name = "ComfyUI-SilentRain"
 description = "Ecological extension of comfyui using Rust language. only supports Linux."
 version = "1.0.2"
 license = { file = "LICENSE" }
