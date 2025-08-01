@@ -1,6 +1,7 @@
 # build
 node.zip
 .ruff_cache
-!comfyui_silentrain
-!comfyui_silentrain.libs
-!comfyui_silentrain-1.0.1.dist-info
+# !comfyui_silentrain
+# !comfyui_silentrain.libs
+# !comfyui_silentrain-1.0.1.dist-info
+# !nodes/ComfyUI_SilentRain.egg-info
