@@ -42,7 +42,7 @@ if [ -d ${nodesDir}/${App}.libs ]; then
     \cp -r ${nodesDir}/${App}.libs ${ComfyUIDir}/${App}/
 fi
 \cp -r ${nodesDir}/${App}-*.dist-info ${ComfyUIDir}/${App}/
-echo "from .${App} import *" > ${ComfyUIDir}/${App}/__init__.py
+\cp -r ${nodesDir}/__init__.py ${ComfyUIDir}/${App}/
 echo -e "\n"
 
 
