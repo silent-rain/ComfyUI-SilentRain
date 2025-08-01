@@ -53,6 +53,9 @@ unzip -o ${whl} -d ${nodesDir}
 echo -e "\n"
 
 
+
+du -sh ${nodesDir}/*
+
 echo -e "\nBuild Done"
 
 echo -e "\n"
