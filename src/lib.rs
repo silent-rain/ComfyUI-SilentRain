@@ -32,10 +32,12 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 每个扩展模块都有自己的全局变量，因此所使用的记录器也与其他 Rust 原生扩展无关。
     // 因此，每个扩展模块可以根据自己的需要自行设置记录器。
     let _ = tracing_subscriber::fmt()
+        .with_ansi(true)
         .with_max_level(tracing::Level::DEBUG)
         .with_level(true)
         .with_file(true)
         .with_line_number(true)
+        .with_target(false)
         .try_init();
 
     // 添加函数demo
