@@ -3,7 +3,7 @@
 use pyo3::{PyResult, Python};
 
 use crate::{
-    conditioning::FluxKontextInpaintingConditioning,
+    conditioning::{ConditioningConsoleDebug, FluxKontextInpaintingConditioning},
     core::node::NodeRegister,
     image::{
         ImageResolution, ImageResolution2, ImageSimpleResolution, LoadImagesFromFolder,
@@ -152,6 +152,12 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "FluxKontextInpaintingConditioning",
             py.get_type::<FluxKontextInpaintingConditioning>(),
             "Sr Flux Kontext Inpainting Conditioning",
+        ),
+        // Conditioning
+        NodeRegister(
+            "ConditioningConsoleDebug",
+            py.get_type::<ConditioningConsoleDebug>(),
+            "Sr Conditioning Console Debug",
         ),
     ];
     Ok(nodes)

@@ -3,12 +3,12 @@
 use std::collections::HashMap;
 
 use candle_core::{Device, Tensor};
-use log::{error, info};
+use log::error;
 use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyListMethods},
     Bound, Python,
 };
-use serde::Serialize;
+use serde::{ser::SerializeSeq, Serialize};
 
 use crate::{
     error::Error,
@@ -24,6 +24,38 @@ pub enum ConditioningEtx {
     Tensor(Tensor),
     Tensors(Vec<Tensor>),
     Float(f32),
+}
+
+/// 实现自定义 Serialize
+impl Serialize for Conditioning {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // 将两个字段序列化为一个数组
+        let mut seq = serializer.serialize_seq(Some(2))?;
+        seq.serialize_element(&self.0.to_string())?;
+        seq.serialize_element(&self.1)?;
+        seq.end()
+    }
+}
+
+/// 实现自定义 Serialize
+impl Serialize for ConditioningEtx {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            ConditioningEtx::Tensor(t) => t.to_string().serialize(serializer),
+            ConditioningEtx::Tensors(t) => t
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .serialize(serializer),
+            ConditioningEtx::Float(f) => serde_json::to_string(&f).unwrap().serialize(serializer),
+        }
+    }
 }
 
 impl ConditioningEtx {
@@ -211,15 +243,4 @@ pub fn latent_rs2py<'py>(
         dict.set_item(k, tensor_py)?;
     }
     Ok(dict)
-}
-
-/// print conditionings shape
-pub fn print_conditionings_shape(conditionings: &[Conditioning]) -> Result<(), Error> {
-    let mut shapes = Vec::new();
-    for conditioning in conditionings.iter() {
-        shapes.push(conditioning.shape());
-    }
-    let results = serde_json::to_string_pretty(&shapes)?;
-    info!("conditionings shape: \n{results}");
-    Ok(())
 }

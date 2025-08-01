@@ -23,7 +23,7 @@ use crate::{
         comfy::{
             node_helpers::{
                 conditioning_set_values, conditionings_py2rs, conditionings_rs2py, latent_rs2py,
-                print_conditionings_shape, Conditioning, ConditioningEtx,
+                Conditioning, ConditioningEtx,
             },
             vae::Vae,
         },
@@ -206,8 +206,6 @@ impl FluxKontextInpaintingConditioning {
         let pixels = TensorWrapper::<f32>::new(&pixels, &self.device)?.into_tensor();
         let mask = TensorWrapper::<f32>::new(&mask, &self.device)?.into_tensor();
 
-        print_conditionings_shape(&conditionings)?;
-
         let x = pixels.dims()[1] / 8 * 8;
         let y = pixels.dims()[2] / 8 * 8;
 
@@ -281,11 +279,7 @@ impl FluxKontextInpaintingConditioning {
             false,
         )?;
 
-        print_conditionings_shape(&c)?;
-
         let conditionings = self._concat_conditioning_latent(c, Some(pixels_latent))?;
-
-        print_conditionings_shape(&conditionings)?;
 
         let mut out_latent = HashMap::new();
         out_latent.insert("samples".to_string(), orig_latent);
