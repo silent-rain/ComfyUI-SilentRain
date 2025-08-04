@@ -1,4 +1,6 @@
 //! Kontext Presets 常用预设
+//!
+//! 提示词由 AI 辅助生成, 未经过完全测试
 
 use log::error;
 use pyo3::{
@@ -50,6 +52,12 @@ impl LoadKontextPresets {
     }
 
     #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
+    }
+
+    #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
     fn input_is_list() -> bool {
         false
@@ -81,12 +89,6 @@ impl LoadKontextPresets {
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
         "Kontext Presets Assistant."
-    }
-
-    #[classattr]
-    #[pyo3(name = "EXPERIMENTAL")]
-    fn experimental() -> bool {
-        true
     }
 
     #[classattr]

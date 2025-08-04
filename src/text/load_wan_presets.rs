@@ -1,4 +1,6 @@
 //! Wan Presets 预设
+//!
+//! 提示词由 AI 辅助生成, 未经过完全测试
 
 use std::collections::HashMap;
 
@@ -47,6 +49,12 @@ impl LoadWanPresets {
     #[new]
     fn new() -> Self {
         Self {}
+    }
+
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
     }
 
     #[classattr]

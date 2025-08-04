@@ -1,4 +1,7 @@
 //! Kontext Presets 预设助手
+//!
+//!
+//! 部分提示词由 AI 辅助生成, 未经过完全测试
 
 use log::error;
 use pyo3::{
@@ -46,6 +49,12 @@ impl LoadKontextPresetsAssistant {
     #[new]
     fn new() -> Self {
         Self {}
+    }
+
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
     }
 
     #[classattr]

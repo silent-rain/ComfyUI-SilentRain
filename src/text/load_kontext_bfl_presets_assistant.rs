@@ -1,4 +1,9 @@
-//! Kontext Presets 预设助手 - BLE 官方版
+//! Kontext Presets 预设助手 - BFL 官方版
+//!
+//! 通过官方的API接口返回的信息提取的提示词。
+//! 官方: https://playground.bfl.ai/image/edit
+//! 官方提示词指南: https://docs.bfl.ai/guides/prompting_guide_kontext_i2i
+//!
 
 use log::error;
 use pyo3::{
@@ -19,7 +24,7 @@ use crate::{
 };
 
 const KONTEXT_PRESETS_DATA: &str =
-    include_str!("../../resources/kontext_ble_presets_assistant.json");
+    include_str!("../../resources/kontext_bfl_presets_assistant.json");
 
 /// 预设内容
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -38,14 +43,14 @@ pub struct PresetAssistant {
     suffix: String,
 }
 
-/// Kontext Presets 预设助手 - BLE 官方版
+/// Kontext Presets 预设助手 - BFL 官方版
 #[pyclass(subclass)]
-pub struct LoadKontextBlePresetsAssistant {}
+pub struct LoadKontextBflPresetsAssistant {}
 
-impl PromptServer for LoadKontextBlePresetsAssistant {}
+impl PromptServer for LoadKontextBflPresetsAssistant {}
 
 #[pymethods]
-impl LoadKontextBlePresetsAssistant {
+impl LoadKontextBflPresetsAssistant {
     #[new]
     fn new() -> Self {
         Self {}
@@ -159,10 +164,10 @@ impl LoadKontextBlePresetsAssistant {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("LoadKontextBlePresetsAssistant error, {e}");
+                error!("LoadKontextBflPresetsAssistant error, {e}");
                 if let Err(e) = self.send_error(
                     py,
-                    "LoadKontextBlePresetsAssistant".to_string(),
+                    "LoadKontextBflPresetsAssistant".to_string(),
                     e.to_string(),
                 ) {
                     error!("send error failed, {e}");
@@ -174,7 +179,7 @@ impl LoadKontextBlePresetsAssistant {
     }
 }
 
-impl LoadKontextBlePresetsAssistant {
+impl LoadKontextBflPresetsAssistant {
     /// 获取预设
     fn get_preset(
         &self,

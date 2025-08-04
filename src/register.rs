@@ -15,7 +15,7 @@ use crate::{
     },
     logic::BatchFloat,
     text::{
-        LoadKontextBlePresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
+        LoadKontextBflPresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
         LoadWanPresets, RegularString, SaveText, StringList, StringListToSting, TextBox,
         TextToList,
     },
@@ -76,9 +76,9 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr Load Kontext Presets Assistant",
         ),
         NodeRegister(
-            "LoadKontextBlePresetsAssistant",
-            py.get_type::<LoadKontextBlePresetsAssistant>(),
-            "Sr Load Kontext Ble Presets Assistant",
+            "LoadKontextBflPresetsAssistant",
+            py.get_type::<LoadKontextBflPresetsAssistant>(),
+            "Sr Load Kontext Bfl Presets Assistant",
         ),
         NodeRegister(
             "LoadWanPresets",
