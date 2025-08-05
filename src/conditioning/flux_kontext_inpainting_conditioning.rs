@@ -1,6 +1,6 @@
 //! Flux Kontext Inpainting Conditioning
 //!
-//! Flux Kontext Inpainting Conditioning 的 Rust 实现。
+//! 基于 Flux Kontext Inpainting Conditioning 的 Rust 实现。
 //!
 //! 引用: https://github.com/ZenAI-Vietnam/ComfyUI-Kontext-Inpainting
 //!
@@ -94,7 +94,9 @@ impl FluxKontextInpaintingConditioning {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Kontext Inpainting"
+        "Kontext Inpainting.
+        Rust implementation based on Flux Kontext Inpainting Condition.
+        "
     }
 
     #[classattr]

@@ -88,7 +88,9 @@ impl LoadKontextPresetsAssistant {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Kontext Presets Assistant."
+        "Kontext Presets Assistant.
+        Pre set prompt words extracted through the official Kontext interface.
+        It also includes some AI generated prompt words that have not been fully validated."
     }
 
     #[classattr]
