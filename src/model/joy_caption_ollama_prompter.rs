@@ -39,89 +39,88 @@ fn caption_length_map() -> HashMap<&'static str, &'static str> {
 /// Constants for caption generation, copied from the original JoyCaption GGUF node
 fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
     HashMap::from([
-        (
-        "Descriptive",
-        vec![
+    (
+    "Descriptive", vec![
             "Write a detailed description for this image.",
             "Write a detailed description for this image in {word_count} words or less.",
             "Write a {length} detailed description for this image.",
         ],
     ),     
     (
-            "Descriptive (Casual)",
-            vec![
-               "Write a descriptive caption for this image in a casual tone.",
-                "Write a descriptive caption for this image in a casual tone within {word_count} words.",
-                "Write a {length} descriptive caption for this image in a casual tone.",
-            ],
-        ),
-        ("Straightforward", vec![
-	"Write a straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
-	"Write a straightforward caption for this image within {word_count} words. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
-	"Write a {length} straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
-],),
-("Stable Diffusion Prompt", vec![
-	"Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.",
-	"Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt. {word_count} words or less.",
-	"Output a {length} stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.",
-],),
-(
-"MidJourney", vec![
-	"Write a MidJourney prompt for this image.",
-	"Write a MidJourney prompt for this image within {word_count} words.",
-	"Write a {length} MidJourney prompt for this image.",
-],
-),
-(
-    "Danbooru tag list", vec![
-	"Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text.",
-	"Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {word_count} words or less.",
-	"Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {length} length.",
-],
-),
-(
-    "e621 tag list", vec![
-	"Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags.",
-	"Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags. Keep it under {word_count} words.",
-	"Write a {length} comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags.",
-],
-),
-(
-    "Rule34 tag list", vec![
-	"Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags.",
-	"Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags. Keep it under {word_count} words.",
-	"Write a {length} comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags.",
-],
-),
-(
-    "Booru-like tag list", vec![
-	"Write a list of Booru-like tags for this image.",
-	"Write a list of Booru-like tags for this image within {word_count} words.",
-	"Write a {length} list of Booru-like tags for this image.",
-],
-),
-(
-"Art Critic", vec![
-	"Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc.",
-	"Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it within {word_count} words.",
-	"Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it {length}.",
-], 
-),
-(
-"Product Listing", vec![
-	"Write a caption for this image as though it were a product listing.",
-	"Write a caption for this image as though it were a product listing. Keep it under {word_count} words.",
-	"Write a {length} caption for this image as though it were a product listing.",
-],
-),
-(
-    "Social Media Post", vec![
-	"Write a caption for this image as if it were being used for a social media post.",
-	"Write a caption for this image as if it were being used for a social media post. Limit the caption to {word_count} words.",
-	"Write a {length} caption for this image as if it were being used for a social media post.",
-],
-),
-    
+    "Descriptive (Casual)", vec![
+            "Write a descriptive caption for this image in a casual tone.",
+            "Write a descriptive caption for this image in a casual tone within {word_count} words.",
+            "Write a {length} descriptive caption for this image in a casual tone.",
+        ],
+    ),
+    ("Straightforward", vec![
+            "Write a straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
+            "Write a straightforward caption for this image within {word_count} words. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
+            "Write a {length} straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
+        ],
+    ),
+    ("Stable Diffusion Prompt", vec![
+            "Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.",
+            "Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt. {word_count} words or less.",
+            "Output a {length} stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.",
+        ]
+    ),
+    (
+    "MidJourney", vec![
+            "Write a MidJourney prompt for this image.",
+            "Write a MidJourney prompt for this image within {word_count} words.",
+            "Write a {length} MidJourney prompt for this image.",
+        ],
+    ),
+    (
+        "Danbooru tag list", vec![
+            "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text.",
+            "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {word_count} words or less.",
+            "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {length} length.",
+        ],
+    ),
+    (
+        "e621 tag list", vec![
+            "Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags.",
+            "Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags. Keep it under {word_count} words.",
+            "Write a {length} comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags.",
+        ],
+    ),
+    (
+        "Rule34 tag list", vec![
+            "Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags.",
+            "Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags. Keep it under {word_count} words.",
+            "Write a {length} comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags.",
+        ],
+    ),
+    (
+        "Booru-like tag list", vec![
+            "Write a list of Booru-like tags for this image.",
+            "Write a list of Booru-like tags for this image within {word_count} words.",
+            "Write a {length} list of Booru-like tags for this image.",
+        ],
+    ),
+    (
+    "Art Critic", vec![
+            "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc.",
+            "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it within {word_count} words.",
+            "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it {length}.",
+        ], 
+    ),
+    (
+    "Product Listing", vec![
+            "Write a caption for this image as though it were a product listing.",
+            "Write a caption for this image as though it were a product listing. Keep it under {word_count} words.",
+            "Write a {length} caption for this image as though it were a product listing.",
+        ],
+    ),
+    (
+        "Social Media Post", vec![
+            "Write a caption for this image as if it were being used for a social media post.",
+            "Write a caption for this image as if it were being used for a social media post. Limit the caption to {word_count} words.",
+            "Write a {length} caption for this image as if it were being used for a social media post.",
+        ],
+    ),
     ])
 }
 
