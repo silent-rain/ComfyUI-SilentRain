@@ -24,11 +24,14 @@ pub use load_kontext_presets::LoadKontextPresets;
 mod load_kontext_presets_assistant;
 pub use load_kontext_presets_assistant::LoadKontextPresetsAssistant;
 
-mod load_kontext_ble_presets_assistant;
-pub use load_kontext_ble_presets_assistant::LoadKontextBlePresetsAssistant;
+mod load_kontext_bfl_presets_assistant;
+pub use load_kontext_bfl_presets_assistant::LoadKontextBflPresetsAssistant;
 
 mod load_wan_presets;
 pub use load_wan_presets::LoadWanPresets;
+
+mod wan22_official_prompt_selector;
+pub use wan22_official_prompt_selector::Wan22OfficialPromptSelector;
 
 use pyo3::{
     types::{PyModule, PyModuleMethods},

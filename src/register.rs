@@ -17,7 +17,7 @@ use crate::{
     text::{
         LoadKontextBflPresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
         LoadWanPresets, RegularString, SaveText, StringList, StringListToSting, TextBox,
-        TextToList,
+        TextToList, Wan22OfficialPromptSelector,
     },
     utils::{BatchRename, BridgeAnything, ConsoleDebug, FileScanner, WorkflowInfo},
 };
@@ -84,6 +84,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "LoadWanPresets",
             py.get_type::<LoadWanPresets>(),
             "Sr Load Wan Presets",
+        ),
+        NodeRegister(
+            "Wan22OfficialPromptSelector",
+            py.get_type::<Wan22OfficialPromptSelector>(),
+            "Sr Wan2.2 Official Prompt Selector",
         ),
         // list
         NodeRegister(
