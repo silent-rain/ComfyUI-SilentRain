@@ -143,52 +143,68 @@ fn caption_length_choices() -> Vec<String> {
 }
 
 /// Select system prompt based on caption type
-fn system_prompt(caption_type: &str) -> &str {
-    let system_prompt;
+fn system_prompt(caption_type: &str) -> String{
+    let system_prompts;
     let caption_type = caption_type.to_lowercase();
     if caption_type.contains("tag list") {
         if caption_type.contains("danbooru") {
-            system_prompt = r#"You are a Danbooru tag generator. Generate ONLY comma-separated tags in lowercase with underscores.
-                Follow this exact order: artist:, copyright:, character:, meta:, then general tags.
-                Include precise counts (1girl, 2boys), specific details about appearance, clothing, accessories, pose, expression, actions, and background.
-                Use EXACT Danbooru syntax. NO explanatory text or natural language."#;
+            system_prompts = vec![
+                "You are a Danbooru tag generator. Generate ONLY comma-separated tags in lowercase with underscores.",
+                "Follow this exact order: artist:, copyright:, character:, meta:, then general tags.",
+                "Include precise counts (1girl, 2boys), specific details about appearance, clothing, accessories, pose, expression, actions, and background.",
+                "Use EXACT Danbooru syntax. NO explanatory text or natural language.",
+            ];
         } else if caption_type.contains("e621") {
-            system_prompt = r#"You are an e621 tag generator. Generate ONLY comma-separated tags in alphabetical order.
-                Follow this exact order: artist:, copyright:, character:, species:, meta:, lore:, then general tags.
-                Be extremely precise with tag formatting. NO explanatory text."#;
+            system_prompts = vec![
+                "You are an e621 tag generator. Generate ONLY comma-separated tags in alphabetical order.",
+                "Follow this exact order: artist:, copyright:, character:, species:, meta:, lore:, then general tags.",
+                "Be extremely precise with tag formatting. NO explanatory text.",
+            ];
         } else if caption_type.contains("rule34") {
-            system_prompt = r#"You are a Rule34 tag generator. Generate ONLY comma-separated tags in alphabetical order.
-                Follow this exact order: artist:, copyright:, character:, meta:, then general tags.
-                Be extremely precise and use proper tag syntax. NO explanatory text."#;
+            system_prompts =  vec![
+                "You are a Rule34 tag generator. Generate ONLY comma-separated tags in alphabetical order.",
+                "Follow this exact order: artist:, copyright:, character:, meta:, then general tags.",
+                "Be extremely precise and use proper tag syntax. NO explanatory text.",
+            ];
         } else {
-            system_prompt = r#"You are a booru tag generator. Generate ONLY comma-separated descriptive tags.
-                Focus on visual elements, character traits, clothing, pose, setting, and actions.
-                Use consistent formatting with underscores for multi-word tags. NO explanatory text."#;
+            system_prompts = vec![
+                "You are a booru tag generator. Generate ONLY comma-separated descriptive tags.",
+                "Focus on visual elements, character traits, clothing, pose, setting, and actions.",
+                "Use consistent formatting with underscores for multi-word tags. NO explanatory text.",
+            ];
         }
     } else if caption_type == "stable diffusion prompt" {
-        system_prompt = r#"You are a Stable Diffusion prompt engineer. Create prompts that work well with Stable Diffusion.
-            Focus on visual details, artistic style, camera angles, lighting, and composition.
-            Use common SD syntax and keywords. Separate key elements with commas.
-            Keep strictly within the specified length limit."#;
+        system_prompts = vec![
+                "You are a Stable Diffusion prompt engineer. Create prompts that work well with Stable Diffusion.",
+                "Focus on visual details, artistic style, camera angles, lighting, and composition.",
+                "Use common SD syntax and keywords. Separate key elements with commas.",
+                "Keep strictly within the specified length limit.",
+            ];
     } else if caption_type == "midjourney" {
-        system_prompt = r#"You are a MidJourney prompt expert. Create prompts optimized for MidJourney.
-            Use MidJourney's specific syntax and parameter style.
-            Include artistic style, camera view, lighting, and composition.
-            Keep strictly within the specified length limit."#;
+        system_prompts = vec![
+                "You are a MidJourney prompt expert. Create prompts optimized for MidJourney.",
+                "Use MidJourney's specific syntax and parameter style.",
+                "Include artistic style, camera view, lighting, and composition.",
+                "Keep strictly within the specified length limit.",
+            ];
     } else if caption_type == "straightforward" {
-        system_prompt = r#"You are a precise image descriptor. Focus on concrete, observable details.
-            Begin with main subject and medium. Describe pivotal elements using confident language.
-            Focus on color, shape, texture, and spatial relationships.
-            Omit speculation and mood. Quote any text exactly. Note technical details like watermarks.
-            Keep strictly within word limits. Never use phrases like 'This image shows...'"#;
+        system_prompts =vec![
+                "You are a precise image descriptor. Focus on concrete, observable details.",
+                "Begin with main subject and medium. Describe pivotal elements using confident language.",
+                "Focus on color, shape, texture, and spatial relationships.",
+                "Omit speculation and mood. Quote any text exactly. Note technical details like watermarks.",
+                "Keep strictly within word limits. Never use phrases like 'This image shows...'",
+            ]; 
     } else {
-        system_prompt = r#"You are an adaptive image description assistant.
-            Adjust your style to match the requested caption type exactly.
-            Strictly adhere to specified word limits and formatting requirements.
-            Be precise, clear, and follow the given style guidelines exactly."#;
+        system_prompts = vec![
+                "You are an adaptive image description assistant.",
+                "Adjust your style to match the requested caption type exactly.",
+                "Strictly adhere to specified word limits and formatting requirements.",
+                "Be precise, clear, and follow the given style guidelines exactly.",
+            ];
     }
 
-    system_prompt
+    system_prompts.join("\n")
 }
 
 /// JoyCaption Ollama Prompter
@@ -286,6 +302,7 @@ impl JoyCaptionOllamaPrompter {
                     "extra_options",
                     (NODE_STRING, {
                         let extra_options = PyDict::new(py);
+                        extra_options.set_item("forceInput", true)?;
                         extra_options
                     }),
                 )?;

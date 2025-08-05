@@ -810,6 +810,7 @@ dependencies = [
  "pythonize",
  "rand 0.9.2",
  "rand_chacha 0.9.0",
+ "raw-string",
  "regex",
  "reqwest",
  "rust_decimal",
@@ -3603,6 +3604,12 @@ checksum = "c6df7ab838ed27997ba19a4664507e6f82b41fe6e20be42929332156e5e85146"
 dependencies = [
  "bitflags 2.9.1",
 ]
+
+[[package]]
+name = "raw-string"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0501e134c6905fee1f10fed25b0a7e1261bf676cffac9543a7d0730dec01af2"
 
 [[package]]
 name = "rawpointer"

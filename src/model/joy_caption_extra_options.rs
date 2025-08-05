@@ -164,7 +164,6 @@ impl JoyCaptionExtraOptions {
                     "character_name",
                     (NODE_STRING, {
                         let character_name = PyDict::new(py);
-                        character_name.set_item("default", "")?;
                         character_name.set_item("placeholder", "e.g., 'Skywalker'")?;
                         character_name.set_item("tooltip", "If there is a person/character in the image you must refer to them as {{character_name}}.")?;
                         character_name
@@ -230,7 +229,11 @@ impl JoyCaptionExtraOptions {
                 continue;
             }
             if let Some(extra_option) = extra_option_dict.get(&name) {
-                extra_options.push(extra_option.to_string().replace("{name}", character_name));
+                if character_name.is_empty() {
+                    extra_options.push(extra_option.to_string().replace("{name}", "{NAME}"));
+                } else {
+                    extra_options.push(extra_option.to_string().replace("{name}", character_name));
+                }
             }
         }
 
