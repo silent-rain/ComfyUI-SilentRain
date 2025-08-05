@@ -1,0 +1,18 @@
+{
+  "LayerMask: LoadBenModel": {
+    "display_name": "LayerMask: Load Ben Model(Advance)",
+    "inputs": {
+      "model": {
+        "name": "model"
+      },
+      "device": {
+        "name": "device"
+      }
+    },
+    "outputs": {
+      "ben_model": {
+        "name": "ben_model"
+      }
+    }
+  }
+}
