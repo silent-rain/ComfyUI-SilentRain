@@ -70,6 +70,7 @@ parquet = "56.0" # 列式存储数据文件格式
 image = "0.25"
 png = "0.17" # 用于读取和写入 PNG 图像
 # ndarray = "0.16"                                         # 用于多维数组
+llama-cpp-2 = "0.1.113"
 
 # src
 intel-mkl-src = { version = "0.8", optional = true }  # 为 Intel/AMD 平台提供行业领先的数学计算性能，适合高性能计算场景

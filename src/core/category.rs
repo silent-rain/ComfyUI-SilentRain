@@ -12,3 +12,6 @@ pub const CATEGORY_LIST: &str = "SilentRain/List";
 pub const CATEGORY_IMAGE: &str = "SilentRain/Image";
 /// 条件
 pub const CATEGORY_CONDITIONING: &str = "SilentRain/conditioning";
+
+/// 模型
+pub const CATEGORY_MODEL: &str = "SilentRain/Model";

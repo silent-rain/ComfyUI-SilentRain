@@ -14,6 +14,7 @@ use crate::{
         RandomAnyList, ShuffleAnyList,
     },
     logic::BatchFloat,
+    model::{JoyCaptionExtraOptions, JoyCaptionOllamaPrompter},
     text::{
         LoadKontextBflPresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
         LoadWanPresets, RegularString, SaveText, StringList, StringListToSting, TextBox,
@@ -163,6 +164,17 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ConditioningConsoleDebug",
             py.get_type::<ConditioningConsoleDebug>(),
             "Sr Conditioning Console Debug",
+        ),
+        // Model
+        NodeRegister(
+            "JoyCaptionExtraOptions",
+            py.get_type::<JoyCaptionExtraOptions>(),
+            "Sr JoyCaption Extra Options",
+        ),
+        NodeRegister(
+            "JoyCaptionOllamaPrompter",
+            py.get_type::<JoyCaptionOllamaPrompter>(),
+            "Sr JoyCaption Ollama Prompter",
         ),
     ];
     Ok(nodes)
