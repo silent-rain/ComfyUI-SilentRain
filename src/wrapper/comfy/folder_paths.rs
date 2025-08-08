@@ -37,6 +37,7 @@ lazy_static! {
 #[derive(Debug)]
 pub struct FolderPaths {
     base_path: PathBuf,
+    model_path: PathBuf,
     /// folders, extensions
     folder_names_and_paths: HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)>,
     output_directory: PathBuf,
@@ -45,16 +46,48 @@ pub struct FolderPaths {
     user_directory: PathBuf,
 }
 
+impl Default for FolderPaths {
+    /// 创建一个默认的 FolderPaths 实例
+    fn default() -> Self {
+        let base_path = std::env::current_dir().expect("Failed to get current directory");
+        let models_dir = base_path.join("models");
+        let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
+
+        Self {
+            base_path: base_path.clone(),
+            model_path: models_dir,
+            folder_names_and_paths,
+            output_directory: base_path.join("output"),
+            temp_directory: base_path.join("temp"),
+            input_directory: base_path.join("input"),
+            user_directory: base_path.join("user"),
+        }
+    }
+}
+
 impl FolderPaths {
     /// 创建新的FolderPaths实例
-    pub fn new(base_directory: Option<&str>) -> Self {
-        let base_path = match base_directory {
-            Some(dir) => PathBuf::from(dir),
-            None => std::env::current_dir().expect("Failed to get current directory"),
-        };
+    pub fn from_base_directory(base_directory: &str) -> Self {
+        let base_path = PathBuf::from(base_directory);
 
         let models_dir = base_path.join("models");
+        let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
 
+        Self {
+            base_path: base_path.clone(),
+            model_path: models_dir,
+            folder_names_and_paths,
+            output_directory: base_path.join("output"),
+            temp_directory: base_path.join("temp"),
+            input_directory: base_path.join("input"),
+            user_directory: base_path.join("user"),
+        }
+    }
+
+    fn init_folder_names_and_paths(
+        base_path: &Path,
+        models_dir: &Path,
+    ) -> HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
         let mut folder_names_and_paths = HashMap::new();
 
         // 添加各种模型路径配置
@@ -206,19 +239,16 @@ impl FolderPaths {
             }),
         );
 
-        Self {
-            base_path: base_path.clone(),
-            folder_names_and_paths,
-            output_directory: base_path.join("output"),
-            temp_directory: base_path.join("temp"),
-            input_directory: base_path.join("input"),
-            user_directory: base_path.join("user"),
-        }
+        folder_names_and_paths
     }
 
     /// 获取基础路径
-    pub fn base_path(&self) -> &Path {
-        &self.base_path
+    pub fn base_path(&self) -> PathBuf {
+        self.base_path.clone()
+    }
+
+    pub fn model_path(&self) -> PathBuf {
+        self.model_path.clone()
     }
 
     /// 获取文件夹路径映射
@@ -229,23 +259,23 @@ impl FolderPaths {
     }
 
     /// 获取输出目录
-    pub fn output_directory(&self) -> &Path {
-        &self.output_directory
+    pub fn output_directory(&self) -> PathBuf {
+        self.output_directory.clone()
     }
 
     /// 获取临时目录
-    pub fn temp_directory(&self) -> &Path {
-        &self.temp_directory
+    pub fn temp_directory(&self) -> PathBuf {
+        self.temp_directory.clone()
     }
 
     /// 获取输入目录
-    pub fn input_directory(&self) -> &Path {
-        &self.input_directory
+    pub fn input_directory(&self) -> PathBuf {
+        self.input_directory.clone()
     }
 
     /// 获取用户目录
-    pub fn user_directory(&self) -> &Path {
-        &self.user_directory
+    pub fn user_directory(&self) -> PathBuf {
+        self.user_directory.clone()
     }
 }
 
@@ -393,7 +423,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_folder_paths_initialization() {
-        let folder_paths = FolderPaths::new(None);
+        let folder_paths = FolderPaths::default();
         assert!(folder_paths.base_path().exists());
         assert!(folder_paths
             .folder_names_and_paths()
