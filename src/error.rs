@@ -10,6 +10,10 @@ pub enum Error {
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("system time error, {0}")]
     SystemTimeError(#[from] std::time::SystemTimeError),
+    #[error("ffi error, {0}")]
+    FfiNulError(#[from] std::ffi::NulError),
+    #[error("num error, {0}")]
+    TryFromIntError(#[from] std::num::TryFromIntError),
     // std::sync::poison::rwlock
     #[error("lock error, {0}")]
     LockError(String),
@@ -18,11 +22,33 @@ pub enum Error {
     OnceLock(String),
     #[error("option none, {0}")]
     OptionNone(String),
+    #[error("strum error, {0}")]
+    ParseEnumString(String),
 
     #[error("serde json error, {0}")]
     SerdeJsonError(#[from] serde_json::Error),
     #[error("regex error, {0}")]
     RegexError(#[from] regex::Error),
+    #[error("llama_cpp_2 error, {0}")]
+    LLamaCppError(#[from] llama_cpp_2::LLamaCppError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppModelLoadError(#[from] llama_cpp_2::LlamaModelLoadError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppContextLoadError(#[from] llama_cpp_2::LlamaContextLoadError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppStringToTokenError(#[from] llama_cpp_2::StringToTokenError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppBatchAddError(#[from] llama_cpp_2::llama_batch::BatchAddError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppDecodeError(#[from] llama_cpp_2::DecodeError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppTokenToStringError(#[from] llama_cpp_2::TokenToStringError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppNewLlamaChatMessageError(#[from] llama_cpp_2::NewLlamaChatMessageError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppChatTemplateError(#[from] llama_cpp_2::ChatTemplateError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaCppApplyChatTemplateError(#[from] llama_cpp_2::ApplyChatTemplateError),
 
     #[error("encode error, {0}")]
     Encode(String),
@@ -59,8 +85,6 @@ pub enum Error {
     InvalidTensorShape(String),
     #[error("numpy error, {0}")]
     NotContiguousError(#[from] numpy::NotContiguousError),
-    #[error("strum error, {0}")]
-    ParseEnumString(String),
 
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),
@@ -75,6 +99,13 @@ pub enum Error {
     InvalidDirectory(String),
     #[error("invalid parameter, {0}")]
     InvalidParameter(String),
+
+    #[error("file not found, {0}")]
+    FileNotFound(String),
+    #[error("invalid path, {0}")]
+    InvalidPath(String),
+    #[error("invalid input, {0}")]
+    InvalidInput(String),
 }
 
 impl From<std::io::Error> for Error {
