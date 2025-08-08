@@ -18,6 +18,9 @@ pub use joycaption_predictor::JoyCaptionPredictorGGUF;
 mod joycaption_beta_one_gguf;
 pub use joycaption_beta_one_gguf::JoyCaptionnBetaOneGGUF;
 
+mod joycaption_beta_one_custom_gguf;
+pub use joycaption_beta_one_custom_gguf::JoyCaptionnBetaOneCustomGGUF;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "joycaption")?;

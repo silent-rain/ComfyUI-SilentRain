@@ -1,4 +1,4 @@
-//! JoyCaption Beta One GGUF
+//! JoyCaption Beta One Custom GGUF
 //!
 //! rust 语言的实现
 //! 原项目: https://github.com/fpgaminer/joycaption_comfyui
@@ -16,13 +16,7 @@ use pyo3::{
 use crate::{
     core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_image},
     error::Error,
-    joycaption::{
-        joy_caption_ollama_prompter::{
-            caption_length_choices, caption_length_map, caption_type_map, system_prompt,
-            user_prompt,
-        },
-        JoyCaptionPredictorGGUF,
-    },
+    joycaption::JoyCaptionPredictorGGUF,
     wrapper::{
         comfyui::{
             types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_SEED_MAX, NODE_STRING},
@@ -32,16 +26,16 @@ use crate::{
     },
 };
 
-/// JoyCaption Beta One GGUF
+/// JoyCaption Beta One Custom GGUF
 #[pyclass(subclass)]
-pub struct JoyCaptionnBetaOneGGUF {
+pub struct JoyCaptionnBetaOneCustomGGUF {
     device: Device,
 }
 
-impl PromptServer for JoyCaptionnBetaOneGGUF {}
+impl PromptServer for JoyCaptionnBetaOneCustomGGUF {}
 
 #[pymethods]
-impl JoyCaptionnBetaOneGGUF {
+impl JoyCaptionnBetaOneCustomGGUF {
     #[new]
     fn new() -> Self {
         Self {
@@ -156,24 +150,21 @@ impl JoyCaptionnBetaOneGGUF {
                     }),
                 )?;
 
-                let caption_type_map = caption_type_map();
-                let caption_type_keys = caption_type_map.keys().cloned().collect::<Vec<_>>();
                 required.set_item(
-                    "caption_type",
-                    (caption_type_keys, {
-                        let caption_type = PyDict::new(py);
-                        caption_type.set_item("default", "Descriptive (Casual)")?;
-                        caption_type
+                    "system_prompt",
+                    (NODE_STRING, {
+                        let system_prompt = PyDict::new(py);
+                        system_prompt.set_item("default", "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions.")?;
+                        system_prompt
                     }),
                 )?;
-
-                let caption_lengths = caption_length_choices();
                 required.set_item(
-                    "caption_length",
-                    (caption_lengths, {
-                        let caption_length = PyDict::new(py);
-                        caption_length.set_item("default", "medium-length")?;
-                        caption_length
+                    "user_query",
+                    (NODE_STRING, {
+                        let user_query = PyDict::new(py);
+                        user_query.set_item("default", "Write a detailed description for this image.")?;
+                        user_query.set_item("multiline", true)?;
+                        user_query
                     }),
                 )?;
 
@@ -276,8 +267,8 @@ impl JoyCaptionnBetaOneGGUF {
         mmproj_file: &str,
         n_gpu_layers: u32,
         n_ctx: u32,
-        caption_type: &str,
-        caption_length: &str,
+        system_prompt: String,
+        user_query: String,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
@@ -292,8 +283,8 @@ impl JoyCaptionnBetaOneGGUF {
             mmproj_file,
             n_gpu_layers,
             n_ctx,
-            caption_type,
-            caption_length,
+            system_prompt,
+            user_query,
             max_new_tokens,
             temperature,
             top_p,
@@ -306,10 +297,12 @@ impl JoyCaptionnBetaOneGGUF {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("JoyCaptionnBetaOneGGUF error, {e}");
-                if let Err(e) =
-                    self.send_error(py, "JoyCaptionnBetaOneGGUF".to_string(), e.to_string())
-                {
+                error!("JoyCaptionnBetaOneCustomGGUF error, {e}");
+                if let Err(e) = self.send_error(
+                    py,
+                    "JoyCaptionnBetaOneCustomGGUF".to_string(),
+                    e.to_string(),
+                ) {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
@@ -319,7 +312,7 @@ impl JoyCaptionnBetaOneGGUF {
     }
 }
 
-impl JoyCaptionnBetaOneGGUF {
+impl JoyCaptionnBetaOneCustomGGUF {
     /// 推理
     #[allow(clippy::too_many_arguments)]
     fn generate<'py>(
@@ -329,8 +322,8 @@ impl JoyCaptionnBetaOneGGUF {
         mmproj_file: &str,
         n_gpu_layers: u32,
         n_ctx: u32,
-        caption_type: &str,
-        caption_length: &str,
+        system_prompt: String,
+        user_query: String,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
@@ -357,23 +350,13 @@ impl JoyCaptionnBetaOneGGUF {
 
         // 提示词处理
         let (system_prompt, user_prompt) = {
-            let caption_length_map = caption_length_map();
-
-            // system prompt
-            let mut system_prompt = system_prompt(caption_type).to_string();
-            // Add length enforcement to system prompt
-            if caption_length.parse::<i32>().is_ok() {
-                system_prompt +=
-                    format!("\nIMPORTANT: Your response MUST NOT exceed {caption_length} words.")
-                        .as_str();
-            } else if let Some(length) = caption_length_map.get(caption_length) {
-                system_prompt +=
-                    format!("\nIMPORTANT: Keep your response approximately {length} words.")
-                        .as_str();
-            }
+            let system_prompt = system_prompt.trim().to_string();
 
             // user prompt
-            let user_prompt = user_prompt(caption_type, caption_length, extra_options);
+            let mut user_prompt = user_query.trim().to_string();
+            if let Some(extra_options) = extra_options {
+                user_prompt += &extra_options.join(" ");
+            }
 
             (system_prompt, user_prompt)
         };
@@ -401,63 +384,6 @@ impl JoyCaptionnBetaOneGGUF {
 
         info!("raw response: {:?}", response);
 
-        // response constraint length
-        let response =
-            Self::response_constraint_length(caption_length, caption_type, response.clone());
-
         Ok((user_prompt, response))
-    }
-
-    /// response constraint length
-    fn response_constraint_length(
-        caption_length: &str,
-        caption_type: &str,
-        caption: String,
-    ) -> String {
-        // Clean up the output
-        let mut caption = caption
-            .replace("ASSISTANT:", "")
-            .replace("Human:", "")
-            .trim()
-            .to_string();
-
-        if ["booru", "danbooru", "e621", "rule34"]
-            .to_vec()
-            .iter()
-            .map(|v| v.to_lowercase())
-            .any(|v| v.contains(caption_type))
-        {
-            // Keep only the comma-separated tags, remove any explanatory text
-            let tags = caption
-                .split(",")
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|v| v.trim())
-                .collect::<Vec<_>>();
-
-            caption = tags.join(", ");
-        }
-
-        let caption_length_map = caption_length_map();
-        let target_length = if let Ok(length) = caption_length.parse::<usize>() {
-            length
-        } else if let Some(caption_length) = caption_length_map.get(caption_length) {
-            caption_length.parse::<usize>().unwrap_or(100)
-        } else {
-            100 // default value, target length is medium-length
-        };
-
-        let words = caption
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .into_iter()
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>();
-
-        if words.len() > target_length {
-            caption = words[0..target_length].join(" ");
-        }
-
-        caption
     }
 }
