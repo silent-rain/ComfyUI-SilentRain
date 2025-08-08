@@ -8,6 +8,7 @@ pub mod image;
 pub mod joycaption;
 pub mod list;
 pub mod logic;
+pub mod math;
 pub mod model;
 pub mod text;
 pub mod utils;
@@ -51,6 +52,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&text::submodule(py)?)?;
     m.add_submodule(&list::submodule(py)?)?;
     m.add_submodule(&logic::submodule(py)?)?;
+    m.add_submodule(&math::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;
     m.add_submodule(&image::submodule(py)?)?;
     m.add_submodule(&model::submodule(py)?)?;
