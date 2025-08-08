@@ -161,6 +161,16 @@ impl JoyCaptionPredictorGGUF {
         Ok(tokens_list)
     }
 
+    /// generate eog tokens
+    fn _eog_tokens(&self) -> Result<Vec<LlamaToken>, Error> {
+        // Stop on newlines and conversation markers
+        let end_marker: [&str; 4] = ["</s>", "Human:", "Assistant:", "\n\n"];
+        let end_marker = end_marker.join("");
+
+        let tokens_list = self.ctx.model.str_to_token(&end_marker, AddBos::Always)?;
+        Ok(tokens_list)
+    }
+
     /// 转换为 Base64 Data URL (自动检测格式)
     fn image_to_base64_url(
         image: &DynamicImage,
@@ -196,7 +206,7 @@ impl JoyCaptionPredictorGGUF {
         image: &DynamicImage,
         system_prompt: &str,
         user_prompt: &str,
-        max_new_tokens: i32,
+        n_tokens: i32,
         temperature: f32,
         top_p: f32,
         top_k: i32,
@@ -214,7 +224,7 @@ impl JoyCaptionPredictorGGUF {
 
         // https://github.com/ggerganov/llama.cpp/wiki/Templates-supported-by-llama_chat_apply_template
         let chat_template = self.model.chat_template(Some("chatml"))?;
-        let messages = self.model.apply_chat_template(
+        let input_messages = self.model.apply_chat_template(
             &chat_template,
             &[
                 LlamaChatMessage::new("system".to_string(), system_prompt.to_string())?,
@@ -223,11 +233,11 @@ impl JoyCaptionPredictorGGUF {
             true,
         )?;
 
-        let tokens_list = self.messages_tokens(&messages, max_new_tokens)?;
+        let tokens_list = self.messages_tokens(&input_messages, n_tokens)?;
 
-        // create a llama_batch with size 512
+        // create a llama_batch with size max_tokens
         // we use this object to submit token data for decoding
-        let mut batch = LlamaBatch::new(512, 1);
+        let mut batch = LlamaBatch::new(n_tokens as usize, 1);
 
         let last_index: i32 = (tokens_list.len() - 1) as i32;
         for (i, token) in (0_i32..).zip(tokens_list.into_iter()) {
@@ -258,7 +268,7 @@ impl JoyCaptionPredictorGGUF {
         ]);
 
         let mut results = String::new();
-        while n_cur <= max_new_tokens {
+        while n_cur <= n_tokens {
             // sample the next token
             {
                 let token = sampler.sample(&self.ctx, batch.n_tokens() - 1);

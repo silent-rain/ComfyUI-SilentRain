@@ -26,7 +26,7 @@ use crate::{
 /// - Medium Length: 100
 /// - Long: 150
 /// - Very Long: 200
-fn caption_length_map() -> HashMap<&'static str, &'static str> {
+pub fn caption_length_map() -> HashMap<&'static str, &'static str> {
     HashMap::from([
         ("very short", "25"),
         ("short", "50"),
@@ -145,7 +145,7 @@ pub fn caption_length_choices() -> Vec<String> {
 }
 
 /// Select system prompt based on caption type
-fn system_prompt(caption_type: &str) -> String {
+pub fn system_prompt(caption_type: &str) -> String {
     let system_prompts;
     let caption_type = caption_type.to_lowercase();
     if caption_type.contains("tag list") {

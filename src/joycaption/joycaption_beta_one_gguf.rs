@@ -4,8 +4,8 @@
 //! 原项目: https://github.com/fpgaminer/joycaption_comfyui
 //! 引用: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF
 
-use candle_core::{Device, Tensor};
-use log::error;
+use candle_core::Device;
+use log::{error, info};
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -14,9 +14,15 @@ use pyo3::{
 };
 
 use crate::{
-    core::category::CATEGORY_JOY_CAPTION,
+    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_image},
     error::Error,
-    joycaption::joy_caption_ollama_prompter::{caption_length_choices, caption_type_map},
+    joycaption::{
+        joy_caption_ollama_prompter::{
+            caption_length_choices, caption_length_map, caption_type_map, system_prompt,
+            user_prompt,
+        },
+        JoyCaptionPredictorGGUF,
+    },
     wrapper::{
         comfyui::{
             types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_SEED_MAX, NODE_STRING},
@@ -262,20 +268,18 @@ impl JoyCaptionnBetaOneGGUF {
         image: Bound<'py, PyAny>,
         gguf_model: &str,
         mmproj_file: &str,
-        n_gpu_layers: i32,
-        n_ctx: i32,
+        n_gpu_layers: u32,
+        n_ctx: u32,
         caption_type: &str,
         caption_length: &str,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
         top_k: i32,
-        seed: i32,
+        seed: u32,
         unload_after_generate: bool,
         extra_options: Option<Vec<String>>,
     ) -> PyResult<(String, String)> {
-        let image = TensorWrapper::<f32>::new(&image, &self.device)?.into_tensor();
-
         let results = self.generate(
             image,
             gguf_model,
@@ -310,23 +314,142 @@ impl JoyCaptionnBetaOneGGUF {
 impl JoyCaptionnBetaOneGGUF {
     /// 推理
     #[allow(clippy::too_many_arguments)]
-    fn generate(
+    fn generate<'py>(
         &self,
-        image: Tensor,
+        image: Bound<'py, PyAny>,
         gguf_model: &str,
         mmproj_file: &str,
-        n_gpu_layers: i32,
-        n_ctx: i32,
+        n_gpu_layers: u32,
+        n_ctx: u32,
         caption_type: &str,
         caption_length: &str,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
         top_k: i32,
-        seed: i32,
-        unload_after_generate: bool,
+        seed: u32,
+        _unload_after_generate: bool,
         extra_options: Option<Vec<String>>,
     ) -> Result<(String, String), Error> {
-        Ok(("".to_string(), "".to_string()))
+        // 模型校验
+        if gguf_model.is_empty() || mmproj_file.is_empty() {
+            return  Err(Error::FileNotFound("Error: GGUF model or mmproj file not selected/found. Please place models in ComfyUI/models/llava_gguf and select them.".to_string()));
+        }
+
+        // 图片转换
+        let image = {
+            let image = TensorWrapper::<f32>::new(&image, &self.device)?.into_tensor();
+            let images = tensor_to_image(&image)?;
+            if images.is_empty() {
+                return Err(Error::ListEmpty);
+            }
+
+            images[0].clone()
+        };
+
+        // 提示词处理
+        let (system_prompt, user_prompt) = {
+            let caption_length_map = caption_length_map();
+
+            // system prompt
+            let mut system_prompt = system_prompt(caption_type).to_string();
+            // Add length enforcement to system prompt
+            if caption_length.parse::<i32>().is_ok() {
+                system_prompt +=
+                    format!("\nIMPORTANT: Your response MUST NOT exceed {caption_length} words.")
+                        .as_str();
+            } else if let Some(length) = caption_length_map.get(caption_length) {
+                system_prompt +=
+                    format!("\nIMPORTANT: Keep your response approximately {length} words.")
+                        .as_str();
+            }
+
+            // user prompt
+            let user_prompt = user_prompt(caption_type, caption_length, extra_options);
+
+            (system_prompt, user_prompt)
+        };
+
+        let mut llm = JoyCaptionPredictorGGUF::new(
+            gguf_model,
+            mmproj_file,
+            Some("llava_gguf"),
+            n_gpu_layers,
+            n_ctx,
+            vec![],
+            None,
+            None,
+        )?;
+        let response = llm.generate(
+            &image,
+            &system_prompt,
+            &user_prompt,
+            max_new_tokens,
+            temperature,
+            top_p,
+            top_k,
+            seed,
+        )?;
+
+        info!("raw response: {:?}", response);
+
+        // response constraint length
+        let response =
+            Self::response_constraint_length(caption_length, caption_type, response.clone());
+
+        Ok((user_prompt, response))
+    }
+
+    /// response constraint length
+    fn response_constraint_length(
+        caption_length: &str,
+        caption_type: &str,
+        caption: String,
+    ) -> String {
+        // Clean up the output
+        let mut caption = caption
+            .replace("ASSISTANT:", "")
+            .replace("Human:", "")
+            .trim()
+            .to_string();
+
+        if ["booru", "danbooru", "e621", "rule34"]
+            .to_vec()
+            .iter()
+            .map(|v| v.to_lowercase())
+            .any(|v| v.contains(caption_type))
+        {
+            // Keep only the comma-separated tags, remove any explanatory text
+            let tags = caption
+                .split(",")
+                .collect::<Vec<_>>()
+                .into_iter()
+                .map(|v| v.trim())
+                .collect::<Vec<_>>();
+
+            caption = tags.join(", ");
+        }
+
+        let caption_length_map = caption_length_map();
+        let target_length = if let Ok(length) = caption_length.parse::<usize>() {
+            length
+        } else if let Some(caption_length) = caption_length_map.get(caption_length) {
+            caption_length.parse::<usize>().unwrap_or(100)
+        } else {
+            100 // default value, target length is medium-length
+        };
+
+        let words = caption
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>();
+
+        if words.len() > target_length {
+            caption = words[0..target_length].join(" ");
+        }
+
+        caption
     }
 }
