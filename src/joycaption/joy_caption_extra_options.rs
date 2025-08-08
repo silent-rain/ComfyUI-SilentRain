@@ -14,7 +14,7 @@ use pyo3::{
 };
 
 use crate::{
-    core::category::CATEGORY_MODEL,
+    core::category::CATEGORY_JOY_CAPTION,
     error::Error,
     wrapper::comfyui::{
         types::{NODE_BOOLEAN, NODE_STRING},
@@ -129,7 +129,7 @@ impl JoyCaptionExtraOptions {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_MODEL;
+    const CATEGORY: &'static str = CATEGORY_JOY_CAPTION;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]

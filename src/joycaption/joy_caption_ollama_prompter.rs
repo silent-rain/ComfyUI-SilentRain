@@ -14,7 +14,7 @@ use pyo3::{
 };
 
 use crate::{
-    core::category::CATEGORY_MODEL,
+    core::category::CATEGORY_JOY_CAPTION,
     error::Error,
     wrapper::comfyui::{types::NODE_STRING, PromptServer},
 };
@@ -37,7 +37,7 @@ fn caption_length_map() -> HashMap<&'static str, &'static str> {
 }
 
 /// Constants for caption generation, copied from the original JoyCaption GGUF node
-fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
+pub fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
     HashMap::from([
     (
     "Descriptive", vec![
@@ -45,7 +45,7 @@ fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
             "Write a detailed description for this image in {word_count} words or less.",
             "Write a {length} detailed description for this image.",
         ],
-    ),     
+    ),
     (
     "Descriptive (Casual)", vec![
             "Write a descriptive caption for this image in a casual tone.",
@@ -105,7 +105,7 @@ fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
             "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc.",
             "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it within {word_count} words.",
             "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it {length}.",
-        ], 
+        ],
     ),
     (
     "Product Listing", vec![
@@ -124,13 +124,15 @@ fn caption_type_map() -> HashMap<&'static str, Vec<&'static str>> {
     ])
 }
 
-fn caption_length_choices() -> Vec<String> {
-    let mut choices: Vec<String> = ["any",
+pub fn caption_length_choices() -> Vec<String> {
+    let mut choices: Vec<String> = [
+        "any",
         "very short",
         "short",
         "medium-length",
         "long",
-        "very long"]
+        "very long",
+    ]
     .iter()
     .map(|v| v.to_string())
     .collect();
@@ -143,7 +145,7 @@ fn caption_length_choices() -> Vec<String> {
 }
 
 /// Select system prompt based on caption type
-fn system_prompt(caption_type: &str) -> String{
+fn system_prompt(caption_type: &str) -> String {
     let system_prompts;
     let caption_type = caption_type.to_lowercase();
     if caption_type.contains("tag list") {
@@ -182,11 +184,11 @@ fn system_prompt(caption_type: &str) -> String{
             ];
     } else if caption_type == "midjourney" {
         system_prompts = vec![
-                "You are a MidJourney prompt expert. Create prompts optimized for MidJourney.",
-                "Use MidJourney's specific syntax and parameter style.",
-                "Include artistic style, camera view, lighting, and composition.",
-                "Keep strictly within the specified length limit.",
-            ];
+            "You are a MidJourney prompt expert. Create prompts optimized for MidJourney.",
+            "Use MidJourney's specific syntax and parameter style.",
+            "Include artistic style, camera view, lighting, and composition.",
+            "Keep strictly within the specified length limit.",
+        ];
     } else if caption_type == "straightforward" {
         system_prompts =vec![
                 "You are a precise image descriptor. Focus on concrete, observable details.",
@@ -194,17 +196,59 @@ fn system_prompt(caption_type: &str) -> String{
                 "Focus on color, shape, texture, and spatial relationships.",
                 "Omit speculation and mood. Quote any text exactly. Note technical details like watermarks.",
                 "Keep strictly within word limits. Never use phrases like 'This image shows...'",
-            ]; 
+            ];
     } else {
         system_prompts = vec![
-                "You are an adaptive image description assistant.",
-                "Adjust your style to match the requested caption type exactly.",
-                "Strictly adhere to specified word limits and formatting requirements.",
-                "Be precise, clear, and follow the given style guidelines exactly.",
-            ];
+            "You are an adaptive image description assistant.",
+            "Adjust your style to match the requested caption type exactly.",
+            "Strictly adhere to specified word limits and formatting requirements.",
+            "Be precise, clear, and follow the given style guidelines exactly.",
+        ];
     }
 
     system_prompts.join("\n")
+}
+
+/// Select user prompt based on caption type
+pub fn user_prompt(
+    caption_type: &str,
+    caption_length: &str,
+    extra_options: Option<Vec<String>>,
+) -> String {
+    let caption_type_map = caption_type_map();
+    let prompt_templates = if let Some(prompt_templates) = caption_type_map.get(caption_type) {
+        prompt_templates
+    } else {
+        let default_template_key = caption_type_map
+            .keys()
+            .next()
+            .map_or("Descriptive (Casual)", |v| v);
+        caption_type_map.get(default_template_key).unwrap()
+    };
+
+    let mut map_idx;
+    if caption_length == "any" {
+        map_idx = 0;
+    } else if caption_length.parse::<i32>().is_ok() {
+        map_idx = 1;
+    } else {
+        map_idx = 2;
+    };
+
+    if map_idx >= prompt_templates.len() as i32 {
+        map_idx = 0;
+    }
+
+    let mut prompt = prompt_templates[map_idx as usize].to_string();
+    if let Some(extra_options) = extra_options {
+        prompt += &(" ".to_string() + " " + &extra_options.join(" "));
+    }
+
+    prompt = prompt
+        .replace("{length}", caption_length)
+        .replace("{word_count}", caption_length);
+
+    prompt
 }
 
 /// JoyCaption Ollama Prompter
@@ -250,7 +294,7 @@ impl JoyCaptionOllamaPrompter {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_MODEL;
+    const CATEGORY: &'static str = CATEGORY_JOY_CAPTION;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
@@ -321,7 +365,7 @@ impl JoyCaptionOllamaPrompter {
         caption_type: &str,
         caption_length: &str,
         extra_options: Option<Vec<String>>,
-    ) -> PyResult<(String,String)> {
+    ) -> PyResult<(String, String)> {
         let results = self.generate_prompts(caption_type, caption_length, extra_options);
 
         match results {
@@ -346,10 +390,10 @@ impl JoyCaptionOllamaPrompter {
         &self,
         caption_type: &str,
         caption_length: &str,
-         extra_options: Option<Vec<String>>,
-    ) -> Result<(String,String), Error> {
+        extra_options: Option<Vec<String>>,
+    ) -> Result<(String, String), Error> {
         let caption_length_map = caption_length_map();
-     
+
         // system prompt
         let mut system_prompt = system_prompt(caption_type).to_string();
         // Add length enforcement to system prompt
@@ -365,46 +409,6 @@ impl JoyCaptionOllamaPrompter {
         // user prompt
         let user_prompt = user_prompt(caption_type, caption_length, extra_options);
 
-        Ok((system_prompt,user_prompt))
+        Ok((system_prompt, user_prompt))
     }
-}
-
-fn user_prompt(
-    caption_type: &str,
-     caption_length: &str,
-    extra_options: Option<Vec<String>>,
-) -> String {
-let caption_type_map = caption_type_map();
-  let prompt_templates =   if let Some(prompt_templates) = caption_type_map.get(caption_type) {
-        prompt_templates
-    } else {
-       
-      let default_template_key =   caption_type_map.keys().next().map_or("Descriptive (Casual)", |v| v);
-       caption_type_map.get(default_template_key).unwrap()
-    };
-
-
- 
-    
-    let mut map_idx ;
-    if caption_length == "any" {
-        map_idx = 0;
-    } else if   caption_length.parse::<i32>().is_ok() {
-        map_idx = 1;
-    } else {
-        map_idx = 2;
-    };
-
-    if map_idx>= prompt_templates.len() as i32 {
-        map_idx = 0;
-    }
-
-    let mut prompt = prompt_templates[map_idx as usize].to_string();
-    if let Some(extra_options) = extra_options {
-        prompt += &(" ".to_string() + " " + &extra_options.join(" "));
-    }
-
-     prompt = prompt.replace("{length}", caption_length).replace("{word_count}", caption_length);
-
-    prompt
 }
