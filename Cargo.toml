@@ -41,6 +41,7 @@ raw-string = "0.3"
 walkdir = "2.5" # 用于遍历目录树
 chardet = "0.2" # 用于检测文本编码的库
 encoding = "0.2" # 用于编码和解码文本的库
+encoding_rs = "0.8" # 用于编码和解码文本的库
 rand = "0.9" # 用于生成随机数
 rand_chacha = "0.9" # 用于生成随机数
 lazy_static = "1.5" # 用于延迟初始化全局变量
@@ -50,6 +51,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
 ] } # 用于 HTTP 客户端
 regex = "1.11" # 正则表达式
+base64 = "0.22" # 用于 base64 编码解码
 
 anyhow = "1.0"
 thiserror = "2.0"
@@ -71,7 +73,10 @@ parquet = "56.0" # 列式存储数据文件格式
 image = "0.25"
 png = "0.17" # 用于读取和写入 PNG 图像
 # ndarray = "0.16"                                         # 用于多维数组
-llama-cpp-2 = "0.1.113"
+llama-cpp-2 = { version = "0.1", features = [
+    "dynamic-link", # 动态链接 llama.cpp 库（如 libllama.so），而非静态编译到应用中。
+    "sampler",
+] } # llama-cpp-2 的封装，实现自 Hugging Face 的 Transformers
 
 # src
 intel-mkl-src = { version = "0.8", optional = true }  # 为 Intel/AMD 平台提供行业领先的数学计算性能，适合高性能计算场景
@@ -95,18 +100,19 @@ mkl = [
     "candle-nn/mkl",
     "candle-transformers/mkl",
     "candle-core/mkl",
-] # Intel 加速
+] # Intel 平台
 cuda = [
     "candle-core/cuda",
     "candle-nn/cuda",
     "candle-transformers/cuda",
+    "llama-cpp-2/cuda",
     # "ort/cuda",
-] # NVIDIA推出的并行计算平台和编程模型，允许开发者利用GPU进行通用计算
+] # NVIDIA 平台
 cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
-metal = [
-    "candle-core/metal",
-    "candle-nn/metal",
-] # 苹果的图形和计算API，用于在苹果设备上实现高性能图形渲染和并行计算。
+metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
+vulkan = [
+    "llama-cpp-2/vulkan",
+] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
 # ort = ["dep:ort"]
 flash-attn = [
     "cuda",
