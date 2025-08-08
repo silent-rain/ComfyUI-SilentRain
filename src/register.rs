@@ -9,12 +9,12 @@ use crate::{
         ImageResolution, ImageResolution2, ImageSimpleResolution, LoadImagesFromFolder,
         SaveImageText, SaveImages,
     },
+    joycaption::{JoyCaptionExtraOptions, JoyCaptionOllamaPrompter},
     list::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, MergeMultiList,
         RandomAnyList, ShuffleAnyList,
     },
     logic::BatchFloat,
-    model::{JoyCaptionExtraOptions, JoyCaptionOllamaPrompter},
     text::{
         LoadKontextBflPresetsAssistant, LoadKontextPresets, LoadKontextPresetsAssistant,
         LoadWanPresets, RegularString, SaveText, StringList, StringListToSting, TextBox,

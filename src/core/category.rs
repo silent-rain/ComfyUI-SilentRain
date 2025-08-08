@@ -15,3 +15,6 @@ pub const CATEGORY_CONDITIONING: &str = "SilentRain/conditioning";
 
 /// 模型
 pub const CATEGORY_MODEL: &str = "SilentRain/Model";
+
+/// JoyCaption
+pub const CATEGORY_JOY_CAPTION: &str = "SilentRain/JoyCaption";

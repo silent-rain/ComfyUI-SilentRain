@@ -5,6 +5,7 @@ pub mod wrapper;
 
 pub mod conditioning;
 pub mod image;
+pub mod joycaption;
 pub mod list;
 pub mod logic;
 pub mod model;
@@ -48,8 +49,13 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&core::submodule(py)?)?;
     m.add_submodule(&wrapper::submodule(py)?)?;
     m.add_submodule(&text::submodule(py)?)?;
+    m.add_submodule(&list::submodule(py)?)?;
     m.add_submodule(&logic::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;
+    m.add_submodule(&image::submodule(py)?)?;
+    m.add_submodule(&model::submodule(py)?)?;
+    m.add_submodule(&conditioning::submodule(py)?)?;
+    m.add_submodule(&joycaption::submodule(py)?)?;
 
     // 注册 ComfyUI NODE_CLASS_MAPPINGS/NODE_DISPLAY_NAME_MAPPINGS
     let node_mapping = PyDict::new(py);
