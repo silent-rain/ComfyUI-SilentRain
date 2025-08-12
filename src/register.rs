@@ -9,7 +9,10 @@ use crate::{
         ImageResolution, ImageResolution2, ImageSimpleResolution, LoadImagesFromFolder,
         SaveImageText, SaveImages,
     },
-    joycaption::{JoyCaptionExtraOptions, JoyCaptionOllamaPrompter},
+    joycaption::{
+        JoyCaptionExtraOptions, JoyCaptionOllamaPrompter, JoyCaptionnBetaOneCustomGGUF,
+        JoyCaptionnBetaOneGGUF,
+    },
     list::{
         BatchToList, IndexFromAnyList, ListBridge, ListCount, ListToBatch, MergeMultiList,
         RandomAnyList, ShuffleAnyList,
@@ -166,6 +169,7 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr Conditioning Console Debug",
         ),
         // Model
+        // JoyCaption
         NodeRegister(
             "JoyCaptionExtraOptions",
             py.get_type::<JoyCaptionExtraOptions>(),
@@ -175,6 +179,16 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "JoyCaptionOllamaPrompter",
             py.get_type::<JoyCaptionOllamaPrompter>(),
             "Sr JoyCaption Ollama Prompter",
+        ),
+        NodeRegister(
+            "JoyCaptionnBetaOneGGUF",
+            py.get_type::<JoyCaptionnBetaOneGGUF>(),
+            "Sr JoyCaptionn Beta One GGUF",
+        ),
+        NodeRegister(
+            "JoyCaptionnBetaOneCustomGGUF",
+            py.get_type::<JoyCaptionnBetaOneCustomGGUF>(),
+            "Sr JoyCaptionn Beta One Custom GGUF",
         ),
     ];
     Ok(nodes)
