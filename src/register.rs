@@ -26,9 +26,23 @@ use crate::{
     utils::{BatchRename, BridgeAnything, ConsoleDebug, FileScanner, WorkflowInfo},
 };
 
+/// 节点注册
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let mut nodes: Vec<NodeRegister> = Vec::new();
+    nodes.extend(utils_register(py)?);
+    nodes.extend(text_register(py)?);
+    nodes.extend(list_register(py)?);
+    nodes.extend(logic_register(py)?);
+    nodes.extend(image_register(py)?);
+    nodes.extend(conditioning_register(py)?);
+    nodes.extend(joy_caption_register(py)?);
+    Ok(nodes)
+}
+
+/// Utils node register
+fn utils_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     let nodes: Vec<NodeRegister> = vec![
-        // utils
+        //
         NodeRegister(
             "FileScanner",
             py.get_type::<FileScanner>(),
@@ -54,7 +68,13 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<ConsoleDebug>(),
             "Sr Console Debug",
         ),
-        // text
+    ];
+    Ok(nodes)
+}
+
+/// Text node register
+fn text_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
         NodeRegister("TextBox", py.get_type::<TextBox>(), "Sr Text Box"),
         NodeRegister("TextToList", py.get_type::<TextToList>(), "Sr Text To List"),
         NodeRegister(
@@ -94,7 +114,13 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<Wan22OfficialPromptSelector>(),
             "Sr Wan2.2 Official Prompt Selector",
         ),
-        // list
+    ];
+    Ok(nodes)
+}
+
+/// List node register
+fn list_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
         NodeRegister(
             "IndexFromAnyList",
             py.get_type::<IndexFromAnyList>(),
@@ -127,9 +153,23 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<MergeMultiList>(),
             "Sr Merge Multi List",
         ),
-        // logic
-        NodeRegister("BatchFloat", py.get_type::<BatchFloat>(), "Sr Batch Float"),
-        // image
+    ];
+    Ok(nodes)
+}
+
+/// Logic node register
+fn logic_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![NodeRegister(
+        "BatchFloat",
+        py.get_type::<BatchFloat>(),
+        "Sr Batch Float",
+    )];
+    Ok(nodes)
+}
+
+/// Image node register
+fn image_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
         NodeRegister(
             "ImageSimpleResolution",
             py.get_type::<ImageSimpleResolution>(),
@@ -156,20 +196,30 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<SaveImageText>(),
             "Sr Save Image Text",
         ),
-        // conditioning
+    ];
+    Ok(nodes)
+}
+
+/// Conditioning node register
+fn conditioning_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
         NodeRegister(
             "FluxKontextInpaintingConditioning",
             py.get_type::<FluxKontextInpaintingConditioning>(),
             "Sr Flux Kontext Inpainting Conditioning",
         ),
-        // Conditioning
         NodeRegister(
             "ConditioningConsoleDebug",
             py.get_type::<ConditioningConsoleDebug>(),
             "Sr Conditioning Console Debug",
         ),
-        // Model
-        // JoyCaption
+    ];
+    Ok(nodes)
+}
+
+/// JoyCaption node register
+fn joy_caption_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
         NodeRegister(
             "JoyCaptionExtraOptions",
             py.get_type::<JoyCaptionExtraOptions>(),
