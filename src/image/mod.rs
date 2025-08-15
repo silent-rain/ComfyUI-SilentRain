@@ -25,7 +25,7 @@ use pyo3::{
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
-    let submodule = PyModule::new(py, "utils")?;
+    let submodule = PyModule::new(py, "image")?;
     submodule.add_class::<ImageSimpleResolution>()?;
     Ok(submodule)
 }

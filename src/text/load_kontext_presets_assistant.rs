@@ -1,4 +1,7 @@
 //! Kontext Presets 预设助手
+//!
+//!
+//! 部分提示词由 AI 辅助生成, 未经过完全测试
 
 use log::error;
 use pyo3::{
@@ -49,6 +52,12 @@ impl LoadKontextPresetsAssistant {
     }
 
     #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
+    }
+
+    #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
     fn input_is_list() -> bool {
         false
@@ -79,7 +88,9 @@ impl LoadKontextPresetsAssistant {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Kontext Presets Assistant."
+        "Kontext Presets Assistant.
+        Pre set prompt words extracted through the official Kontext interface.
+        It also includes some AI generated prompt words that have not been fully validated."
     }
 
     #[classattr]

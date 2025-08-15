@@ -1,0 +1,391 @@
+{
+  "id": "c5d04b8e-0f55-4d3b-9de6-62458d54ecfd",
+  "revision": 0,
+  "last_node_id": 7,
+  "last_link_id": 5,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadWanPresets",
+      "pos": [
+        740,
+        610
+      ],
+      "size": [
+        325.42578125,
+        506
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        },
+        {
+          "label": "description",
+          "name": "description",
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        },
+        {
+          "label": "prompts",
+          "name": "prompts",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadWanPresets"
+      },
+      "widgets_values": [
+        "镜头拉近",
+        "手持镜头",
+        "none",
+        "大特写",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "Wan22OfficialPromptSelector",
+      "pos": [
+        740,
+        1170
+      ],
+      "size": [
+        325.42578125,
+        462
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            4
+          ]
+        },
+        {
+          "label": "prompt_zh",
+          "name": "prompt_zh",
+          "type": "STRING",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Wan22OfficialPromptSelector"
+      },
+      "widgets_values": [
+        "日光",
+        "柔光",
+        "白天",
+        "none",
+        "中心构图",
+        "none",
+        "none",
+        "none",
+        "暖色调",
+        "none",
+        "愤怒",
+        "none",
+        "手持镜头",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "easy showAnything",
+      "pos": [
+        1140,
+        620
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "Handheld shot,extreme close-up,zoom in"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy showAnything",
+      "pos": [
+        1380,
+        620
+      ],
+      "size": [
+        140,
+        76
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "模拟手持摄影机的抖动效果，增加真实感和临场感\n极端近距离拍摄局部细节（如眼球、纹理），制造强烈戏剧张力\n镜头缓慢或快速向主体靠近，突出细节或增强情感表达"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy showAnything",
+      "pos": [
+        1580,
+        620
+      ],
+      "size": [
+        220,
+        196
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "手持镜头;手持抖动效果;轻微晃动;纪录片风格;临场感;真实感拍摄",
+        "极近细节;微观视角;强烈特写;戏剧效果;极致近距离",
+        "面部特写;手部细节;物体聚焦;眼神特写;局部放大"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "easy showAnything",
+      "pos": [
+        1160,
+        1200
+      ],
+      "size": [
+        210,
+        140
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "Warm Colors,Angrily,Soft Lighting,Sunny Lighting,Handheld Camera,Sunrise Time,Center Composition"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy showAnything",
+      "pos": [
+        1400,
+        1190
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "anything",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "label": "output",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "6873492872f3aed096177363b83b3a24d23d8a48",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "暖色调,愤怒,柔光,日光,手持镜头,白天,中心构图"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "*"
+    ],
+    [
+      2,
+      1,
+      1,
+      4,
+      0,
+      "*"
+    ],
+    [
+      3,
+      1,
+      2,
+      5,
+      0,
+      "*"
+    ],
+    [
+      4,
+      2,
+      0,
+      6,
+      0,
+      "*"
+    ],
+    [
+      5,
+      2,
+      1,
+      7,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -591.2731937458643,
+        -496.7492245269269
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

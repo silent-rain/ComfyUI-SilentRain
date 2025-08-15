@@ -1,0 +1,18 @@
+{
+  "LayerMask: LoadBenModel": {
+    "display_name": "图层遮罩：加载Ben模型（高级）",
+    "inputs": {
+      "model": {
+        "name": "模型"
+      },
+      "device": {
+        "name": "设备"
+      }
+    },
+    "outputs": {
+      "ben_model": {
+        "name": "本模型"
+      }
+    }
+  }
+}

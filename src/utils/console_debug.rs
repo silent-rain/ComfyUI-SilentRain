@@ -42,10 +42,7 @@ impl ConsoleDebug {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types(py: Python<'_>) -> (Bound<'_, PyAny>,) {
-        let any_type = any_type(py).unwrap();
-        (any_type,)
-    }
+    fn return_types() {}
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]

@@ -5,8 +5,11 @@ pub mod wrapper;
 
 pub mod conditioning;
 pub mod image;
+pub mod joycaption;
 pub mod list;
 pub mod logic;
+pub mod math;
+pub mod model;
 pub mod text;
 pub mod utils;
 
@@ -32,10 +35,12 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 每个扩展模块都有自己的全局变量，因此所使用的记录器也与其他 Rust 原生扩展无关。
     // 因此，每个扩展模块可以根据自己的需要自行设置记录器。
     let _ = tracing_subscriber::fmt()
+        .with_ansi(true)
         .with_max_level(tracing::Level::DEBUG)
         .with_level(true)
         .with_file(true)
         .with_line_number(true)
+        .with_target(false)
         .try_init();
 
     // 添加函数demo
@@ -45,8 +50,14 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&core::submodule(py)?)?;
     m.add_submodule(&wrapper::submodule(py)?)?;
     m.add_submodule(&text::submodule(py)?)?;
+    m.add_submodule(&list::submodule(py)?)?;
     m.add_submodule(&logic::submodule(py)?)?;
+    m.add_submodule(&math::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;
+    m.add_submodule(&image::submodule(py)?)?;
+    m.add_submodule(&model::submodule(py)?)?;
+    m.add_submodule(&conditioning::submodule(py)?)?;
+    m.add_submodule(&joycaption::submodule(py)?)?;
 
     // 注册 ComfyUI NODE_CLASS_MAPPINGS/NODE_DISPLAY_NAME_MAPPINGS
     let node_mapping = PyDict::new(py);

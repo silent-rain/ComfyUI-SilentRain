@@ -39,6 +39,7 @@ source .venv/bin/activate
 
 # build
 echo "build release whl ..."
+# maturin build -r --features cuda
 maturin build -r
 
 
@@ -52,6 +53,9 @@ echo "extract whl file ..."
 unzip -o ${whl} -d ${nodesDir}
 echo -e "\n"
 
+
+
+du -sh ${nodesDir}/*
 
 echo -e "\nBuild Done"
 
