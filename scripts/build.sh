@@ -42,8 +42,8 @@ source .venv/bin/activate
 
 # build
 echo "build release whl ..."
-# maturin build -r --features cuda
-maturin build -r
+# uv tool run maturin build -r --features cuda
+uv tool run maturin build -r
 
 
 # 获取whl文件路径

@@ -73,8 +73,14 @@ accelerate-src = { workspace = true, optional = true }
 # ort = { workspace = true, features = ["half"], optional = true }
 
 
+# [build-dependencies]
+# bindgen = "0.72.0"  # 尝试较旧的版本
+# cc = { version="1.2.34", features=["parallel"] }
+# cmake = "0.1"
+# find_cuda_helper = "0.2.0"
+
 [features]
-default = ["mkl"]
+default = ["mkl", "native"]
 mkl = [
     "dep:intel-mkl-src",
     "candle-nn/mkl",
@@ -92,6 +98,7 @@ metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
 vulkan = [
     "llama-cpp-2/vulkan",
 ] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
+native = ["llama-cpp-2/native"]
 cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
 flash-attn = [
     "cuda",

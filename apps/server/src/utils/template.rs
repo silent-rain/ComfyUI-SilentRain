@@ -180,7 +180,7 @@ mod tests {
 
     /// 测试模板
     /// ```shell
-    /// LD_LIBRARY_PATH=~/.local/share/uv/python/cpython-3.12.11-linux-x86_64-gnu/lib \
+    /// LD_LIBRARY_PATH=~/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib \
     /// cargo test --package comfyui_silentrain --lib -- utils::template::tests::test_todo --exact --show-output
     /// ```
     #[test]
@@ -197,7 +197,7 @@ mod tests {
     /// `auto-initialize` feature is enabled.
     ///
     /// ```shell
-    /// LD_LIBRARY_PATH=~/.local/share/uv/python/cpython-3.12.11-linux-x86_64-gnu/lib \
+    /// LD_LIBRARY_PATH=~/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib \
     /// cargo test --package comfyui_silentrain --lib -- utils::template::tests::test_todo_attach --exact --show-output
     /// ```
     #[test]

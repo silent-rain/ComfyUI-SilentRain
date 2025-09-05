@@ -11,7 +11,7 @@ debug = false # 关闭调试日志, 加快构建速度
 pyo3 = "0.26.0"
 # pyo3-async-runtimes = "0.26.0"
 # pyo3-log = "0.12"    # 从 Rust 到 Python 日志记录的桥梁
-pyo3-arrow = "0.12" # pyo3 的轻量级Apache Arrow集成。
+# pyo3-arrow = "0.12" # pyo3 的轻量级Apache Arrow集成。
 # pyo3-bytes = "0.4"   # bytes 转换
 pythonize = "0.26.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象
 numpy = "0.26.0"     # rust-numpy
@@ -52,7 +52,7 @@ parquet = "56.0"            # 列式存储数据文件格式
 image = "0.25"
 png = "0.18"                # 用于读取和写入 PNG 图像
 ndarray = "0.16"            # 用于多维数组
-# llama-cpp-2 = "0.1"         # llama-cpp-2 的封装，实现自 Hugging Face 的 Transformers
+# llama-cpp-2 = "0.1"         # llama.cpp 的封装，实现自 Hugging Face 的 Transformers
 llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main" }
 ort = "=2.0.0-rc.10"                                                                 # ONNX Runtime
 
