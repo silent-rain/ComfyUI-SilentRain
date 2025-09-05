@@ -1,5 +1,12 @@
 //! 图片
 
+use pyo3::{
+    types::{PyModule, PyModuleMethods},
+    Bound, PyResult, Python,
+};
+
+use crate::core::node::NodeRegister;
+
 mod image_simple_resolution;
 pub use image_simple_resolution::ImageSimpleResolution;
 
@@ -18,14 +25,47 @@ pub use save_images::SaveImages;
 mod save_image_text;
 pub use save_image_text::SaveImageText;
 
-use pyo3::{
-    types::{PyModule, PyModuleMethods},
-    Bound, PyResult, Python,
-};
-
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "image")?;
     submodule.add_class::<ImageSimpleResolution>()?;
+    submodule.add_class::<ImageResolution>()?;
+    submodule.add_class::<ImageResolution2>()?;
+    submodule.add_class::<LoadImagesFromFolder>()?;
+    submodule.add_class::<SaveImages>()?;
+    submodule.add_class::<SaveImageText>()?;
     Ok(submodule)
+}
+
+/// Image node register
+pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let nodes: Vec<NodeRegister> = vec![
+        NodeRegister(
+            "ImageSimpleResolution",
+            py.get_type::<ImageSimpleResolution>(),
+            "Sr Image Simple Resolution",
+        ),
+        NodeRegister(
+            "ImageResolution",
+            py.get_type::<ImageResolution>(),
+            "Sr Image Resolution",
+        ),
+        NodeRegister(
+            "ImageResolution2",
+            py.get_type::<ImageResolution2>(),
+            "Sr Image Resolution2",
+        ),
+        NodeRegister(
+            "LoadImagesFromFolder",
+            py.get_type::<LoadImagesFromFolder>(),
+            "Sr Load Images From Folder",
+        ),
+        NodeRegister("SaveImages", py.get_type::<SaveImages>(), "Sr Save Images"),
+        NodeRegister(
+            "SaveImageText",
+            py.get_type::<SaveImageText>(),
+            "Sr Save Image Text",
+        ),
+    ];
+    Ok(nodes)
 }

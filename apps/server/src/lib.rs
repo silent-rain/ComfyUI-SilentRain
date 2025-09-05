@@ -1,6 +1,5 @@
 pub mod core;
 pub mod error;
-pub mod register;
 pub mod wrapper;
 
 pub mod conditioning;
@@ -19,7 +18,7 @@ use pyo3::{
     wrap_pyfunction, Bound, PyResult, Python,
 };
 
-use crate::register::node_register;
+use crate::core::node::NodeRegister;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -77,4 +76,19 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("NODE_CLASS_MAPPINGS", node_mapping)?;
     m.add("NODE_DISPLAY_NAME_MAPPINGS", name_mapping)?;
     Ok(())
+}
+
+/// 节点注册
+fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
+    let mut nodes: Vec<NodeRegister> = Vec::new();
+    nodes.extend(utils::node_register(py)?);
+    nodes.extend(text::node_register(py)?);
+    nodes.extend(list::node_register(py)?);
+    nodes.extend(logic::node_register(py)?);
+    nodes.extend(image::node_register(py)?);
+    nodes.extend(conditioning::node_register(py)?);
+    nodes.extend(joycaption::node_register(py)?);
+    nodes.extend(model::node_register(py)?);
+    nodes.extend(math::node_register(py)?);
+    Ok(nodes)
 }
