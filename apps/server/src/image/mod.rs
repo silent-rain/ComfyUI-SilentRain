@@ -25,6 +25,12 @@ pub use save_images::SaveImages;
 mod save_image_text;
 pub use save_image_text::SaveImageText;
 
+mod image_split_grid;
+pub use image_split_grid::ImageSplitGrid;
+
+mod image_grid_composite;
+pub use image_grid_composite::ImageGridComposite;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "image")?;
@@ -34,6 +40,8 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<LoadImagesFromFolder>()?;
     submodule.add_class::<SaveImages>()?;
     submodule.add_class::<SaveImageText>()?;
+    submodule.add_class::<ImageSplitGrid>()?;
+    submodule.add_class::<ImageGridComposite>()?;
     Ok(submodule)
 }
 
@@ -65,6 +73,16 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "SaveImageText",
             py.get_type::<SaveImageText>(),
             "Sr Save Image Text",
+        ),
+        NodeRegister(
+            "ImageSplitGrid",
+            py.get_type::<ImageSplitGrid>(),
+            "Sr Image Split Grid",
+        ),
+        NodeRegister(
+            "ImageGridComposite",
+            py.get_type::<ImageGridComposite>(),
+            "Sr Image Grid Composite",
         ),
     ];
     Ok(nodes)
