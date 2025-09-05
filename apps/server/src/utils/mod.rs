@@ -6,6 +6,8 @@ use pyo3::{
 
 use crate::core::node::NodeRegister;
 
+mod template;
+
 mod file_scanner;
 pub use file_scanner::FileScanner;
 
