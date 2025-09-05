@@ -16,8 +16,6 @@ echo "====================== root:${root} ======================"
 App=comfyui_silentrain
 # ComfyUI 节点目录
 nodesDir=${root}/nodes
-# 编译目录
-buildDir=./target/wheels
 
 
 # switch venv

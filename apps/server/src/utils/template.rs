@@ -95,11 +95,9 @@ impl Template {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        // 这是一个节点描述
         "the description of the node."
     }
 
-    // 调研方法函数名称
     #[classattr]
     #[pyo3(name = "FUNCTION")]
     const FUNCTION: &'static str = "execute";
