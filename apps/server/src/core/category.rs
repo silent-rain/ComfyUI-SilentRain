@@ -19,3 +19,5 @@ pub const CATEGORY_MODEL: &str = "SilentRain/Model";
 
 /// JoyCaption
 pub const CATEGORY_JOY_CAPTION: &str = "SilentRain/JoyCaption";
+/// Math
+pub const CATEGORY_MATH: &str = "SilentRain/Math";

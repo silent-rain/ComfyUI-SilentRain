@@ -14,5 +14,10 @@
         "name": "本模型"
       }
     }
+  },
+  "Sr Int Constant": {
+    "display_name": "整数常量",
+    "inputs": {},
+    "outputs": {}
   }
 }

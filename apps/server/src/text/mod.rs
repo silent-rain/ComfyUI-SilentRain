@@ -6,6 +6,9 @@ use pyo3::{
 
 use crate::core::node::NodeRegister;
 
+mod string_constant;
+pub use string_constant::StringConstant;
+
 mod text_box;
 pub use text_box::TextBox;
 
@@ -42,6 +45,7 @@ pub use wan22_official_prompt_selector::Wan22OfficialPromptSelector;
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;
+    submodule.add_class::<StringConstant>()?;
     submodule.add_class::<TextBox>()?;
     submodule.add_class::<TextToList>()?;
     submodule.add_class::<StringListToSting>()?;
@@ -59,6 +63,11 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
 /// Text node register
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     let nodes: Vec<NodeRegister> = vec![
+        NodeRegister(
+            "StringConstant",
+            py.get_type::<StringConstant>(),
+            "Sr String Constant",
+        ),
         NodeRegister("TextBox", py.get_type::<TextBox>(), "Sr Text Box"),
         NodeRegister("TextToList", py.get_type::<TextToList>(), "Sr Text To List"),
         NodeRegister(
