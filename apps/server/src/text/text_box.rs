@@ -52,8 +52,18 @@ impl TextBox {
                     (NODE_BOOLEAN, {
                         let strip_newlines = PyDict::new(py);
                         strip_newlines.set_item("default", false)?;
-                        strip_newlines.set_item("tooltip", "Parsing line breaks")?;
+                        strip_newlines.set_item("tooltip", "Remove all newlines from the text box.")?;
                         strip_newlines
+                    }),
+                )?;
+
+                required.set_item(
+                    "hash_comment",
+                    (NODE_BOOLEAN, {
+                        let hash_comment = PyDict::new(py);
+                        hash_comment.set_item("default", false)?;
+                        hash_comment.set_item("tooltip", "The pound sign (#) is used for commenting in text boxes. The comment content starts with a pound sign, and the content after the pound sign will be ignored.")?;
+                        hash_comment
                     }),
                 )?;
                 required
@@ -101,8 +111,14 @@ impl TextBox {
     const FUNCTION: &'static str = "execute";
 
     #[pyo3(name = "execute")]
-    fn execute(&mut self, py: Python, text: &str, strip_newlines: bool) -> PyResult<(String,)> {
-        let result = self.stringify(text, strip_newlines);
+    fn execute(
+        &mut self,
+        py: Python,
+        text: &str,
+        strip_newlines: bool,
+        hash_comment: bool,
+    ) -> PyResult<(String,)> {
+        let result = self.stringify(text, strip_newlines, hash_comment);
 
         match result {
             Ok(v) => Ok((v,)),
@@ -123,11 +139,20 @@ impl TextBox {
 }
 
 impl TextBox {
-    fn stringify(&self, text: &str, strip_newlines: bool) -> Result<String, Error> {
+    fn stringify(
+        &self,
+        text: &str,
+        strip_newlines: bool,
+        hash_comment: bool,
+    ) -> Result<String, Error> {
         let mut new_string: Vec<String> = Vec::new();
         let reader = io::Cursor::new(text);
         for line in reader.lines() {
             let line = line?;
+            if hash_comment && line.starts_with('#') {
+                continue;
+            }
+
             if !line.starts_with('\n') && strip_newlines {
                 new_string.push(line.replace("\\n", "\n"));
             } else if line.starts_with('\n') && strip_newlines {
