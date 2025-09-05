@@ -1,0 +1,26 @@
+[project]
+name = "comfyui_silentrain"
+description = "Ecological extension of comfyui using Rust language."
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+# version = "1.0.1"
+dependencies = [
+    "comfy-cli>=1.4.1",
+    "maturin[patchelf]>=1.9.3",
+    "numpy>=2.2.6",
+    # "torch>=2.7.0",
+] # Filled in from requirements.txt
+
+
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+
+[tool.maturin]
+features = ["pyo3/extension-module"]

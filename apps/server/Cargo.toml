@@ -1,0 +1,106 @@
+[package]
+name = "comfyui_silentrain"
+version = "0.1.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "comfyui_silentrain"
+crate-type = ["cdylib", "rlib"]
+
+
+[dependencies]
+pyo3 = { workspace = true, features = [
+    "extension-module",
+    # "auto-initialize",  # 将 Python 嵌入到 Rust 二进制文件中
+    # "multiple-pymethods",
+    # "macros",
+    # "abi3-py312",
+] }
+numpy = { workspace = true }
+pythonize = { workspace = true }
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+rust_decimal = { workspace = true }
+raw-string = { workspace = true }
+walkdir = { workspace = true }
+chardet = { workspace = true }
+encoding = { workspace = true }
+encoding_rs = { workspace = true }
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+lazy_static = { workspace = true }
+reqwest = { workspace = true, features = ["json", "blocking", "rustls-tls"] }
+regex = { workspace = true }
+base64 = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-onnx = { workspace = true }
+candle-transformers = { workspace = true }
+candle-flash-attn = { workspace = true, optional = true }
+hf-hub = { workspace = true, features = ["rustls-tls"] }
+tokenizers = { workspace = true }
+parquet = { workspace = true }
+image = { workspace = true }
+png = { workspace = true }
+llama-cpp-2 = { workspace = true, features = [
+    "dynamic-link", # 动态链接 llama.cpp 库（如 libllama.so），而非静态编译到应用中。
+    "sampler",
+] }
+
+# src
+intel-mkl-src = { workspace = true, optional = true }
+accelerate-src = { workspace = true, optional = true }
+
+
+# ONNX Runtime
+# [target.'cfg(not(target_os = "macos"))'.dependencies]
+# ort = { workspace = true, features = [
+#     "load-dynamic",
+#     "half",
+# ], optional = true }
+# [target.'cfg(target_os = "macos")'.dependencies]
+# ort = { workspace = true, features = ["half"], optional = true }
+
+
+[features]
+default = ["mkl"]
+mkl = [
+    "dep:intel-mkl-src",
+    "candle-nn/mkl",
+    "candle-transformers/mkl",
+    "candle-core/mkl",
+] # Intel 平台
+cuda = [
+    "candle-core/cuda",
+    "candle-nn/cuda",
+    "candle-transformers/cuda",
+    "llama-cpp-2/cuda",
+    # "ort/cuda",
+] # NVIDIA 平台
+metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
+vulkan = [
+    "llama-cpp-2/vulkan",
+] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
+cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
+flash-attn = [
+    "cuda",
+    "candle-transformers/flash-attn",
+    "dep:candle-flash-attn",
+] # 优化后的注意力机制实现，通过分块计算等方法提升Transformer模型的效率。它显著减少了内存占用和计算时间
+accelerate = [
+    "dep:accelerate-src",
+    "candle-core/accelerate",
+    "candle-nn/accelerate",
+    "candle-transformers/accelerate",
+] #  ​​Hugging Face 开发的 accelerate 库​​，它是一个专为 PyTorch 设计的分布式训练加速工具

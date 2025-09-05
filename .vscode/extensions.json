@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "rust-lang.rust-analyzer",
+        "fill-labs.dependi",
+        "tamasfe.even-better-toml",
+        "yzhang.markdown-all-in-one",
+        "davidanson.vscode-markdownlint",
+        "ms-python.python",
+        "ms-python.isort",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+    ]
+}

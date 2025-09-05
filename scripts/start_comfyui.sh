@@ -12,6 +12,7 @@ cd ${ComfyUI}
 # switch venv
 echo "switch venv ..."
 source .venv/bin/activate
+# uv add --dev pip setuptools
 
 # 更新 comfyui-frontend-package
 # pip install --upgrade comfyui-frontend-package
