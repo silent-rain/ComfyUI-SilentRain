@@ -43,6 +43,7 @@ if [ -d ${nodesDir}/${App}.libs ]; then
 fi
 \cp -r ${nodesDir}/${App}-*.dist-info ${ComfyUIDir}/${App}/
 \cp -r ${nodesDir}/__init__.py ${ComfyUIDir}/${App}/
+\cp -r ${nodesDir}/locales ${ComfyUIDir}/${App}/
 echo -e "\n"
 
 

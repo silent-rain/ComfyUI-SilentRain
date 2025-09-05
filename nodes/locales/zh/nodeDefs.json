@@ -15,7 +15,7 @@
       }
     }
   },
-  "Sr Int Constant": {
+  "IntConstant": {
     "display_name": "整数常量",
     "inputs": {},
     "outputs": {}
