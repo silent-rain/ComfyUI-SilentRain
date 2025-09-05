@@ -19,7 +19,7 @@ use crate::{
     joycaption::JoyCaptionPredictorGGUF,
     wrapper::{
         comfyui::{
-            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_SEED_MAX, NODE_STRING},
+            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_SEED_MAX, NODE_STRING},
             PromptServer,
         },
         torch::tensor::TensorWrapper,
@@ -101,7 +101,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
 
                 required.set_item(
                     "image",
-                    ("IMAGE", {
+                    (NODE_IMAGE, {
                         let image = PyDict::new(py);
                         image.set_item("forceInput", true)?;
                         image

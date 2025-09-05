@@ -21,7 +21,7 @@ use crate::{
     wrapper::{
         comfyui::{
             node_input::InputPrompt,
-            types::{NODE_BOOLEAN, NODE_STRING},
+            types::{NODE_BOOLEAN, NODE_IMAGE, NODE_STRING},
             PromptServer,
         },
         torch::tensor::TensorWrapper,
@@ -102,7 +102,7 @@ impl SaveImages {
                 let required = PyDict::new(py);
                 required.set_item(
                     "image",
-                    ("IMAGE", {
+                    (NODE_IMAGE, {
                         let image = PyDict::new(py);
                         image
                     }),

@@ -91,7 +91,7 @@ impl ImageSimpleResolution {
                 let required = PyDict::new(py);
                 required.set_item(
                     "image",
-                    ("IMAGE", {
+                    (NODE_IMAGE, {
                         let params = PyDict::new(py);
                         params
                     }),
