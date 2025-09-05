@@ -7,6 +7,7 @@ pub mod image;
 pub mod joycaption;
 pub mod list;
 pub mod logic;
+pub mod mask;
 pub mod math;
 pub mod model;
 pub mod text;
@@ -54,6 +55,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&math::submodule(py)?)?;
     m.add_submodule(&utils::submodule(py)?)?;
     m.add_submodule(&image::submodule(py)?)?;
+    m.add_submodule(&mask::submodule(py)?)?;
     m.add_submodule(&model::submodule(py)?)?;
     m.add_submodule(&conditioning::submodule(py)?)?;
     m.add_submodule(&joycaption::submodule(py)?)?;
@@ -86,6 +88,7 @@ fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     nodes.extend(list::node_register(py)?);
     nodes.extend(logic::node_register(py)?);
     nodes.extend(image::node_register(py)?);
+    nodes.extend(mask::node_register(py)?);
     nodes.extend(conditioning::node_register(py)?);
     nodes.extend(joycaption::node_register(py)?);
     nodes.extend(model::node_register(py)?);

@@ -10,9 +10,10 @@ pub const CATEGORY_UTILS: &str = "SilentRain/Utils";
 pub const CATEGORY_LIST: &str = "SilentRain/List";
 /// 图片
 pub const CATEGORY_IMAGE: &str = "SilentRain/Image";
+/// 遮罩
+pub const CATEGORY_MASK: &str = "SilentRain/Mask";
 /// 条件
 pub const CATEGORY_CONDITIONING: &str = "SilentRain/conditioning";
-
 /// 模型
 pub const CATEGORY_MODEL: &str = "SilentRain/Model";
 
