@@ -31,6 +31,9 @@ pub use image_split_grid::ImageSplitGrid;
 mod image_grid_composite;
 pub use image_grid_composite::ImageGridComposite;
 
+mod image_attachment_text;
+pub use image_attachment_text::ImageAttachmentText;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "image")?;
@@ -42,6 +45,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<SaveImageText>()?;
     submodule.add_class::<ImageSplitGrid>()?;
     submodule.add_class::<ImageGridComposite>()?;
+    submodule.add_class::<ImageAttachmentText>()?;
     Ok(submodule)
 }
 
@@ -83,6 +87,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ImageGridComposite",
             py.get_type::<ImageGridComposite>(),
             "Sr Image Grid Composite",
+        ),
+        NodeRegister(
+            "ImageAttachmentText",
+            py.get_type::<ImageAttachmentText>(),
+            "Sr Image Attachment Text",
         ),
     ];
     Ok(nodes)
