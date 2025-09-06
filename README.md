@@ -13,7 +13,7 @@
 
 ### 环境搭建与编译文档
 
-- [环境搭建](docs/环境搭建.md)
+- [后端开发指南](docs/后端开发指南.md)
 - [Maturin使用指引](docs/Maturin使用指引.md)
 
 ### 编译与本地部署
@@ -52,5 +52,8 @@ uv run comfy node publish
 ## 工作流示例
 
 - [工作流示例](workflow)
+
+## 参考文档
+
 - [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - [节点注册](https://registry.comfy.org)
