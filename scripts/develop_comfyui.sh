@@ -44,6 +44,7 @@ fi
 \cp -r ${nodesDir}/${App}-*.dist-info ${ComfyUIDir}/${App}/
 \cp -r ${nodesDir}/__init__.py ${ComfyUIDir}/${App}/
 \cp -r ${nodesDir}/locales ${ComfyUIDir}/${App}/
+\cp -r ${nodesDir}/web ${ComfyUIDir}/${App}/
 echo -e "\n"
 
 

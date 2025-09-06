@@ -75,8 +75,11 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
         name_mapping.set_item(node.0, node.2)?;
     }
 
+    const WEB_DIRECTORY: &str = "./web";
+
     m.add("NODE_CLASS_MAPPINGS", node_mapping)?;
     m.add("NODE_DISPLAY_NAME_MAPPINGS", name_mapping)?;
+    m.add("WEB_DIRECTORY", WEB_DIRECTORY)?;
     Ok(())
 }
 
