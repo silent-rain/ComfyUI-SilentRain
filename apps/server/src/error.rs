@@ -49,6 +49,12 @@ pub enum Error {
     LlamaCppChatTemplateError(#[from] llama_cpp_2::ChatTemplateError),
     #[error("llama_cpp_2 error, {0}")]
     LlamaCppApplyChatTemplateError(#[from] llama_cpp_2::ApplyChatTemplateError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaMtmdInitError(#[from] llama_cpp_2::mtmd::MtmdInitError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaMtmdTokenizeError(#[from] llama_cpp_2::mtmd::MtmdTokenizeError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaMtmdEvalError(#[from] llama_cpp_2::mtmd::MtmdEvalError),
 
     #[error("encode error, {0}")]
     Encode(String),

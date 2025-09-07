@@ -6,6 +6,7 @@ pub mod conditioning;
 pub mod image;
 pub mod joycaption;
 pub mod list;
+pub mod llama_cpp;
 pub mod logic;
 pub mod mask;
 pub mod math;
@@ -59,6 +60,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&model::submodule(py)?)?;
     m.add_submodule(&conditioning::submodule(py)?)?;
     m.add_submodule(&joycaption::submodule(py)?)?;
+    m.add_submodule(&llama_cpp::submodule(py)?)?;
 
     // 注册 ComfyUI NODE_CLASS_MAPPINGS/NODE_DISPLAY_NAME_MAPPINGS
     let node_mapping = PyDict::new(py);
@@ -96,5 +98,6 @@ fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     nodes.extend(joycaption::node_register(py)?);
     nodes.extend(model::node_register(py)?);
     nodes.extend(math::node_register(py)?);
+    nodes.extend(llama_cpp::node_register(py)?);
     Ok(nodes)
 }
