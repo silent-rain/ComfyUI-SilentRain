@@ -55,6 +55,8 @@ pub enum Error {
     LlamaMtmdTokenizeError(#[from] llama_cpp_2::mtmd::MtmdTokenizeError),
     #[error("llama_cpp_2 error, {0}")]
     LlamaMtmdEvalError(#[from] llama_cpp_2::mtmd::MtmdEvalError),
+    #[error("llama_cpp_2 error, {0}")]
+    LlamaMtmdBitmapError(#[from] llama_cpp_2::mtmd::MtmdBitmapError),
 
     #[error("encode error, {0}")]
     Encode(String),

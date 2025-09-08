@@ -1,6 +1,6 @@
 //! llama.cpp vision
 
-use std::{num::NonZero, path::PathBuf};
+use std::num::NonZero;
 
 use log::info;
 use pyo3::pyclass;
@@ -11,7 +11,7 @@ use llama_cpp_2::{
         LlamaContext,
     },
     llama_backend::LlamaBackend,
-    model::{params::LlamaModelParams, LlamaModel},
+    model::{params::LlamaModelParams, LlamaChatMessage, LlamaModel},
     sampling::LlamaSampler,
     send_logs_to_tracing, LogOptions,
 };
@@ -19,7 +19,7 @@ use llama_cpp_2::{
 use crate::{
     error::Error,
     llama_cpp::{LlamaCppMtmdContext, LlamaCppOptions},
-    wrapper::{comfy::folder_paths::FolderPaths, comfyui::PromptServer},
+    wrapper::comfyui::PromptServer,
 };
 
 #[pyclass(subclass)]
@@ -34,15 +34,11 @@ impl LlamaCppVision {
         // llama.cpp logs
         send_logs_to_tracing(LogOptions::default().with_logs_enabled(params.verbose));
 
-        // get model path
-        let (model_path, mmproj_path) = self.get_model_path(&params)?;
-
         // Initialize backend
         let backend = LlamaBackend::init()?;
 
         // Load model
         let model = self.load_model(&backend, &params)?;
-        info!("Loading model: {model_path:?}");
 
         // Load context
         let mut context = self.load_context(&model, &backend, &params)?;
@@ -56,40 +52,38 @@ impl LlamaCppVision {
 
         info!("Model loaded successfully");
 
-        // run_single_turn(&mut ctx, &model, &mut context, &mut sampler, &params)?;
+        // Add media marker if not present
+        let mut user_prompt = params.user_prompt.clone();
+        let default_marker = llama_cpp_2::mtmd::mtmd_default_marker().to_string();
+        let media_marker = params.media_marker.as_ref().unwrap_or(&default_marker);
+        if !user_prompt.contains(media_marker) {
+            user_prompt.push_str(media_marker);
+        }
+
+        // Load media files
+        for image_path in &params.images {
+            info!("Loading image: {image_path}");
+            ctx.load_media(image_path)?;
+        }
+        for audio_path in &params.audio {
+            ctx.load_media(audio_path)?;
+        }
+
+        // Create user message
+        let msgs = vec![
+            LlamaChatMessage::new("system".to_string(), params.system_prompt)?,
+            LlamaChatMessage::new("user".to_string(), user_prompt)?,
+        ];
+
+        info!("Evaluating message: {msgs:?}");
+
+        // Evaluate the message (prefill)
+        ctx.eval_message(&model, &mut context, msgs, true, params.n_batch as i32)?;
+
+        // Generate response (decode)
+        ctx.generate_response(&model, &mut context, &mut sampler, params.n_predict)?;
 
         Ok(())
-    }
-
-    /// get model path
-    fn get_model_path(&self, params: &LlamaCppOptions) -> Result<(PathBuf, PathBuf), Error> {
-        let base_models_dir = FolderPaths::default().model_path();
-        let subfolder = "LLM";
-
-        let model_path = base_models_dir
-            .join(subfolder)
-            .join(params.model_path.clone());
-        let mmproj_path = base_models_dir
-            .join(subfolder)
-            .join(params.mmproj_path.clone());
-
-        // Validate required parameters
-        if !model_path.exists() {
-            return Err(Error::InvalidPath(format!(
-                "Model file not found: {}",
-                model_path.to_string_lossy()
-            )));
-        }
-        if !mmproj_path.exists() {
-            return Err(Error::InvalidPath(format!(
-                "Multimodal projection file not found: {}",
-                mmproj_path.to_string_lossy()
-            )));
-        }
-
-        info!("Loading model: {model_path:?}");
-
-        Ok((model_path, mmproj_path))
     }
 
     /// Setup model parameters
@@ -98,6 +92,8 @@ impl LlamaCppVision {
         backend: &LlamaBackend,
         params: &LlamaCppOptions,
     ) -> Result<LlamaModel, Error> {
+        let model_path = params.get_model_path()?;
+
         let model_params = LlamaModelParams::default().with_n_gpu_layers(params.n_gpu_layers); // Use n layers on GPU
 
         // for (k, v) in &key_value_overrides {
@@ -106,7 +102,9 @@ impl LlamaCppVision {
         // }
 
         // Load model
-        let model = LlamaModel::load_from_file(&backend, &params.model_path, &model_params)?;
+        let model = LlamaModel::load_from_file(&backend, &model_path, &model_params)?;
+
+        info!("Loading model: {model_path:?}");
 
         Ok(model)
     }

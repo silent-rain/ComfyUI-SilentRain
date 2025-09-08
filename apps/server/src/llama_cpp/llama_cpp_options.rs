@@ -1,4 +1,9 @@
 //! llama.cpp options
+//!
+//!
+//! media_marker:
+//!     - https://hf-mirror.com/mlabonne/gemma-3-4b-it-abliterated/blob/main/chat_template.json
+//!     - image: <start_of_image>
 
 use std::path::PathBuf;
 
@@ -21,6 +26,16 @@ pub struct LlamaCppOptions {
     /// Path to the multimodal projection file (e.g., "mmproj-model.bin")
     /// Required for models with multimodal capabilities (e.g., vision or audio).
     pub mmproj_path: String,
+
+    /// The system prompt (or instruction) that guides the model's behavior.
+    /// This is typically a high-level directive (e.g., "You are a helpful assistant.").
+    /// It is often static and set once per session.
+    pub system_prompt: String,
+
+    /// The user-provided input or query to the model.
+    /// This is the dynamic part of the prompt that changes with each interaction.
+    /// May include media markers - else they will be added automatically.
+    pub user_prompt: String,
 
     /// Controls diversity via top-k sampling (default: 40).
     /// Higher values mean more diverse outputs.
@@ -54,6 +69,9 @@ pub struct LlamaCppOptions {
     /// Defines the maximum context length the model can handle.
     pub n_ctx: u32,
 
+    /// Number of tokens to predict (-1 for unlimited)
+    pub n_predict: i32,
+
     /// Index of the main GPU to use (default: 0).
     /// Relevant for multi-GPU systems.
     pub main_gpu: i32,
@@ -75,30 +93,6 @@ pub struct LlamaCppOptions {
     /// Options: "None", "Mean", "Cls", "Last", "Rank".
     pub pooling_type: String,
 
-    /// Enables verbose logging from llama.cpp (default: false).
-    /// Useful for debugging and performance analysis.
-    pub verbose: bool,
-
-    // *************************
-    /// Path to image file(s)
-    pub images: Vec<String>,
-    /// Path to audio file(s)
-    pub audio: Vec<String>,
-    /// Text prompt to use as input to the model. May include media markers - else they will be added automatically.
-    pub prompt: String,
-    /// Number of tokens to predict (-1 for unlimited)
-    // #[arg(
-    //     short = 'n',
-    //     long = "n-predict",
-    //     value_name = "N",
-    //     default_value = "-1"
-    // )]
-    pub n_predict: i32,
-
-    /// Maximum number of tokens in context
-    // #[arg(long = "n-tokens", value_name = "N", default_value = "4096")]
-    // pub n_tokens: NonZeroU32,
-
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
@@ -106,11 +100,19 @@ pub struct LlamaCppOptions {
     /// Media marker. If not provided, the default marker will be used.
     pub media_marker: Option<String>,
 
+    /// Path to image file(s)
+    pub images: Vec<String>,
+
+    /// Path to audio file(s)
+    pub audio: Vec<String>,
+
+    /// Enables verbose logging from llama.cpp (default: false).
+    /// Useful for debugging and performance analysis.
+    pub verbose: bool,
+
+    // *************************
     /// Whether to normalise the produced embeddings
     normalise: bool,
-
-    /// The query to embed
-    query: String,
 
     /// The documents to embed and compare against
     documents: Vec<String>,
@@ -172,6 +174,10 @@ impl Default for LlamaCppOptions {
             // 多模态投影文件路径（需用户指定，默认留空）
             mmproj_path: String::new(),
 
+            // 文本生成参数
+            system_prompt: String::new(), // 描述模型行为的系统级指令（例如“你是一个有用的助手”）。
+            user_prompt: String::new(),   // 用户提供的输入或查询
+
             // 采样参数
             top_k: 40,        // 默认 top-k 采样值
             top_p: 0.8,       // 默认 top-p 采样值
@@ -183,6 +189,7 @@ impl Default for LlamaCppOptions {
             n_threads_batch: 0, // 0 表示自动使用所有可用线程
             n_batch: 512,       // 默认批处理大小
             n_ctx: 2048,        // 默认上下文窗口大小
+            n_predict: -1,      // 要预测的Token数量， -1 表示无限生成
 
             // GPU 相关参数
             main_gpu: 0,              // 默认主 GPU 索引
@@ -193,24 +200,18 @@ impl Default for LlamaCppOptions {
             // 池化类型（默认未指定）
             pooling_type: String::from("Unspecified"),
 
-            // 日志和调试
-            verbose: false, // 默认禁用详细日志
-
             // 多模态输入（默认留空）
+            chat_template: None, // 默认聊天模板（空）
+            media_marker: None,  // 默认媒体标记（空）
             images: Vec::new(),
             audio: Vec::new(),
 
-            // 文本生成参数
-            prompt: String::new(), // 默认空提示
-            n_predict: -1,         // -1 表示无限生成
-            chat_template: None,   // 默认聊天模板（空）
+            // 日志和调试
+            verbose: false, // 默认禁用详细日志
 
-            // 多模态标记和归一化
-            media_marker: None, // 默认媒体标记（空）
-            normalise: false,   // 默认禁用输入归一化
+            normalise: false, // 默认禁用输入归一化
 
             // 检索增强生成（RAG）参数
-            query: String::new(),  // 默认查询文本（空）
             documents: Vec::new(), // 默认文档列表（空）
             n_len: 128,            // 默认检索结果长度
         }

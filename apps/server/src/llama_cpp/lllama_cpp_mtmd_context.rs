@@ -34,7 +34,7 @@ pub struct LlamaCppMtmdContext {
 }
 
 impl LlamaCppMtmdContext {
-    /// Creates a new MTMD CLI context
+    /// Creates a new MTMD context
     ///
     /// # Errors
     pub fn new(model: &LlamaModel, params: &LlamaCppOptions) -> Result<Self, Error> {
@@ -90,11 +90,11 @@ impl LlamaCppMtmdContext {
         &mut self,
         model: &LlamaModel,
         context: &mut LlamaContext,
-        msg: LlamaChatMessage,
+        msgs: Vec<LlamaChatMessage>,
         add_bos: bool,
         batch_size: i32,
     ) -> Result<(), Error> {
-        self.chat.push(msg);
+        self.chat.extend(msgs);
 
         // Format the message using chat template (simplified)
         let formatted_prompt = model.apply_chat_template(&self.chat_template, &self.chat, true)?;
@@ -150,7 +150,7 @@ impl LlamaCppMtmdContext {
 
             // Print token
             let piece = model.token_to_str(token, Special::Tokenize)?;
-            print!("{piece}");
+            info!("{piece}");
             io::stdout().flush()?;
 
             // Prepare next batch
