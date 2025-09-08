@@ -46,6 +46,12 @@ echo "build release whl ..."
 uv tool run maturin build -r
 
 
+# del old dir
+# if [ -d ${nodesDir}/comfyui_silentrain.libs ]; then 
+#     rm -rf ${nodesDir}/comfyui_silentrain.libs/*
+# fi
+
+
 # 获取whl文件路径
 echo "find whl file ..."
 whl=$(find ${buildDir} -name "${App}-*.whl" | head -n 1)

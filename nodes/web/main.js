@@ -1,17 +1,9 @@
-import { app } from "../../scripts/app.js";
-import init, { greet } from './pkg/web.js';
-
-
-app.registerExtension({ 
-	name: "a.unique.name.for.a.useless.extension",
-	async setup() { 
-		alert("Setup complete!")
-	},
-})
+import init, { register_extension } from './pkg/web.js';
 
 
 async function run() {
-    await init();
-    console.log(greet("World"));
+	await init();
+	await register_extension();
+	console.log("Hello from Rust!");
 }
 run();

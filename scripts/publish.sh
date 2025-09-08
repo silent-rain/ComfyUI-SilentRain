@@ -25,6 +25,7 @@ source .venv/bin/activate
 
 # build
 ./scripts/build.sh
+./scripts/build_web.sh
 
 
 cd ${nodesDir}
