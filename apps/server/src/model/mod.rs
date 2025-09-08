@@ -11,7 +11,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     Ok(submodule)
 }
 
-/// Logic node register
+/// model node register
 pub fn node_register(_py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     let nodes: Vec<NodeRegister> = vec![];
     Ok(nodes)

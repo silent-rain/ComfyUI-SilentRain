@@ -1,4 +1,4 @@
-//! 数学运算
+//! llama.cpp
 
 use pyo3::{
     types::{PyModule, PyModuleMethods},
@@ -19,18 +19,16 @@ pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "math")?;
-    // submodule.add_class::<IntConstant>()?;
+    submodule.add_class::<LlamaCppOptions>()?;
     Ok(submodule)
 }
 
-/// Logic node register
+/// llama.cpp node register
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
-    let nodes: Vec<NodeRegister> = vec![
-        // NodeRegister(
-        //     "IntConstant",
-        //     py.get_type::<IntConstant>(),
-        //     "Sr Int Constant",
-        // ),
-    ];
+    let nodes: Vec<NodeRegister> = vec![NodeRegister(
+        "LlamaCppOptions",
+        py.get_type::<LlamaCppOptions>(),
+        "Sr Llama Cpp Options",
+    )];
     Ok(nodes)
 }
