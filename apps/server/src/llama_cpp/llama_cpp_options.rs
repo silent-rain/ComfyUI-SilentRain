@@ -16,6 +16,7 @@ use pyo3::{
 };
 use pythonize::{depythonize, pythonize};
 use serde::{Deserialize, Serialize};
+use strum_macros::{Display, EnumString};
 
 use crate::{
     core::category::CATEGORY_LLAMA_CPP,
@@ -23,16 +24,42 @@ use crate::{
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
-            types::{
-                NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX,
-                NODE_STRING,
-            },
+            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_STRING},
             PromptServer,
         },
     },
 };
 
 const SUBFOLDER: &str = "LLM";
+
+/// 处理模式枚举
+#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
+#[strum(serialize_all = "kebab-case")]
+pub enum PoolingTypeMode {
+    /// 无模式
+    #[strum(to_string = "None")]
+    None,
+
+    /// 均值模式
+    #[strum(to_string = "Mean")]
+    Mean,
+
+    /// 分类模式
+    #[strum(to_string = "Cls")]
+    Cls,
+
+    /// 最后模式
+    #[strum(to_string = "Last")]
+    Last,
+
+    /// 排序模式
+    #[strum(to_string = "Rank")]
+    Rank,
+
+    /// 未指定模式
+    #[strum(to_string = "Unspecified")]
+    Unspecified,
+}
 
 /// Options for the llama_cpp library
 #[pyclass(subclass)]
@@ -115,8 +142,8 @@ pub struct LlamaCppOptions {
 
     /// If set to `true`, disables GPU offloading for the multimodal projection (mmproj) (default: false).
     /// This forces mmproj computations to run on CPU, even if the main model runs on GPU.
-    #[serde(default)]
-    pub no_mmproj_offload: bool,
+    // #[serde(default)]
+    // pub no_mmproj_offload: bool,
 
     /// Enables flash attention for faster inference (default: false).
     /// Requires compatible hardware and model support.
@@ -124,7 +151,7 @@ pub struct LlamaCppOptions {
     pub flash_attention: bool,
 
     /// Pooling type for embeddings (default: "Unspecified").
-    /// Options: "None", "Mean", "Cls", "Last", "Rank".
+    /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
     pub pooling_type: String,
 
@@ -139,11 +166,11 @@ pub struct LlamaCppOptions {
 
     /// Path to image file(s)
     #[serde(default)]
-    pub images: Vec<String>,
+    pub images: Vec<Vec<u8>>,
 
     /// Path to audio file(s)
     #[serde(default)]
-    pub audio: Vec<String>,
+    pub audio: Vec<Vec<u8>>,
 
     /// Enables verbose logging from llama.cpp (default: false).
     /// Useful for debugging and performance analysis.
@@ -250,63 +277,6 @@ impl LlamaCppOptions {
                 )?;
 
                 required.set_item(
-                    "main_gpu",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.main_gpu)?;
-                        params.set_item("min", 0)?;
-                        params.set_item("step", 1)?;
-                        params.set_item(
-                            "tooltip",
-                            "Index of the main GPU to use. Relevant for multi-GPU systems.",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "n_gpu_layers",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.n_gpu_layers)?;
-                        params.set_item("min", 0)?;
-                        params.set_item("step", 1)?;
-                        params.set_item(
-                            "tooltip",
-                            "Number of GPU layers to offload (default: 0, CPU-only).",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "n_ctx",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.n_ctx)?;
-                        params.set_item("min", 256)?;
-                        params.set_item("step", 10)?;
-                        params.set_item("tooltip", "Size of the prompt context window.")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "n_predict",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.n_predict)?;
-                        params.set_item("min", -1)?;
-                        params.set_item("step", 10)?;
-                        params.set_item(
-                            "tooltip",
-                            "Number of tokens to predict (-1 for unlimited).",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
                     "top_k",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -343,22 +313,6 @@ impl LlamaCppOptions {
                         params.set_item(
                             "tooltip",
                             "Controls randomness (default: 0.7). Higher values mean more random outputs.",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "seed",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.seed)?;
-                        params.set_item("min", -1)?;
-                        params.set_item("max", NODE_SEED_MAX)?;
-                        params.set_item("step", 1)?;
-                        params.set_item(
-                            "tooltip",
-                            "Seed for random number generation (default: 0). Set to a fixed value for reproducible outputs.",
                         )?;
                         params
                     }),
@@ -410,16 +364,6 @@ impl LlamaCppOptions {
                 )?;
 
                 required.set_item(
-                    "no_mmproj_offload",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.no_mmproj_offload)?;
-                        params.set_item("tooltip", "If set to `true`, disables GPU offloading for the multimodal projection (mmproj) (default: false). This forces mmproj computations to run on CPU, even if the main model runs on GPU.")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
                     "flash_attention",
                     (NODE_BOOLEAN, {
                         let params = PyDict::new(py);
@@ -429,8 +373,25 @@ impl LlamaCppOptions {
                     }),
                 )?;
 
-                // TODO 待处理
-                // pooling_type
+                required.set_item(
+                    "pooling_type",
+                    (
+                        vec![
+                            PoolingTypeMode::None.to_string(),
+                            PoolingTypeMode::Mean.to_string(),
+                            PoolingTypeMode::Cls.to_string(),
+                            PoolingTypeMode::Last.to_string(),
+                            PoolingTypeMode::Rank.to_string(),
+                            PoolingTypeMode::Unspecified.to_string(),
+                        ],
+                        {
+                            let params = PyDict::new(py);
+                            params.set_item("default", options.pooling_type)?;
+                            params.set_item("tooltip", r#"Pooling type for embeddings (default: "Unspecified"). Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified"."#)?;
+                            params
+                        },
+                    ),
+                )?;
 
                 required.set_item(
                     "chat_template",
@@ -442,7 +403,7 @@ impl LlamaCppOptions {
                     }),
                 )?;
 
-                // TODO 待处理
+                // TODO 尚未实现
                 required.set_item(
                     "unload_after_generate",
                     (NODE_BOOLEAN, {
@@ -461,34 +422,6 @@ impl LlamaCppOptions {
                         params
                     }),
                 )?;
-
-                // =======================
-                // required.set_item(
-                //     "image",
-                //     (NODE_IMAGE, {
-                //         let image = PyDict::new(py);
-                //         image.set_item("forceInput", true)?;
-                //         image
-                //     }),
-                // )?;
-
-                // required.set_item(
-                //     "gguf_model",
-                //     (NODE_STRING, {
-                //         let gguf_model = PyDict::new(py);
-                //         gguf_model.set_item("tooltip", "model file path")?;
-                //         gguf_model
-                //     }),
-                // )?;
-
-                // required.set_item(
-                //     "mmproj_file",
-                //     (NODE_STRING, {
-                //         let mmproj_file = PyDict::new(py);
-                //         mmproj_file.set_item("tooltip", "mmproj model file path")?;
-                //         mmproj_file
-                //     }),
-                // )?;
 
                 required
             })?;
@@ -602,13 +535,13 @@ impl Default for LlamaCppOptions {
             n_predict: -1,      // 要预测的Token数量， -1 表示无限生成
 
             // GPU 相关参数
-            main_gpu: 0,              // 默认主 GPU 索引
-            n_gpu_layers: 0,          // 默认不启用 GPU 卸载
-            no_mmproj_offload: false, // 默认启用 mmproj 的 GPU 卸载
-            flash_attention: false,   // 默认禁用 Flash Attention
+            main_gpu: 0,     // 默认主 GPU 索引
+            n_gpu_layers: 0, // 默认不启用 GPU 卸载
+            // no_mmproj_offload: false, // 默认启用 mmproj 的 GPU 卸载
+            flash_attention: false, // 默认禁用 Flash Attention
 
             // 池化类型（默认未指定）
-            pooling_type: String::from("Unspecified"),
+            pooling_type: PoolingTypeMode::Unspecified.to_string(),
 
             // 多模态输入（默认留空）
             chat_template: None, // 默认聊天模板（空）

@@ -38,7 +38,7 @@ impl LlamaCppMtmdContext {
     ///
     /// # Errors
     pub fn new(model: &LlamaModel, params: &LlamaCppOptions) -> Result<Self, Error> {
-        let use_gpu = { params.n_gpu_layers > 0 && !params.no_mmproj_offload };
+        let use_gpu = { params.n_gpu_layers > 0 };
 
         // Initialize MTMD context
         let mtmd_params = MtmdContextParams {
@@ -78,9 +78,15 @@ impl LlamaCppMtmdContext {
 
     /// Loads media (image or audio) from the specified file path
     /// # Errors
-    pub fn load_media(&mut self, path: &str) -> Result<(), MtmdBitmapError> {
+    pub fn load_media_file(&mut self, path: &str) -> Result<(), MtmdBitmapError> {
         let bitmap = MtmdBitmap::from_file(&self.mtmd_ctx, path)?;
         self.bitmaps.push(bitmap);
+        Ok(())
+    }
+
+    pub fn load_image(&mut self, image: &[u8]) -> Result<(), MtmdBitmapError> {
+        MtmdBitmap::from_buffer(&self.mtmd_ctx, image)?;
+
         Ok(())
     }
 
