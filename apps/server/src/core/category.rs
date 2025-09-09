@@ -19,5 +19,7 @@ pub const CATEGORY_MODEL: &str = "SilentRain/Model";
 
 /// JoyCaption
 pub const CATEGORY_JOY_CAPTION: &str = "SilentRain/JoyCaption";
+/// llama.cpp
+pub const CATEGORY_LLAMA_CPP: &str = "SilentRain/LlamaCpp";
 /// Math
 pub const CATEGORY_MATH: &str = "SilentRain/Math";

@@ -15,6 +15,7 @@ use llama_cpp_2::{
     sampling::LlamaSampler,
     send_logs_to_tracing, LogOptions,
 };
+use rand::TryRngCore;
 
 use crate::{
     error::Error,
@@ -102,7 +103,7 @@ impl LlamaCppVision {
         // }
 
         // Load model
-        let model = LlamaModel::load_from_file(&backend, &model_path, &model_params)?;
+        let model = LlamaModel::load_from_file(backend, &model_path, &model_params)?;
 
         info!("Loading model: {model_path:?}");
 
@@ -134,16 +135,24 @@ impl LlamaCppVision {
             .with_pooling_type(pooling_type);
 
         // Create context
-        let context = model.new_context(&backend, context_params)?;
+        let context = model.new_context(backend, context_params)?;
 
         Ok(context)
     }
 
     /// Setup sampler parameters
     fn load_sampler(&self, params: &LlamaCppOptions) -> Result<LlamaSampler, Error> {
+        // 随机值
+        let seed = if params.seed == -1 {
+            // 随机值
+            rand::rng().try_next_u32().unwrap_or(0)
+        } else {
+            params.seed as u32
+        };
+
         let sampler = LlamaSampler::chain_simple([
             LlamaSampler::greedy(),
-            LlamaSampler::dist(params.seed),
+            LlamaSampler::dist(seed),
             LlamaSampler::top_k(params.top_k),
             LlamaSampler::top_p(params.top_p, 0),
             LlamaSampler::temp(params.temperature),

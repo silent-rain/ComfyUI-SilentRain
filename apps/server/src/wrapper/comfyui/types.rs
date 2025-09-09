@@ -18,6 +18,8 @@ pub const NODE_CONDITIONING: &str = "CONDITIONING";
 pub const NODE_VAE: &str = "VAE";
 pub const NODE_LATENT: &str = "LATENT";
 
+pub const NODE_LLAMA_CPP_OPTIONS: &str = "LlamaCppExtraOptions";
+
 pub const NODE_INT_MAX: u64 = 0xffffffffffffffffu64;
 pub const NODE_SEED_MAX: u64 = 10000000;
 

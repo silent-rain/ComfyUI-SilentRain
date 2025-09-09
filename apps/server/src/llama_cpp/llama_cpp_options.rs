@@ -7,115 +7,157 @@
 
 use std::path::PathBuf;
 
-use pyo3::pyclass;
+use log::{error, info};
+use pyo3::{
+    exceptions::PyRuntimeError,
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyDict, PyType},
+    Bound, Py, PyErr, PyResult, Python,
+};
+use pythonize::{depythonize, pythonize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
+    core::category::CATEGORY_LLAMA_CPP,
     error::Error,
-    wrapper::{comfy::folder_paths::FolderPaths, comfyui::PromptServer},
+    wrapper::{
+        comfy::folder_paths::FolderPaths,
+        comfyui::{
+            types::{
+                NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX,
+                NODE_STRING,
+            },
+            PromptServer,
+        },
+    },
 };
 
 const SUBFOLDER: &str = "LLM";
 
 /// Options for the llama_cpp library
 #[pyclass(subclass)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LlamaCppOptions {
     /// Path to the model file (e.g., "ggml-model.bin")
+    #[serde(default)]
     pub model_path: String,
 
     /// Path to the multimodal projection file (e.g., "mmproj-model.bin")
     /// Required for models with multimodal capabilities (e.g., vision or audio).
+    #[serde(default)]
     pub mmproj_path: String,
 
     /// The system prompt (or instruction) that guides the model's behavior.
     /// This is typically a high-level directive (e.g., "You are a helpful assistant.").
     /// It is often static and set once per session.
+    #[serde(default)]
     pub system_prompt: String,
 
     /// The user-provided input or query to the model.
     /// This is the dynamic part of the prompt that changes with each interaction.
     /// May include media markers - else they will be added automatically.
+    #[serde(default)]
     pub user_prompt: String,
 
     /// Controls diversity via top-k sampling (default: 40).
     /// Higher values mean more diverse outputs.
+    #[serde(default)]
     pub top_k: i32,
 
     /// Controls diversity via nucleus sampling (default: 0.8).
     /// Lower values mean more focused outputs.
+    #[serde(default)]
     pub top_p: f32,
 
     /// Controls randomness (default: 0.7).
     /// Higher values mean more random outputs.
+    #[serde(default)]
     pub temperature: f32,
 
     /// Seed for random number generation (default: 0).
     /// Set to a fixed value for reproducible outputs.
-    pub seed: u32,
+    #[serde(default)]
+    pub seed: i32,
 
     /// Number of threads to use during generation (default: all available threads).
     /// Set to a specific value to limit CPU usage.
+    #[serde(default)]
     pub n_threads: i32,
 
     /// Number of threads to use during batch and prompt processing (default: all available threads).
     /// Useful for optimizing multi-threaded workloads.
+    #[serde(default)]
     pub n_threads_batch: u32,
 
     /// Batch size for prompt processing (default: 512).
     /// Larger values may improve throughput but increase memory usage.
+    #[serde(default)]
     pub n_batch: u32,
 
     /// Size of the prompt context window (default: 2048).
     /// Defines the maximum context length the model can handle.
+    #[serde(default)]
     pub n_ctx: u32,
 
     /// Number of tokens to predict (-1 for unlimited)
+    #[serde(default)]
     pub n_predict: i32,
 
     /// Index of the main GPU to use (default: 0).
     /// Relevant for multi-GPU systems.
+    #[serde(default)]
     pub main_gpu: i32,
 
     /// Number of GPU layers to offload (default: 0, CPU-only).
     /// Higher values offload more work to the GPU.
+    #[serde(default)]
     pub n_gpu_layers: u32,
 
     /// If set to `true`, disables GPU offloading for the multimodal projection (mmproj) (default: false).
     /// This forces mmproj computations to run on CPU, even if the main model runs on GPU.
-    /// Useful for debugging or compatibility with certain hardware configurations.
+    #[serde(default)]
     pub no_mmproj_offload: bool,
 
     /// Enables flash attention for faster inference (default: false).
     /// Requires compatible hardware and model support.
+    #[serde(default)]
     pub flash_attention: bool,
 
     /// Pooling type for embeddings (default: "Unspecified").
     /// Options: "None", "Mean", "Cls", "Last", "Rank".
+    #[serde(default)]
     pub pooling_type: String,
 
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
+    #[serde(default)]
     pub chat_template: Option<String>,
 
     /// Media marker. If not provided, the default marker will be used.
+    #[serde(default)]
     pub media_marker: Option<String>,
 
     /// Path to image file(s)
+    #[serde(default)]
     pub images: Vec<String>,
 
     /// Path to audio file(s)
+    #[serde(default)]
     pub audio: Vec<String>,
 
     /// Enables verbose logging from llama.cpp (default: false).
     /// Useful for debugging and performance analysis.
+    #[serde(default)]
     pub verbose: bool,
 
     // *************************
     /// Whether to normalise the produced embeddings
-    normalise: bool,
+    #[serde(default)]
+    _normalise: bool,
 
     /// The documents to embed and compare against
-    documents: Vec<String>,
+    #[serde(default)]
+    _documents: Vec<String>,
 
     /// override some parameters of the model
     // #[arg(short = 'o', value_parser = parse_key_val)]
@@ -123,7 +165,375 @@ pub struct LlamaCppOptions {
 
     /// set the length of the prompt + output in tokens
     // #[arg(long, default_value_t = 32)]
-    n_len: i32,
+    #[serde(default)]
+    _n_len: i32,
+}
+
+impl PromptServer for LlamaCppOptions {}
+
+#[pymethods]
+impl LlamaCppOptions {
+    #[new]
+    fn new() -> Self {
+        Default::default()
+    }
+
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
+    }
+
+    #[classattr]
+    #[pyo3(name = "INPUT_IS_LIST")]
+    fn input_is_list() -> bool {
+        false
+    }
+
+    #[classattr]
+    #[pyo3(name = "RETURN_TYPES")]
+    fn return_types() -> (&'static str,) {
+        (NODE_LLAMA_CPP_OPTIONS,)
+    }
+
+    #[classattr]
+    #[pyo3(name = "RETURN_NAMES")]
+    fn return_names() -> (&'static str,) {
+        ("extra_options",)
+    }
+
+    #[classattr]
+    #[pyo3(name = "OUTPUT_TOOLTIPS")]
+    fn output_tooltips() {}
+
+    #[classattr]
+    #[pyo3(name = "OUTPUT_IS_LIST")]
+    fn output_is_list() -> (bool,) {
+        (false,)
+    }
+
+    #[classattr]
+    #[pyo3(name = "CATEGORY")]
+    const CATEGORY: &'static str = CATEGORY_LLAMA_CPP;
+
+    #[classattr]
+    #[pyo3(name = "DESCRIPTION")]
+    fn description() -> &'static str {
+        "llama.cpp extra options"
+    }
+
+    #[classattr]
+    #[pyo3(name = "FUNCTION")]
+    const FUNCTION: &'static str = "execute";
+
+    #[classmethod]
+    #[pyo3(name = "INPUT_TYPES")]
+    fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("required", {
+                let required = PyDict::new(py);
+
+                let options = LlamaCppOptions::default();
+
+                required.set_item(
+                    "media_marker",
+                    (NODE_STRING, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.media_marker)?;
+                        params.set_item(
+                            "tooltip",
+                            "Media marker. If not provided, the default marker will be used.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "main_gpu",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.main_gpu)?;
+                        params.set_item("min", 0)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Index of the main GPU to use. Relevant for multi-GPU systems.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "n_gpu_layers",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_gpu_layers)?;
+                        params.set_item("min", 0)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Number of GPU layers to offload (default: 0, CPU-only).",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "n_ctx",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_ctx)?;
+                        params.set_item("min", 256)?;
+                        params.set_item("step", 10)?;
+                        params.set_item("tooltip", "Size of the prompt context window.")?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "n_predict",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_predict)?;
+                        params.set_item("min", -1)?;
+                        params.set_item("step", 10)?;
+                        params.set_item(
+                            "tooltip",
+                            "Number of tokens to predict (-1 for unlimited).",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "top_k",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.top_k)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Controls diversity via top-k sampling (default: 40).  Higher values mean more diverse outputs.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "top_p",
+                    (NODE_FLOAT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.top_p)?;
+                        params.set_item("step", 0.01)?;
+                        params.set_item(
+                            "tooltip",
+                            "Controls diversity via nucleus sampling (default: 0.8).  Lower values mean more focused outputs.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "temperature",
+                    (NODE_FLOAT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.temperature)?;
+                        params.set_item("step", 0.05)?;
+                        params.set_item(
+                            "tooltip",
+                            "Controls randomness (default: 0.7). Higher values mean more random outputs.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "seed",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.seed)?;
+                        params.set_item("min", -1)?;
+                        params.set_item("max", NODE_SEED_MAX)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Seed for random number generation (default: 0). Set to a fixed value for reproducible outputs.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                 required.set_item(
+                    "n_threads",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_threads)?;
+                        params.set_item("min", 0)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Number of threads to use during generation (default: all available threads). Set to a specific value to limit CPU usage.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "n_threads_batch",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_threads_batch)?;
+                        params.set_item("min", 0)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Number of threads to use during batch and prompt processing (default: all available threads). Useful for optimizing multi-threaded workloads.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "n_batch",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.n_batch)?;
+                        params.set_item("min", 0)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Batch size for prompt processing (default: 512). Larger values may improve throughput but increase memory usage.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "no_mmproj_offload",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.no_mmproj_offload)?;
+                        params.set_item("tooltip", "If set to `true`, disables GPU offloading for the multimodal projection (mmproj) (default: false). This forces mmproj computations to run on CPU, even if the main model runs on GPU.")?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "flash_attention",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.flash_attention)?;
+                        params.set_item("tooltip", "Enables flash attention for faster inference (default: false). Requires compatible hardware and model support.")?;
+                        params
+                    }),
+                )?;
+
+                // TODO 待处理
+                // pooling_type
+
+                required.set_item(
+                    "chat_template",
+                    (NODE_STRING, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.chat_template)?;
+                        params.set_item("tooltip", "Chat template to use, default template if not provided.")?;
+                        params
+                    }),
+                )?;
+
+                // TODO 待处理
+                required.set_item(
+                    "unload_after_generate",
+                    (NODE_BOOLEAN, {
+                        let unload_after_generate = PyDict::new(py);
+                        unload_after_generate.set_item("default", false)?;
+                        unload_after_generate
+                    }),
+                )?;
+
+                required.set_item(
+                    "verbose",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.verbose)?;
+                        params.set_item("tooltip", "Enables verbose logging from llama.cpp (default: false). Useful for debugging and performance analysis..")?;
+                        params
+                    }),
+                )?;
+
+                // =======================
+                // required.set_item(
+                //     "image",
+                //     (NODE_IMAGE, {
+                //         let image = PyDict::new(py);
+                //         image.set_item("forceInput", true)?;
+                //         image
+                //     }),
+                // )?;
+
+                // required.set_item(
+                //     "gguf_model",
+                //     (NODE_STRING, {
+                //         let gguf_model = PyDict::new(py);
+                //         gguf_model.set_item("tooltip", "model file path")?;
+                //         gguf_model
+                //     }),
+                // )?;
+
+                // required.set_item(
+                //     "mmproj_file",
+                //     (NODE_STRING, {
+                //         let mmproj_file = PyDict::new(py);
+                //         mmproj_file.set_item("tooltip", "mmproj model file path")?;
+                //         mmproj_file
+                //     }),
+                // )?;
+
+                required
+            })?;
+
+            Ok(dict.into())
+        })
+    }
+
+    #[pyo3(name = "execute", signature = (**kwargs))]
+    fn execute<'py>(
+        &mut self,
+        py: Python<'py>,
+        kwargs: Option<Bound<'py, PyDict>>,
+    ) -> PyResult<(Bound<'py, PyDict>,)> {
+        let results = self.options_parser(py, kwargs);
+
+        match results {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                error!("LlamaCppOptions error, {e}");
+                if let Err(e) = self.send_error(py, "LlamaCppOptions".to_string(), e.to_string()) {
+                    error!("send error failed, {e}");
+                    return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
+                };
+                Err(PyErr::new::<PyRuntimeError, _>(e.to_string()))
+            }
+        }
+    }
+}
+
+impl LlamaCppOptions {
+    fn options_parser<'py>(
+        &self,
+        py: Python<'py>,
+        kwargs: Option<Bound<'py, PyDict>>,
+    ) -> Result<(Bound<'py, PyDict>,), Error> {
+        let kwargs =
+            kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
+        let options: LlamaCppOptions = depythonize(&kwargs)?;
+
+        info!("options: {:?}", options);
+
+        let py_options = pythonize(py, &options)?.extract::<Bound<'py, PyDict>>()?;
+        Ok((py_options,))
+    }
 }
 
 impl LlamaCppOptions {
@@ -182,7 +592,7 @@ impl Default for LlamaCppOptions {
             top_k: 40,        // 默认 top-k 采样值
             top_p: 0.8,       // 默认 top-p 采样值
             temperature: 0.7, // 默认温度值
-            seed: 0,          // 默认随机种子（0 表示随机）
+            seed: -1,         // 默认随机种子（-1 表示随机）
 
             // 线程和批处理参数
             n_threads: 0,       // 0 表示自动使用所有可用线程
@@ -209,13 +619,11 @@ impl Default for LlamaCppOptions {
             // 日志和调试
             verbose: false, // 默认禁用详细日志
 
-            normalise: false, // 默认禁用输入归一化
+            _normalise: false, // 默认禁用输入归一化
 
             // 检索增强生成（RAG）参数
-            documents: Vec::new(), // 默认文档列表（空）
-            n_len: 128,            // 默认检索结果长度
+            _documents: Vec::new(), // 默认文档列表（空）
+            _n_len: 128,            // 默认检索结果长度
         }
     }
 }
-
-impl PromptServer for LlamaCppOptions {}
