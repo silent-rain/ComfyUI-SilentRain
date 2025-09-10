@@ -20,15 +20,23 @@ pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "math")?;
     submodule.add_class::<LlamaCppOptions>()?;
+    submodule.add_class::<LlamaCppVision>()?;
     Ok(submodule)
 }
 
 /// llama.cpp node register
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
-    let nodes: Vec<NodeRegister> = vec![NodeRegister(
-        "LlamaCppOptions",
-        py.get_type::<LlamaCppOptions>(),
-        "Sr Llama Cpp Options",
-    )];
+    let nodes: Vec<NodeRegister> = vec![
+        NodeRegister(
+            "LlamaCppOptions",
+            py.get_type::<LlamaCppOptions>(),
+            "Sr Llama Cpp Options",
+        ),
+        NodeRegister(
+            "LlamaCppVision",
+            py.get_type::<LlamaCppVision>(),
+            "Sr Llama Cpp Vision",
+        ),
+    ];
     Ok(nodes)
 }

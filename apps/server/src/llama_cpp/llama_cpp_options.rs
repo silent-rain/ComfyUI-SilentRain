@@ -1,13 +1,16 @@
 //! llama.cpp options
 //!
 //!
-//! media_marker:
-//!     - https://hf-mirror.com/mlabonne/gemma-3-4b-it-abliterated/blob/main/chat_template.json
-//!     - image: <start_of_image>
+//! ## media_marker
+//!     - chat_template.json
+//!         - https://hf-mirror.com/mlabonne/gemma-3-4b-it-abliterated/blob/main/chat_template.json
+//!         - image: <start_of_image>
+//!     - gguf model
+//!         - tokenizer.chat_template
 
 use std::path::PathBuf;
 
-use log::{error, info};
+use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -180,11 +183,11 @@ pub struct LlamaCppOptions {
     // *************************
     /// Whether to normalise the produced embeddings
     #[serde(default)]
-    _normalise: bool,
+    pub normalise: bool,
 
     /// The documents to embed and compare against
     #[serde(default)]
-    _documents: Vec<String>,
+    pub documents: Vec<String>,
 
     /// override some parameters of the model
     // #[arg(short = 'o', value_parser = parse_key_val)]
@@ -193,7 +196,7 @@ pub struct LlamaCppOptions {
     /// set the length of the prompt + output in tokens
     // #[arg(long, default_value_t = 32)]
     #[serde(default)]
-    _n_len: i32,
+    pub n_len: i32,
 }
 
 impl PromptServer for LlamaCppOptions {}
@@ -262,19 +265,6 @@ impl LlamaCppOptions {
                 let required = PyDict::new(py);
 
                 let options = LlamaCppOptions::default();
-
-                required.set_item(
-                    "media_marker",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.media_marker)?;
-                        params.set_item(
-                            "tooltip",
-                            "Media marker. If not provided, the default marker will be used.",
-                        )?;
-                        params
-                    }),
-                )?;
 
                 required.set_item(
                     "top_k",
@@ -462,8 +452,6 @@ impl LlamaCppOptions {
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
         let options: LlamaCppOptions = depythonize(&kwargs)?;
 
-        info!("options: {:?}", options);
-
         let py_options = pythonize(py, &options)?.extract::<Bound<'py, PyDict>>()?;
         Ok((py_options,))
     }
@@ -552,11 +540,11 @@ impl Default for LlamaCppOptions {
             // 日志和调试
             verbose: false, // 默认禁用详细日志
 
-            _normalise: false, // 默认禁用输入归一化
+            normalise: false, // 默认禁用输入归一化
 
             // 检索增强生成（RAG）参数
-            _documents: Vec::new(), // 默认文档列表（空）
-            _n_len: 128,            // 默认检索结果长度
+            documents: Vec::new(), // 默认文档列表（空）
+            n_len: 128,            // 默认检索结果长度
         }
     }
 }

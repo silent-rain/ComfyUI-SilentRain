@@ -153,6 +153,19 @@ impl LlamaCppVision {
                 )?;
 
                 required.set_item(
+                    "media_marker",
+                    (NODE_STRING, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.media_marker)?;
+                        params.set_item(
+                            "tooltip",
+                            "Media marker. If not provided, the default marker will be used.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
                     "n_ctx",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -234,7 +247,6 @@ impl LlamaCppVision {
                     "extra_options",
                     (NODE_LLAMA_CPP_OPTIONS, {
                         let params = PyDict::new(py);
-                        params.set_item("forceInput", true)?;
                         params.set_item("tooltip", "llama.cpp extra options")?;
                         params
                     }),
@@ -247,7 +259,7 @@ impl LlamaCppVision {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (images, model_path, mmproj_path, system_prompt, user_prompt, n_ctx, n_predict, main_gpu, n_gpu_layers, **kwargs))]
+    #[pyo3(name = "execute", signature = (images, model_path, mmproj_path, system_prompt, user_prompt, media_marker, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, extra_options=None))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
@@ -256,11 +268,13 @@ impl LlamaCppVision {
         mmproj_path: String,
         system_prompt: String,
         user_prompt: String,
+        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
+        seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
-        kwargs: Option<Bound<'py, PyDict>>,
+        extra_options: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(Bound<'py, PyAny>, String)> {
         let params = self
             .options_parser(
@@ -269,11 +283,13 @@ impl LlamaCppVision {
                 mmproj_path,
                 system_prompt,
                 user_prompt,
+                media_marker,
                 n_ctx,
                 n_predict,
+                seed,
                 main_gpu,
                 n_gpu_layers,
-                kwargs,
+                extra_options,
             )
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
 
@@ -305,46 +321,66 @@ impl LlamaCppVision {
         mmproj_path: String,
         system_prompt: String,
         user_prompt: String,
+        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
+        seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
-        kwargs: Option<Bound<'py, PyDict>>,
+        extra_options: Option<Bound<'py, PyDict>>,
     ) -> Result<LlamaCppOptions, Error> {
-        let kwargs =
-            kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
-        let mut options: LlamaCppOptions = depythonize(&kwargs)?;
+        // 图片校验
+        let images_shape = images.getattr("shape")?.extract::<Vec<usize>>()?;
+        if images_shape.len() != 4 {
+            return Err(Error::InvalidTensorShape(format!(
+                "Expected [batch, height, width, channels] tensor, images shape: {}",
+                images_shape.len()
+            )));
+        }
+        let batch = images_shape[0];
+
+        // 将图片转换成 bytes
+        // image tensors -> Vec<tensor>
+        // tensors.select(dim=0, index=0).numpy().tobytes()
+        let mut image_vec = Vec::with_capacity(batch);
+        for i in 0..batch {
+            let image = images
+                .call_method1("select", (0, i))
+                .map_err(|e| {
+                    error!("select error, {e}");
+                    e
+                })?
+                .call_method0("numpy")
+                .map_err(|e| {
+                    error!("numpy error, {e}");
+                    e
+                })?
+                .call_method0("tobytes")
+                .map_err(|e| {
+                    error!("tobytes error, {e}");
+                    e
+                })?
+                .extract::<Vec<u8>>()?;
+            image_vec.push(image);
+        }
+
+        let mut options = LlamaCppOptions::default();
+
+        if let Some(extra_options) = extra_options {
+            options = depythonize(&extra_options)?;
+        }
 
         options.model_path = model_path;
         options.mmproj_path = mmproj_path;
         options.system_prompt = system_prompt;
         options.user_prompt = user_prompt;
+        options.media_marker = Some(media_marker);
         options.n_ctx = n_ctx;
         options.n_predict = n_predict;
+        options.seed = seed;
         options.main_gpu = main_gpu;
         options.n_gpu_layers = n_gpu_layers;
-
-        let images_shape = images.call_method0("shape")?.extract::<usize>()?;
-        if images_shape != 4 {
-            return Err(Error::InvalidTensorShape(format!(
-                "Expected [batch, height, width, channels] tensor, images shape: {images_shape}"
-            )));
-        }
-
-        // image tensors -> Vec<tensor>
-        // tensors.select(dim=0, index=0).numpy().tobytes()
-        let mut image_vec = Vec::with_capacity(images_shape);
-        for i in 0..images_shape {
-            let image = images
-                .call_method1("select", (0, i))?
-                .call_method0("numpy")?
-                .call_method0("tobytes")?
-                .extract::<Vec<u8>>()?;
-            image_vec.push(image);
-        }
         options.images = image_vec;
-
-        info!("options: {:?}", options);
 
         Ok(options)
     }
@@ -372,7 +408,7 @@ impl LlamaCppVision {
         let mut sampler = self.load_sampler(params)?;
 
         // Create the MTMD context
-        let mut ctx = LlamaCppMtmdContext::new(&model, params)?;
+        let mut mtmd_ctx = LlamaCppMtmdContext::new(&model, params)?;
         info!("Loading mtmd projection: {}", params.mmproj_path);
 
         info!("Model loaded successfully");
@@ -394,7 +430,7 @@ impl LlamaCppVision {
         //     ctx.load_media_file(audio_path)?;
         // }
 
-        ctx.load_image(&params.images[0])?;
+        mtmd_ctx.load_image(&params.images[0])?;
 
         // Create user message
         let msgs = vec![
@@ -405,10 +441,10 @@ impl LlamaCppVision {
         info!("Evaluating message: {msgs:?}");
 
         // Evaluate the message (prefill)
-        ctx.eval_message(&model, &mut context, msgs, true, params.n_batch as i32)?;
+        mtmd_ctx.eval_message(&model, &mut context, msgs, true, params.n_batch as i32)?;
 
         // Generate response (decode)
-        ctx.generate_response(&model, &mut context, &mut sampler, params.n_predict)?;
+        mtmd_ctx.generate_response(&model, &mut context, &mut sampler, params.n_predict)?;
 
         Ok((images, String::new()))
     }
