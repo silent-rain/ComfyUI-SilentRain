@@ -89,42 +89,42 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub user_prompt: String,
 
-    /// Controls diversity via top-k sampling (default: 40).
+    /// Controls diversity via top-k sampling.
     /// Higher values mean more diverse outputs.
     #[serde(default)]
     pub top_k: i32,
 
-    /// Controls diversity via nucleus sampling (default: 0.8).
+    /// Controls diversity via nucleus sampling.
     /// Lower values mean more focused outputs.
     #[serde(default)]
     pub top_p: f32,
 
-    /// Controls randomness (default: 0.7).
+    /// Controls randomness.
     /// Higher values mean more random outputs.
     #[serde(default)]
     pub temperature: f32,
 
-    /// Seed for random number generation (default: 0).
+    /// Seed for random number generation.
     /// Set to a fixed value for reproducible outputs.
     #[serde(default)]
     pub seed: i32,
 
-    /// Number of threads to use during generation (default: all available threads).
+    /// Number of threads to use during generation.
     /// Set to a specific value to limit CPU usage.
     #[serde(default)]
     pub n_threads: i32,
 
-    /// Number of threads to use during batch and prompt processing (default: all available threads).
+    /// Number of threads to use during batch and prompt processing.
     /// Useful for optimizing multi-threaded workloads.
     #[serde(default)]
     pub n_threads_batch: u32,
 
-    /// Batch size for prompt processing (default: 512).
+    /// Batch size for prompt processing.
     /// Larger values may improve throughput but increase memory usage.
     #[serde(default)]
     pub n_batch: u32,
 
-    /// Size of the prompt context window (default: 2048).
+    /// Size of the prompt context window.
     /// Defines the maximum context length the model can handle.
     #[serde(default)]
     pub n_ctx: u32,
@@ -133,27 +133,27 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub n_predict: i32,
 
-    /// Index of the main GPU to use (default: 0).
+    /// Index of the main GPU to use.
     /// Relevant for multi-GPU systems.
     #[serde(default)]
     pub main_gpu: i32,
 
-    /// Number of GPU layers to offload (default: 0, CPU-only).
+    /// Number of GPU layers to offload.
     /// Higher values offload more work to the GPU.
     #[serde(default)]
     pub n_gpu_layers: u32,
 
-    /// If set to `true`, disables GPU offloading for the multimodal projection (mmproj) (default: false).
+    /// If set to `true`, disables GPU offloading for the multimodal projection (mmproj) .
     /// This forces mmproj computations to run on CPU, even if the main model runs on GPU.
     // #[serde(default)]
     // pub no_mmproj_offload: bool,
 
-    /// Enables flash attention for faster inference (default: false).
+    /// Enables flash attention for faster inference.
     /// Requires compatible hardware and model support.
     #[serde(default)]
     pub flash_attention: bool,
 
-    /// Pooling type for embeddings (default: "Unspecified").
+    /// Pooling type for embeddings.
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
     pub pooling_type: String,
@@ -175,7 +175,7 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub audio: Vec<Vec<u8>>,
 
-    /// Enables verbose logging from llama.cpp (default: false).
+    /// Enables verbose logging from llama.cpp.
     /// Useful for debugging and performance analysis.
     #[serde(default)]
     pub verbose: bool,
@@ -274,7 +274,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Controls diversity via top-k sampling (default: 40).  Higher values mean more diverse outputs.",
+                            "Controls diversity via top-k sampling.  Higher values mean more diverse outputs.",
                         )?;
                         params
                     }),
@@ -288,7 +288,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 0.01)?;
                         params.set_item(
                             "tooltip",
-                            "Controls diversity via nucleus sampling (default: 0.8).  Lower values mean more focused outputs.",
+                            "Controls diversity via nucleus sampling.  Lower values mean more focused outputs.",
                         )?;
                         params
                     }),
@@ -302,7 +302,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 0.05)?;
                         params.set_item(
                             "tooltip",
-                            "Controls randomness (default: 0.7). Higher values mean more random outputs.",
+                            "Controls randomness. Higher values mean more random outputs.",
                         )?;
                         params
                     }),
@@ -317,7 +317,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Number of threads to use during generation (default: all available threads). Set to a specific value to limit CPU usage.",
+                            "Number of threads to use during generation. Set to a specific value to limit CPU usage.",
                         )?;
                         params
                     }),
@@ -332,7 +332,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Number of threads to use during batch and prompt processing (default: all available threads). Useful for optimizing multi-threaded workloads.",
+                            "Number of threads to use during batch and prompt processing. Useful for optimizing multi-threaded workloads.",
                         )?;
                         params
                     }),
@@ -347,7 +347,7 @@ impl LlamaCppOptions {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Batch size for prompt processing (default: 512). Larger values may improve throughput but increase memory usage.",
+                            "Batch size for prompt processing. Larger values may improve throughput but increase memory usage.",
                         )?;
                         params
                     }),
@@ -358,7 +358,7 @@ impl LlamaCppOptions {
                     (NODE_BOOLEAN, {
                         let params = PyDict::new(py);
                         params.set_item("default", options.flash_attention)?;
-                        params.set_item("tooltip", "Enables flash attention for faster inference (default: false). Requires compatible hardware and model support.")?;
+                        params.set_item("tooltip", "Enables flash attention for faster inference. Requires compatible hardware and model support.")?;
                         params
                     }),
                 )?;
@@ -377,7 +377,7 @@ impl LlamaCppOptions {
                         {
                             let params = PyDict::new(py);
                             params.set_item("default", options.pooling_type)?;
-                            params.set_item("tooltip", r#"Pooling type for embeddings (default: "Unspecified"). Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified"."#)?;
+                            params.set_item("tooltip", r#"Pooling type for embeddings. Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified"."#)?;
                             params
                         },
                     ),
@@ -408,7 +408,7 @@ impl LlamaCppOptions {
                     (NODE_BOOLEAN, {
                         let params = PyDict::new(py);
                         params.set_item("default", options.verbose)?;
-                        params.set_item("tooltip", "Enables verbose logging from llama.cpp (default: false). Useful for debugging and performance analysis..")?;
+                        params.set_item("tooltip", "Enables verbose logging from llama.cpp. Useful for debugging and performance analysis..")?;
                         params
                     }),
                 )?;

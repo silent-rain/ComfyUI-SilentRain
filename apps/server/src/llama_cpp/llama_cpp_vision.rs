@@ -202,7 +202,7 @@ impl LlamaCppVision {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Seed for random number generation (default: 0). Set to a fixed value for reproducible outputs.",
+                            "Seed for random number generation. Set to a fixed value for reproducible outputs.",
                         )?;
                         params
                     }),
@@ -232,7 +232,7 @@ impl LlamaCppVision {
                         params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
-                            "Number of GPU layers to offload (default: 0, CPU-only).",
+                            "Number of GPU layers to offload.",
                         )?;
                         params
                     }),
