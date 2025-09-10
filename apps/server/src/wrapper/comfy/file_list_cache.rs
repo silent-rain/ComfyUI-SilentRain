@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashMap,
-    sync::{Mutex, MutexGuard, OnceLock},
+    sync::{Arc, OnceLock, RwLock},
 };
 
 use log::error;
@@ -11,7 +11,7 @@ use log::error;
 use crate::{core::utils::directory::get_mtime, error::Error};
 
 // 全局文件列表缓存实例
-static FILE_LIST_CACHE: OnceLock<Mutex<FileListCache>> = OnceLock::new();
+static FILE_LIST_CACHE: OnceLock<Arc<RwLock<HashMap<String, CacheEntry>>>> = OnceLock::new();
 
 // 缓存项结构
 #[derive(Debug, Clone)]
@@ -48,30 +48,23 @@ impl CacheEntry {
 
 // 文件列表缓存
 #[derive(Default)]
-pub struct FileListCache {
-    filename_list_cache: HashMap<String, CacheEntry>,
-}
+pub struct FileListCache;
 
 impl FileListCache {
-    pub fn new() -> Result<MutexGuard<'static, FileListCache>, Error> {
-        let cache = FILE_LIST_CACHE.get_or_init(|| Mutex::new(FileListCache::default()));
-        let obj = cache.lock().map_err(|e| Error::OnceLock(e.to_string()))?;
-        Ok(obj)
-    }
-
     /// 更新文件名缓存
-    pub fn set(&mut self, key: String, entry: CacheEntry) {
-        self.filename_list_cache.insert(key, entry);
+    pub fn set(&mut self, key: String, entry: CacheEntry) -> Result<(), Error> {
+        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(HashMap::new())));
+        let mut cache_guard = cache.write().map_err(|e| Error::LockError(e.to_string()))?;
+        cache_guard.insert(key, entry);
+
+        Ok(())
     }
 
     /// 获取文件名缓存
-    pub fn get(&self, key: &str) -> Option<&CacheEntry> {
-        self.filename_list_cache.get(key)
-    }
-
-    /// 获取文件名缓存的克隆
-    pub fn get_cloned(&self, key: &str) -> Option<CacheEntry> {
-        self.filename_list_cache.get(key).cloned()
+    pub fn get(&self, key: &str) -> Result<Option<CacheEntry>, Error> {
+        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(HashMap::new())));
+        let cache_guard = cache.read().map_err(|e| Error::LockError(e.to_string()))?;
+        Ok(cache_guard.get(key).cloned())
     }
 
     /// 检查缓存是否有效
@@ -79,8 +72,21 @@ impl FileListCache {
     /// 检查文件本身的时间是否与缓存中的时间一致
     pub fn is_valid(&self, key: &str) -> bool {
         match self.get(key) {
-            Some(cache_entry) => cache_entry.is_valid(),
-            None => false,
+            Ok(Some(cache_entry)) => cache_entry.is_valid(),
+            Ok(None) | Err(_) => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_file_list_cache() -> anyhow::Result<()> {
+        let entry = FileListCache.get("key")?;
+        println!("entry: {:?}", entry);
+        Ok(())
     }
 }

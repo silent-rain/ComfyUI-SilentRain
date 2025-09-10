@@ -26,11 +26,16 @@ use crate::{
     core::category::CATEGORY_LLAMA_CPP,
     error::Error,
     llama_cpp::{LlamaCppMtmdContext, LlamaCppOptions},
-    wrapper::comfyui::{
-        types::{NODE_IMAGE, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX, NODE_STRING},
-        PromptServer,
+    wrapper::{
+        comfy::folder_paths::FolderPaths,
+        comfyui::{
+            types::{NODE_IMAGE, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX, NODE_STRING},
+            PromptServer,
+        },
     },
 };
+
+const SUBFOLDER: &str = "LLM";
 
 #[pyclass(subclass)]
 pub struct LlamaCppVision {}
@@ -112,9 +117,14 @@ impl LlamaCppVision {
                     }),
                 )?;
 
+
+                // 获取模型列表
+                let model_list = FolderPaths::default().get_filename_list(SUBFOLDER);
+                error!("model_list: {:?}", model_list);
+
                 required.set_item(
                     "model_path",
-                    (NODE_STRING, {
+                    (model_list.clone(), {
                         let params = PyDict::new(py);
                         // params.set_item("default", options.model_path)?;
                         params.set_item("tooltip", "model file path")?;
@@ -124,7 +134,7 @@ impl LlamaCppVision {
 
                 required.set_item(
                     "mmproj_path",
-                    (NODE_STRING, {
+                    (model_list, {
                         let params = PyDict::new(py);
                         params.set_item("default", options.mmproj_path)?;
                         params.set_item("tooltip", "mmproj model file path")?;

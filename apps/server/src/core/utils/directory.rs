@@ -63,13 +63,22 @@ pub fn filter_files_extensions(files: &[String], extensions: &[String]) -> Vec<S
         return files.to_vec();
     }
 
+    // 预处理扩展名：去掉点并转为小写
+    let normalized_exts: Vec<String> = extensions
+        .iter()
+        .map(|ext| ext.trim_start_matches('.').to_lowercase())
+        .collect();
+
     files
         .iter()
         .filter(|file| {
             Path::new(file)
                 .extension()
                 .and_then(|ext| ext.to_str())
-                .map(|ext| extensions.iter().any(|e| e.eq_ignore_ascii_case(ext)))
+                .map(|ext| {
+                    let normalized_ext = ext.trim_start_matches('.').to_lowercase();
+                    normalized_exts.iter().any(|e| e == &normalized_ext)
+                })
                 .unwrap_or(false)
         })
         .cloned()

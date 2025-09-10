@@ -239,6 +239,15 @@ impl FolderPaths {
             }),
         );
 
+        folder_names_and_paths.insert(
+            "LLM",
+            (vec![models_dir.join("LLM")], {
+                let mut set = HashSet::new();
+                set.insert("");
+                set
+            }),
+        );
+
         folder_names_and_paths
     }
 
@@ -291,6 +300,53 @@ impl FolderPaths {
 }
 
 impl FolderPaths {
+    /// 添加模型文件夹路径
+    ///
+    /// # 参数
+    /// * `folder_name` - 文件夹名称
+    /// * `full_folder_path` - 完整的文件夹路径
+    /// * `is_default` - 是否设为默认路径（放在列表首位）
+    pub fn add_model_folder_path(
+        &mut self,
+        folder_name: &'static str,
+        full_folder_path: PathBuf,
+        is_default: bool,
+    ) {
+        let folder_name = Self::map_legacy(folder_name);
+
+        if let Some((paths, _exts)) = self.folder_names_and_paths.get_mut(folder_name) {
+            // 检查路径是否已存在
+            if paths.contains(&full_folder_path) {
+                if is_default && paths[0] != full_folder_path {
+                    // 如果路径不是列表中的第一个，则移动到开头
+                    let index = paths.iter().position(|p| p == &full_folder_path).unwrap();
+                    paths.remove(index);
+                    paths.insert(0, full_folder_path);
+                }
+            } else {
+                // 添加新路径
+                if is_default {
+                    paths.insert(0, full_folder_path);
+                } else {
+                    paths.push(full_folder_path);
+                }
+            }
+        } else {
+            // 创建新的文件夹配置
+            let mut extensions = HashSet::new();
+            // 默认使用支持的模型文件扩展名
+            if folder_name != "configs"
+                && folder_name != "diffusers"
+                && folder_name != "classifiers"
+                && folder_name != "custom_nodes"
+            {
+                extensions = SUPPORTED_PT_EXTENSIONS.clone();
+            }
+            self.folder_names_and_paths
+                .insert(folder_name, (vec![full_folder_path], extensions));
+        }
+    }
+
     /// 获取完整文件路径
     pub fn get_full_path(
         &self,
@@ -336,7 +392,7 @@ impl FolderPaths {
     }
 
     /// 获取文件名列表
-    pub fn get_filename_list(&self, cache: &mut FileListCache, folder_name: &str) -> Vec<String> {
+    pub fn get_filename_list(&self, folder_name: &str) -> Vec<String> {
         let folder_name = Self::map_legacy(folder_name);
 
         if let Some(entry) = self.cached_filename_list(folder_name) {
@@ -345,7 +401,10 @@ impl FolderPaths {
 
         // 更新缓存
         let entry = self.get_filename_list_(folder_name);
-        cache.set(folder_name.to_string(), entry.clone());
+        // 处理可能的错误，但不影响返回结果
+        if let Err(e) = FileListCache.set(folder_name.to_string(), entry.clone()) {
+            error!("Failed to update file list cache: {}", e);
+        }
         entry.files
     }
 
@@ -353,15 +412,12 @@ impl FolderPaths {
     fn cached_filename_list(&self, folder_name: &str) -> Option<CacheEntry> {
         let folder_name = Self::map_legacy(folder_name);
 
-        let cache = match FileListCache::new() {
-            Ok(v) => v,
-            Err(e) => {
-                error!("error: {e}");
-                return None;
-            }
+        // 处理 Result<Option<CacheEntry>, Error>
+        let entry = match FileListCache.get(folder_name) {
+            Ok(Some(entry)) => entry,
+            Ok(None) | Err(_) => return None,
         };
 
-        let entry = cache.get(folder_name)?;
         // 检查目录修改时间是否变化
         if !entry.is_valid() {
             return None;
@@ -375,9 +431,12 @@ impl FolderPaths {
                     continue;
                 }
                 // 检查目录是否发生变化
-                entry
+                if !entry
                     .dir_mtimes
-                    .get(&dir_path.to_string_lossy().to_string())?;
+                    .contains_key(&dir_path.to_string_lossy().to_string())
+                {
+                    return None;
+                }
             }
         }
 
@@ -392,11 +451,15 @@ impl FolderPaths {
 
         if let Some((dir_paths, extensions)) = self.folder_names_and_paths.get(folder_name) {
             for dir_path in dir_paths {
-                let (files, dirs) = recursive_search(dir_path.to_string_lossy().as_ref(), &[]);
+                let (files, dirs) =
+                    recursive_search(dir_path.to_string_lossy().as_ref(), &[".git"]);
                 dir_mtimes.extend(dirs);
 
-                let extensions_vec: Vec<String> =
-                    extensions.iter().map(|s| s.to_string()).collect();
+                let extensions_vec: Vec<String> = extensions
+                    .iter()
+                    .map(|s| s.to_string())
+                    .filter(|ext| !ext.is_empty())
+                    .collect();
                 let filtered = filter_files_extensions(&files, &extensions_vec);
                 output_list.extend(filtered);
             }
