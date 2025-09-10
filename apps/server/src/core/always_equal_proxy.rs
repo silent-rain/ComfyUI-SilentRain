@@ -68,11 +68,16 @@ impl AlwaysEqualProxy {
         Ok(dict.into())
     }
 
+    // #[getter]
+    // fn __json__(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+    //     let dict = PyDict::new(py);
+    //     dict.set_item("value", &self.0)?;
+    //     Ok(dict.into())
+    // }
+
     #[getter]
-    fn __json__(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        let dict = PyDict::new(py);
-        dict.set_item("value", &self.0)?;
-        Ok(dict.into())
+    fn __json__(&self) -> String {
+        self.0.clone()
     }
 
     // 代理所有方法到内部 PyAny

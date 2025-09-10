@@ -20,7 +20,7 @@ print(sum_as_string(1, 2))
 
 print("\n\n")
 print("AlwaysEqualProxy: ", dir(core.AlwaysEqualProxy))
-any_type = core.AlwaysEqualProxy
+any_type = core.AlwaysEqualProxy("*")
 print(type(any_type), any_type)
 # print(type(any_type.__str__()),any_type.__str__())
 # print(type(any_type.__repr__()),any_type.__repr__())
