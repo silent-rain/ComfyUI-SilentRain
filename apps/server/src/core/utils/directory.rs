@@ -29,8 +29,8 @@ pub fn recursive_search(
 
     for entry in walker.filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
-            if let Some(path) = entry.path().to_str() {
-                files.push(path.to_string());
+            if let Some(file_name) = entry.path().file_name() {
+                files.push(file_name.to_string_lossy().to_string());
             }
         } else if entry.file_type().is_dir() {
             if let Some(path) = entry.path().to_str() {

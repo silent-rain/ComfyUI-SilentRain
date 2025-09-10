@@ -36,13 +36,20 @@ lazy_static! {
 #[allow(clippy::type_complexity)]
 #[derive(Debug)]
 pub struct FolderPaths {
+    /// 基础路径
     base_path: PathBuf,
+    /// 模型路径
     model_path: PathBuf,
     /// folders, extensions
+    /// 文件夹名称和路径映射
     folder_names_and_paths: HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)>,
+    /// 输出目录
     output_directory: PathBuf,
+    /// 临时目录
     temp_directory: PathBuf,
+    /// 输入目录
     input_directory: PathBuf,
+    /// 用户目录
     user_directory: PathBuf,
 }
 
@@ -50,17 +57,17 @@ impl Default for FolderPaths {
     /// 创建一个默认的 FolderPaths 实例
     fn default() -> Self {
         let base_path = std::env::current_dir().expect("Failed to get current directory");
-        let models_dir = base_path.join("models");
+        let models_dir = PathBuf::from("models");
         let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
 
         Self {
-            base_path: base_path.clone(),
+            base_path,
             model_path: models_dir,
             folder_names_and_paths,
-            output_directory: base_path.join("output"),
-            temp_directory: base_path.join("temp"),
-            input_directory: base_path.join("input"),
-            user_directory: base_path.join("user"),
+            output_directory: PathBuf::from("output"),
+            temp_directory: PathBuf::from("temp"),
+            input_directory: PathBuf::from("input"),
+            user_directory: PathBuf::from("user"),
         }
     }
 }
@@ -70,22 +77,22 @@ impl FolderPaths {
     pub fn from_base_directory(base_directory: &str) -> Self {
         let base_path = PathBuf::from(base_directory);
 
-        let models_dir = base_path.join("models");
+        let models_dir = PathBuf::from("models");
         let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
 
         Self {
-            base_path: base_path.clone(),
+            base_path,
             model_path: models_dir,
             folder_names_and_paths,
-            output_directory: base_path.join("output"),
-            temp_directory: base_path.join("temp"),
-            input_directory: base_path.join("input"),
-            user_directory: base_path.join("user"),
+            output_directory: PathBuf::from("output"),
+            temp_directory: PathBuf::from("temp"),
+            input_directory: PathBuf::from("input"),
+            user_directory: PathBuf::from("user"),
         }
     }
 
     fn init_folder_names_and_paths(
-        base_path: &Path,
+        _base_path: &Path,
         models_dir: &Path,
     ) -> HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
         let mut folder_names_and_paths = HashMap::new();
@@ -211,7 +218,7 @@ impl FolderPaths {
 
         folder_names_and_paths.insert(
             "custom_nodes",
-            (vec![base_path.join("custom_nodes")], HashSet::new()),
+            (vec![PathBuf::from("custom_nodes")], HashSet::new()),
         );
 
         folder_names_and_paths.insert(
@@ -297,6 +304,24 @@ impl FolderPaths {
             _ => folder_name,
         }
     }
+
+    /// 将相对路径转换为绝对路径
+    pub fn to_absolute_path(&self, relative_path: &Path) -> PathBuf {
+        self.base_path.join(relative_path)
+    }
+
+    /// 将绝对路径转换为相对路径
+    pub fn to_relative_path(&self, absolute_path: &Path) -> Option<PathBuf> {
+        absolute_path
+            .strip_prefix(&self.base_path)
+            .ok()
+            .map(|p| p.to_path_buf())
+    }
+
+    /// 检查路径是否为绝对路径
+    pub fn is_absolute_path(&self, path: &Path) -> bool {
+        path.is_absolute()
+    }
 }
 
 impl FolderPaths {
@@ -356,7 +381,7 @@ impl FolderPaths {
         let folder_name = Self::map_legacy(folder_name);
 
         // 获取基础路径列表
-        let (base_paths, _) = self
+        let (file_paths, _) = self
             .folder_names_and_paths()
             .get(folder_name)
             .ok_or_else(|| Error::InvalidDirectory(format!("folder {folder_name} not found")))?;
@@ -369,8 +394,8 @@ impl FolderPaths {
             .unwrap_or_else(|_| PathBuf::from(filename));
 
         // 在基础路径中查找文件
-        for base in base_paths {
-            let full_path = base.join(&normalized_filename);
+        for file_path in file_paths {
+            let full_path = self.base_path.join(file_path).join(&normalized_filename);
 
             // 检查文件是否存在
             if let Ok(metadata) = fs::symlink_metadata(&full_path) {
