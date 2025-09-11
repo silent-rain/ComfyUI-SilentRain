@@ -1,4 +1,11 @@
 //! llama.cpp mtmd context
+//!
+//!
+//! pub fn chat_template(&self, name: Option<&str>) -> Result<LlamaChatTemplate, ChatTemplateError>
+//!     - https://github.com/ggml-org/llama.cpp/wiki/Templates-supported-by-llama_chat_apply_template
+//!     - https://github.com/ggml-org/llama.cpp/blob/master/src/llama-chat.cpp#L28
+//!
+//!
 
 use std::{
     ffi::CString,
@@ -57,12 +64,28 @@ impl LlamaCppMtmdContext {
         let mtmd_ctx =
             MtmdContext::init_from_file(&params.get_mmproj_path()?, model, &mtmd_params)?;
 
-        let chat_template = model
-            .chat_template(params.chat_template.as_deref())
-            .map_err(|e| {
-                error!("Failed to get chat template: {e}");
-                e
-            })?;
+        // 通过预定义模板进行格式化
+        // let chat_template = model
+        //     .chat_template(params.chat_template.as_deref())
+        //     .map_err(|e| {
+        //         error!("Failed to get chat template: {e}");
+        //         e
+        //     })?;
+
+        // 通过自定义模板进行格式化
+        // let chat_template = LlamaChatTemplate::new(
+        //     params
+        //         .chat_template
+        //         .clone()
+        //         .unwrap_or("default".to_string())
+        //         .as_str(),
+        // )?;
+
+        // 默认模板
+        let chat_template = model.chat_template(None).map_err(|e| {
+            error!("Failed to get chat template: {e}");
+            e
+        })?;
 
         let batch = LlamaBatch::new(params.n_ctx as usize, 1);
 
@@ -85,8 +108,8 @@ impl LlamaCppMtmdContext {
     }
 
     pub fn load_image(&mut self, image: &[u8]) -> Result<(), MtmdBitmapError> {
-        MtmdBitmap::from_buffer(&self.mtmd_ctx, image)?;
-
+        let bitmap = MtmdBitmap::from_buffer(&self.mtmd_ctx, image)?;
+        self.bitmaps.push(bitmap);
         Ok(())
     }
 
@@ -103,7 +126,12 @@ impl LlamaCppMtmdContext {
         self.chat.extend(msgs);
 
         // Format the message using chat template (simplified)
-        let formatted_prompt = model.apply_chat_template(&self.chat_template, &self.chat, true)?;
+        let formatted_prompt = model
+            .apply_chat_template(&self.chat_template, &self.chat, true)
+            .map_err(|e| {
+                error!("Failed to apply chat template: {e}");
+                e
+            })?;
 
         let input_text = MtmdInputText {
             text: formatted_prompt,

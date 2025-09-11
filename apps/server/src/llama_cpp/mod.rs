@@ -1,4 +1,7 @@
 //! llama.cpp
+//!
+//! git: https://github.com/utilityai/llama-cpp-rs
+//!
 
 use pyo3::{
     types::{PyModule, PyModuleMethods},

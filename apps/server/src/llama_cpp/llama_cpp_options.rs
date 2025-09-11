@@ -117,7 +117,7 @@ pub struct LlamaCppOptions {
     /// Number of threads to use during batch and prompt processing.
     /// Useful for optimizing multi-threaded workloads.
     #[serde(default)]
-    pub n_threads_batch: u32,
+    pub n_threads_batch: i32,
 
     /// Batch size for prompt processing.
     /// Larger values may improve throughput but increase memory usage.
