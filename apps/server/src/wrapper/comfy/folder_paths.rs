@@ -1,7 +1,7 @@
 //! 文件夹路径
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     fs,
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
@@ -42,7 +42,7 @@ pub struct FolderPaths {
     model_path: PathBuf,
     /// folders, extensions
     /// 文件夹名称和路径映射
-    folder_names_and_paths: HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)>,
+    folder_names_and_paths: BTreeMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)>,
     /// 输出目录
     output_directory: PathBuf,
     /// 临时目录
@@ -57,17 +57,17 @@ impl Default for FolderPaths {
     /// 创建一个默认的 FolderPaths 实例
     fn default() -> Self {
         let base_path = std::env::current_dir().expect("Failed to get current directory");
-        let models_dir = PathBuf::from("models");
+        let models_dir = base_path.join("models");
         let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
 
         Self {
-            base_path,
+            base_path: base_path.clone(),
             model_path: models_dir,
             folder_names_and_paths,
-            output_directory: PathBuf::from("output"),
-            temp_directory: PathBuf::from("temp"),
-            input_directory: PathBuf::from("input"),
-            user_directory: PathBuf::from("user"),
+            output_directory: base_path.join("output"),
+            temp_directory: base_path.join("temp"),
+            input_directory: base_path.join("input"),
+            user_directory: base_path.join("user"),
         }
     }
 }
@@ -77,25 +77,25 @@ impl FolderPaths {
     pub fn from_base_directory(base_directory: &str) -> Self {
         let base_path = PathBuf::from(base_directory);
 
-        let models_dir = PathBuf::from("models");
+        let models_dir = base_path.join(&base_path);
         let folder_names_and_paths = Self::init_folder_names_and_paths(&base_path, &models_dir);
 
         Self {
-            base_path,
+            base_path: base_path.clone(),
             model_path: models_dir,
             folder_names_and_paths,
-            output_directory: PathBuf::from("output"),
-            temp_directory: PathBuf::from("temp"),
-            input_directory: PathBuf::from("input"),
-            user_directory: PathBuf::from("user"),
+            output_directory: base_path.join("output"),
+            temp_directory: base_path.join("temp"),
+            input_directory: base_path.join("input"),
+            user_directory: base_path.join("user"),
         }
     }
 
     fn init_folder_names_and_paths(
-        _base_path: &Path,
+        base_path: &Path,
         models_dir: &Path,
-    ) -> HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
-        let mut folder_names_and_paths = HashMap::new();
+    ) -> BTreeMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
+        let mut folder_names_and_paths = BTreeMap::new();
 
         // 添加各种模型路径配置
         folder_names_and_paths.insert(
@@ -218,7 +218,7 @@ impl FolderPaths {
 
         folder_names_and_paths.insert(
             "custom_nodes",
-            (vec![PathBuf::from("custom_nodes")], HashSet::new()),
+            (vec![base_path.join("custom_nodes")], HashSet::new()),
         );
 
         folder_names_and_paths.insert(
@@ -270,7 +270,7 @@ impl FolderPaths {
     /// 获取文件夹路径映射
     pub fn folder_names_and_paths(
         &self,
-    ) -> &HashMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
+    ) -> &BTreeMap<&'static str, (Vec<PathBuf>, HashSet<&'static str>)> {
         &self.folder_names_and_paths
     }
 
@@ -430,6 +430,7 @@ impl FolderPaths {
         if let Err(e) = FileListCache.set(folder_name.to_string(), entry.clone()) {
             error!("Failed to update file list cache: {}", e);
         }
+
         entry.files
     }
 
@@ -472,7 +473,7 @@ impl FolderPaths {
     fn get_filename_list_(&self, folder_name: &str) -> CacheEntry {
         let folder_name = Self::map_legacy(folder_name);
         let mut output_list = HashSet::new();
-        let mut dir_mtimes = HashMap::new();
+        let mut dir_mtimes = BTreeMap::new();
 
         if let Some((dir_paths, extensions)) = self.folder_names_and_paths.get(folder_name) {
             for dir_path in dir_paths {

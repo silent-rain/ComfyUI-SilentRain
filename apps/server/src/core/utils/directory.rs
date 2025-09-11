@@ -1,6 +1,6 @@
 //! 目录操作
 
-use std::{collections::HashMap, path::Path, time::UNIX_EPOCH};
+use std::{collections::BTreeMap, path::Path, time::UNIX_EPOCH};
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -15,22 +15,26 @@ pub fn is_directory(path: &str) -> bool {
 pub fn recursive_search(
     directory: &str,
     excluded_dir_names: &[&str],
-) -> (Vec<String>, HashMap<String, f64>) {
+) -> (Vec<String>, BTreeMap<String, f64>) {
     let mut files = Vec::new();
-    let mut dirs = HashMap::new();
+    let mut dirs = BTreeMap::new();
 
     if !Path::new(directory).is_dir() {
         return (files, dirs);
     }
 
+    let dir_path = Path::new(directory);
     let walker = WalkDir::new(directory)
         .into_iter()
         .filter_entry(|e| !is_excluded_dir(e, excluded_dir_names));
 
     for entry in walker.filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
-            if let Some(file_name) = entry.path().file_name() {
-                files.push(file_name.to_string_lossy().to_string());
+            // 获取相对于搜索目录的路径
+            if let Ok(rel_path) = entry.path().strip_prefix(dir_path) {
+                if let Some(rel_str) = rel_path.to_str() {
+                    files.push(rel_str.to_string());
+                }
             }
         } else if entry.file_type().is_dir() {
             if let Some(path) = entry.path().to_str() {

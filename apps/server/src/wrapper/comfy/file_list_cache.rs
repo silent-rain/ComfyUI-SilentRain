@@ -2,7 +2,7 @@
 //!
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     sync::{Arc, OnceLock, RwLock},
 };
 
@@ -11,7 +11,7 @@ use log::error;
 use crate::{core::utils::directory::get_mtime, error::Error};
 
 // 全局文件列表缓存实例
-static FILE_LIST_CACHE: OnceLock<Arc<RwLock<HashMap<String, CacheEntry>>>> = OnceLock::new();
+static FILE_LIST_CACHE: OnceLock<Arc<RwLock<BTreeMap<String, CacheEntry>>>> = OnceLock::new();
 
 // 缓存项结构
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ pub struct CacheEntry {
     /// 文件列表
     pub files: Vec<String>,
     /// 目录修改时间
-    pub dir_mtimes: HashMap<String, f64>,
+    pub dir_mtimes: BTreeMap<String, f64>,
     /// 时间戳
     pub timestamp: f64,
 }
@@ -53,7 +53,7 @@ pub struct FileListCache;
 impl FileListCache {
     /// 更新文件名缓存
     pub fn set(&mut self, key: String, entry: CacheEntry) -> Result<(), Error> {
-        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(HashMap::new())));
+        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(BTreeMap::new())));
         let mut cache_guard = cache.write().map_err(|e| Error::LockError(e.to_string()))?;
         cache_guard.insert(key, entry);
 
@@ -62,7 +62,7 @@ impl FileListCache {
 
     /// 获取文件名缓存
     pub fn get(&self, key: &str) -> Result<Option<CacheEntry>, Error> {
-        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(HashMap::new())));
+        let cache = FILE_LIST_CACHE.get_or_init(|| Arc::new(RwLock::new(BTreeMap::new())));
         let cache_guard = cache.read().map_err(|e| Error::LockError(e.to_string()))?;
         Ok(cache_guard.get(key).cloned())
     }
