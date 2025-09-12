@@ -1,6 +1,12 @@
 //! llama.cpp chat
 
-use std::{io::Write, num::NonZero, time::Duration};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    io::Write,
+    num::NonZero,
+    time::Duration,
+};
 
 use llama_cpp_2::{
     context::{
@@ -34,8 +40,8 @@ use crate::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
             types::{
-                NODE_IMAGE, NODE_INT, NODE_INT_MAX, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX,
-                NODE_STRING,
+                NODE_BOOLEAN, NODE_IMAGE, NODE_INT, NODE_INT_MAX, NODE_LLAMA_CPP_OPTIONS,
+                NODE_SEED_MAX, NODE_STRING,
             },
             PromptServer,
         },
@@ -45,7 +51,13 @@ use crate::{
 const SUBFOLDER: &str = "LLM";
 
 #[pyclass(subclass)]
-pub struct LlamaCppChat {}
+pub struct LlamaCppChat {
+    // 当前节点使用的模型缓存键
+    model_cache_key: String,
+    // 上下文缓存
+    context_history: Vec<LlamaChatMessage>,
+    model: Option<LlamaModel>,
+}
 
 impl PromptServer for LlamaCppChat {}
 
@@ -53,7 +65,11 @@ impl PromptServer for LlamaCppChat {}
 impl LlamaCppChat {
     #[new]
     fn new() -> Self {
-        Self {}
+        Self {
+            model_cache_key: String::new(),
+            context_history: Vec::new(),
+            model: None,
+        }
     }
 
     #[classattr]
@@ -239,6 +255,16 @@ impl LlamaCppChat {
                     }),
                 )?;
 
+                required.set_item(
+                    "keep_context",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.keep_context)?;
+                        params.set_item("tooltip", "Keep the context between requests")?;
+                        params
+                    }),
+                )?;
+
                 required
             })?;
 
@@ -260,7 +286,7 @@ impl LlamaCppChat {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, media_marker, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, extra_options=None))]
+    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, media_marker, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, keep_context, extra_options=None))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
@@ -273,6 +299,7 @@ impl LlamaCppChat {
         seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
+        keep_context: bool,
         extra_options: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(String,)> {
         let params = self
@@ -286,10 +313,12 @@ impl LlamaCppChat {
                 seed,
                 main_gpu,
                 n_gpu_layers,
+                keep_context,
                 extra_options,
             )
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
 
+        // 使用缓存生成结果
         let results = self.generate(&params);
 
         match results {
@@ -322,6 +351,7 @@ impl LlamaCppChat {
         seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
+        keep_context: bool,
         extra_options: Option<Bound<'py, PyDict>>,
     ) -> Result<LlamaCppOptions, Error> {
         let mut options = LlamaCppOptions::default();
@@ -339,18 +369,40 @@ impl LlamaCppChat {
         options.seed = seed;
         options.main_gpu = main_gpu;
         options.n_gpu_layers = n_gpu_layers;
+        options.keep_context = keep_context;
 
         Ok(options)
+    }
+
+    /// 计算模型缓存的哈希键
+    /// 只包含影响模型加载的参数
+    fn compute_model_cache_key(&self, params: &LlamaCppOptions) -> String {
+        let mut hasher = DefaultHasher::new();
+
+        // 只包含影响模型加载的关键参数
+        params.model_path.hash(&mut hasher);
+        params.n_gpu_layers.hash(&mut hasher);
+        params.main_gpu.hash(&mut hasher);
+        params.flash_attention.hash(&mut hasher);
+        params.n_ctx.hash(&mut hasher);
+
+        format!("{:x}", hasher.finish())
     }
 }
 
 impl LlamaCppChat {
+    /// 生成结果
     pub fn generate(&mut self, params: &LlamaCppOptions) -> Result<(String,), Error> {
         // llama.cpp logs
         send_logs_to_tracing(LogOptions::default().with_logs_enabled(params.verbose));
 
         // Initialize backend
         let backend = LlamaBackend::init()?;
+
+        // TODO 添加缓存 model
+        // Load cache model
+        // self.load_cache_model(&backend, params)?;
+        // let model = self.model.as_ref().unwrap();
 
         // Load model
         let model = self.load_model(&backend, params)?;
@@ -361,22 +413,18 @@ impl LlamaCppChat {
         // Load sampler
         let mut sampler = self.load_sampler(params)?;
 
-        // 创建一个大小为 512 的 LlamaBatch 对象
-        // 这个对象用于提交 token 数据进行解码
-        // 参数 512 是批处理的最大 token 数，1 是序列数
+        // 创建批处理对象
         let mut batch = LlamaBatch::new(params.n_batch as usize, 1);
 
+        // get tokens
         let tokens_list = self.create_message(&model, params)?;
-        // let tokens_list = model.str_to_token(&params.user_prompt, AddBos::Always)?;
-
         self.validate_tokens_size(tokens_list.len(), context.n_ctx(), params.n_predict)?;
-
         self.process_tokens(&mut context, &mut batch, tokens_list)?;
 
+        let t_main_start = ggml_time_us();
         // 获取当前批处理中的 token 数量，用作下一个 token 的位置索引
         let mut n_cur = batch.n_tokens();
         let mut n_decode = 0;
-        let t_main_start = ggml_time_us();
         let mut results = String::new();
 
         // 循环生成 token，直到达到最大长度 max_predict
@@ -426,6 +474,13 @@ impl LlamaCppChat {
             n_decode += 1;
         }
 
+        // 添加助手回复到上下文历史
+        if !results.is_empty() {
+            let assistant_message =
+                LlamaChatMessage::new(PromptMessageRole::Assistant.to_string(), results.clone())?;
+            self.context_history.push(assistant_message);
+        }
+
         let t_main_end = ggml_time_us();
         let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
         info!(
@@ -460,6 +515,24 @@ impl LlamaCppChat {
         info!("Loading model: {model_path:?}");
 
         Ok(model)
+    }
+
+    // Load cache model
+    fn load_cache_model(
+        &mut self,
+        backend: &LlamaBackend,
+        params: &LlamaCppOptions,
+    ) -> Result<(), Error> {
+        // 计算模型缓存键
+        let cache_key = self.compute_model_cache_key(params);
+
+        if self.model_cache_key != cache_key {
+            self.model_cache_key = cache_key;
+            let model = self.load_model(&backend, params)?;
+            self.model = Some(model);
+        }
+
+        Ok(())
     }
 
     /// Setup context parameters
@@ -517,8 +590,8 @@ impl LlamaCppChat {
             LlamaSampler::penalties(
                 64,  // penalty_last_n: 考虑最近64个token的重复情况
                 1.0, // penalty_repeat: 轻微惩罚重复token
-                0.0, // penalty_freq: 不惩罚高频token
-                0.0, // penalty_present: 轻微惩罚当前已出现的token
+                0.0, // penalty_freq: 惩罚重复的 token（正值减少重复）。-2.0 至 2.0
+                0.0, // penalty_present: 惩罚新主题的出现（正值减少重复主题），-2.0 至 2.0
             ),
             LlamaSampler::greedy(), // 贪婪采样器，始终选择概率最高的 token
         ]);
@@ -527,12 +600,12 @@ impl LlamaCppChat {
 
     /// Create message
     fn create_message(
-        &self,
+        &mut self,
         model: &LlamaModel,
         params: &LlamaCppOptions,
     ) -> Result<Vec<LlamaToken>, Error> {
         // Create message
-        let msgs = vec![
+        let mut msgs = vec![
             LlamaChatMessage::new(
                 PromptMessageRole::System.to_string(),
                 params.system_prompt.clone(),
@@ -542,6 +615,16 @@ impl LlamaCppChat {
                 params.user_prompt.clone(),
             )?,
         ];
+
+        // Add history messages
+        if params.keep_context {
+            for msg in &self.context_history {
+                msgs.push(msg.clone());
+            }
+        } else {
+            // 清空历史记录
+            self.context_history.clear();
+        }
 
         // 通过预定义模板进行格式化
         // let chat_template = model
@@ -581,6 +664,8 @@ impl LlamaCppChat {
                 error!("failed to tokenize {:?}, err: {}", formatted_prompt, e);
                 e
             })?;
+
+        // let tokens_list = model.str_to_token(&params.user_prompt, AddBos::Always)?;
 
         Ok(tokens_list)
     }

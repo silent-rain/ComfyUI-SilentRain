@@ -177,6 +177,10 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub flash_attention: bool,
 
+    /// Keep the context between requests
+    #[serde(default)]
+    pub keep_context: bool,
+
     /// Pooling type for embeddings.
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
@@ -560,6 +564,8 @@ impl Default for LlamaCppOptions {
             n_gpu_layers: 0, // 默认不启用 GPU 卸载
             // no_mmproj_offload: false, // 默认启用 mmproj 的 GPU 卸载
             flash_attention: false, // 默认禁用 Flash Attention
+
+            keep_context: false, // 保持上下文（默认禁用）
 
             // 池化类型（默认未指定）
             pooling_type: PoolingTypeMode::Unspecified.to_string(),
