@@ -35,6 +35,30 @@ use crate::{
 
 const SUBFOLDER: &str = "LLM";
 
+/// 对话消息角色枚举
+#[derive(Debug, Clone, PartialEq, EnumString, Display)]
+#[strum(serialize_all = "kebab-case")]
+pub enum PromptMessageRole {
+    /// 系统角色（用于初始化或系统级指令）
+    #[strum(to_string = "System")]
+    System,
+    /// 用户角色（人类用户输入）
+    #[strum(to_string = "User")]
+    User,
+    /// AI 助手角色（模型生成的回复）
+    #[strum(to_string = "Assistant")]
+    Assistant,
+    /// 可选：自定义角色（如多AI代理场景）
+    #[strum(transparent)]
+    Custom(String),
+}
+
+impl PromptMessageRole {
+    pub fn custom(role: &str) -> Self {
+        Self::Custom(role.to_string())
+    }
+}
+
 /// 处理模式枚举
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
@@ -495,6 +519,15 @@ impl LlamaCppOptions {
 
         Ok(mmproj_path.to_string_lossy().to_string())
     }
+
+    /// get max predict
+    pub fn max_predict(&self) -> i32 {
+        if self.n_predict < 0 {
+            i32::MAX
+        } else {
+            self.n_predict
+        }
+    }
 }
 
 impl Default for LlamaCppOptions {
@@ -511,8 +544,8 @@ impl Default for LlamaCppOptions {
 
             // 采样参数
             top_k: 40,        // 默认 top-k 采样值
-            top_p: 0.8,       // 默认 top-p 采样值
-            temperature: 0.7, // 默认温度值
+            top_p: 0.95,      // 默认 top-p 采样值
+            temperature: 0.6, // 默认温度值
             seed: -1,         // 默认随机种子（-1 表示随机）
 
             // 线程和批处理参数

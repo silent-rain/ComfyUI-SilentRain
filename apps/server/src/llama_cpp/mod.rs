@@ -11,19 +11,23 @@ use pyo3::{
 use crate::core::node::NodeRegister;
 
 mod llama_cpp_options;
-pub use llama_cpp_options::LlamaCppOptions;
+pub use llama_cpp_options::{LlamaCppOptions, PromptMessageRole};
+
+mod lllama_cpp_mtmd_context;
+pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
 
 mod llama_cpp_vision;
 pub use llama_cpp_vision::LlamaCppVision;
 
-mod lllama_cpp_mtmd_context;
-pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
+mod llama_cpp_chat;
+pub use llama_cpp_chat::LlamaCppChat;
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "math")?;
     submodule.add_class::<LlamaCppOptions>()?;
     submodule.add_class::<LlamaCppVision>()?;
+    submodule.add_class::<LlamaCppChat>()?;
     Ok(submodule)
 }
 
@@ -39,6 +43,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "LlamaCppVision",
             py.get_type::<LlamaCppVision>(),
             "Sr Llama Cpp Vision",
+        ),
+        NodeRegister(
+            "LlamaCppChat",
+            py.get_type::<LlamaCppChat>(),
+            "Sr Llama Cpp Chat",
         ),
     ];
     Ok(nodes)
