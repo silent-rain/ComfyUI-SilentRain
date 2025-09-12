@@ -609,10 +609,14 @@ impl LlamaCppChat {
         n_ctx: u32,
         n_predict: i32,
     ) -> Result<(), Error> {
-        if n_predict < 0 && tokens_size >= n_ctx as usize {
-            return Err(Error::InvalidParameter(
-                "the prompt is too long, it has more tokens than n_ctx".to_string(),
-            ));
+        if n_predict < 0 {
+            if tokens_size >= n_ctx as usize {
+                return Err(Error::InvalidParameter(
+                    "the prompt is too long, it has more tokens than n_ctx".to_string(),
+                ));
+            }
+
+            return Ok(());
         }
 
         let n_kv_req = tokens_size as i32 + (n_predict - tokens_size as i32);
