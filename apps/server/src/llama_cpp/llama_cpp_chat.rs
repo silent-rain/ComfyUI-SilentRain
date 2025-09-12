@@ -528,7 +528,7 @@ impl LlamaCppChat {
 
         if self.model_cache_key != cache_key {
             self.model_cache_key = cache_key;
-            let model = self.load_model(&backend, params)?;
+            let model = self.load_model(backend, params)?;
             self.model = Some(model);
         }
 
