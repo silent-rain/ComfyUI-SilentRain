@@ -582,7 +582,6 @@ impl LlamaCppChat {
         */
 
         let sampler = LlamaSampler::chain_simple([
-            LlamaSampler::dist(seed), // 随机种子，用于生成随机数
             LlamaSampler::top_k(params.top_k),
             LlamaSampler::top_p(params.top_p, 0),
             LlamaSampler::min_p(0.0, 0),
@@ -593,7 +592,8 @@ impl LlamaCppChat {
                 0.0, // penalty_freq: 惩罚重复的 token（正值减少重复）。-2.0 至 2.0
                 0.0, // penalty_present: 惩罚新主题的出现（正值减少重复主题），-2.0 至 2.0
             ),
-            LlamaSampler::greedy(), // 贪婪采样器，始终选择概率最高的 token
+            // LlamaSampler::greedy(),   // 贪婪采样器，始终选择概率最高的 token, 应用于最后一个，该采样器会导致每次文本一样
+            LlamaSampler::dist(seed), // 随机种子，用于生成随机数, 应用于最后一个
         ]);
         Ok(sampler)
     }
