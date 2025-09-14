@@ -54,6 +54,7 @@ candle-nn = "0.9"
 candle-onnx = "0.9"
 candle-transformers = "0.9"
 candle-flash-attn = "0.9"   # 用于 Flash Attention
+candle-kernels = "0.9"
 hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.22"         # 标记文本
 parquet = "56.0"            # 列式存储数据文件格式

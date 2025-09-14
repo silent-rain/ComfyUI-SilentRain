@@ -740,6 +740,7 @@ dependencies = [
  "base64 0.22.1",
  "candle-core",
  "candle-flash-attn",
+ "candle-kernels",
  "candle-nn",
  "candle-onnx",
  "candle-transformers",

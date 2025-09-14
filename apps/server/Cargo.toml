@@ -48,6 +48,7 @@ candle-nn = { workspace = true }
 candle-onnx = { workspace = true }
 candle-transformers = { workspace = true }
 candle-flash-attn = { workspace = true, optional = true }
+candle-kernels = { workspace = true }
 hf-hub = { workspace = true, features = ["rustls-tls"] }
 tokenizers = { workspace = true }
 parquet = { workspace = true }
@@ -89,9 +90,9 @@ mkl = [
     "candle-core/mkl",
 ] # Intel 平台
 cuda = [
-    "candle-core/cuda",
-    "candle-nn/cuda",
-    "candle-transformers/cuda",
+    # "candle-core/cuda",
+    # "candle-nn/cuda",
+    # "candle-transformers/cuda",
     "llama-cpp-2/cuda",
     # "ort/cuda",
 ] # NVIDIA 平台
