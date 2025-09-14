@@ -606,12 +606,25 @@ impl LlamaCppVision {
             params.seed as u32
         };
 
+        /* penalties:
+            减少重复性: penalties(64, 1.2, 0.0, 0.2)
+            增加多样性: penalties(64, 1.1, 0.1, 0.0)
+            默认平衡: penalties(64, 1.0, 0.0, 0.0)
+        */
+
         let sampler = LlamaSampler::chain_simple([
-            LlamaSampler::greedy(),
-            LlamaSampler::dist(seed),
             LlamaSampler::top_k(params.top_k),
             LlamaSampler::top_p(params.top_p, 0),
+            LlamaSampler::min_p(0.0, 0),
             LlamaSampler::temp(params.temperature),
+            LlamaSampler::penalties(
+                64,  // penalty_last_n: 考虑最近64个token的重复情况
+                1.0, // penalty_repeat: 轻微惩罚重复token
+                0.0, // penalty_freq: 惩罚重复的 token（正值减少重复）。-2.0 至 2.0
+                0.0, // penalty_present: 惩罚新主题的出现（正值减少重复主题），-2.0 至 2.0
+            ),
+            // LlamaSampler::greedy(),   // 贪婪采样器，始终选择概率最高的 token, 应用于最后一个，该采样器会导致每次文本一样
+            LlamaSampler::dist(seed), // 随机种子，用于生成随机数, 应用于最后一个
         ]);
         Ok(sampler)
     }
