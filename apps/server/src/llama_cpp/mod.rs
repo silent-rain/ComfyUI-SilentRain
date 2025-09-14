@@ -16,6 +16,9 @@ pub use llama_cpp_options::{LlamaCppOptions, PromptMessageRole};
 mod lllama_cpp_mtmd_context;
 pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
 
+mod llama_cpp_pipeline;
+pub use llama_cpp_pipeline::LlamaCppPipeline;
+
 mod llama_cpp_vision;
 pub use llama_cpp_vision::LlamaCppVision;
 

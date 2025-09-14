@@ -18,6 +18,7 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
 };
 use pythonize::{depythonize, pythonize};
+use rand::TryRngCore;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
@@ -177,9 +178,33 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub flash_attention: bool,
 
-    /// Keep the context between requests
+    /// Whether to keep context between requests
     #[serde(default)]
     pub keep_context: bool,
+
+    /// Whether to cache model between requests
+    #[serde(default)]
+    pub cache_model: bool,
+
+    /// Size of the sliding window for repeat penalty
+    /// Specifies how many most recent tokens to consider for repeat penalty
+    #[serde(default)]
+    pub penalty_last_n: i32,
+
+    /// Repeat penalty coefficient
+    /// Penalizes repeated tokens - higher values enforce more diversity
+    #[serde(default)]
+    pub penalty_repeat: f32,
+
+    /// Frequency penalty coefficient
+    /// Penalizes tokens based on their frequency in the text
+    #[serde(default)]
+    pub penalty_freq: f32,
+
+    /// Presence penalty coefficient
+    /// Penalizes tokens already present in the context
+    #[serde(default)]
+    pub penalty_present: f32,
 
     /// Pooling type for embeddings.
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
@@ -336,7 +361,7 @@ impl LlamaCppOptions {
                     }),
                 )?;
 
-                 required.set_item(
+                required.set_item(
                     "n_threads",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -390,6 +415,63 @@ impl LlamaCppOptions {
                         params
                     }),
                 )?;
+
+                required.set_item(
+                    "penalty_last_n",
+                    (NODE_INT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.penalty_last_n)?;
+                        params.set_item("step", 1)?;
+                        params.set_item(
+                            "tooltip",
+                            "Size of the sliding window for repeat penalty Specifies how many most recent tokens to consider for repeat penalty.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "penalty_repeat",
+                    (NODE_FLOAT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.penalty_repeat)?;
+                        params.set_item("step", 0.01)?;
+                        params.set_item(
+                            "tooltip",
+                            "Penalizes repeated tokens - higher values enforce more diversity.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "penalty_freq",
+                    (NODE_FLOAT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.penalty_freq)?;
+                        params.set_item("step", 0.01)?;
+                        params.set_item(
+                            "tooltip",
+                            "Penalizes tokens based on their frequency in the text - higher values enforce more diversity.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "penalty_present",
+                    (NODE_FLOAT, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.penalty_present)?;
+                        params.set_item("step", 0.01)?;
+                        params.set_item(
+                            "tooltip",
+                            "Penalizes tokens already present in the context - higher values enforce more diversity.",
+                        )?;
+                        params
+                    }),
+                )?;
+
 
                 required.set_item(
                     "pooling_type",
@@ -524,12 +606,23 @@ impl LlamaCppOptions {
         Ok(mmproj_path.to_string_lossy().to_string())
     }
 
-    /// get max predict
+    /// max predict
     pub fn max_predict(&self) -> i32 {
         if self.n_predict < 0 {
             i32::MAX
         } else {
             self.n_predict
+        }
+    }
+
+    /// get seed
+    pub fn get_seed(&self) -> u32 {
+        // 随机值
+        if self.seed == -1 {
+            // 随机值
+            rand::rng().try_next_u32().unwrap_or(0)
+        } else {
+            self.seed as u32
         }
     }
 }
@@ -566,6 +659,13 @@ impl Default for LlamaCppOptions {
             flash_attention: false, // 默认禁用 Flash Attention
 
             keep_context: false, // 保持上下文（默认禁用）
+            cache_model: false,  // 缓存模型（默认禁用）
+
+            // Penalizes tokens for being present in the context.
+            penalty_last_n: 64,   // 重复惩罚的窗口大小
+            penalty_repeat: 1.2,  // 重复惩罚系数
+            penalty_freq: 1.1,    // 重复频率惩罚系数
+            penalty_present: 0.0, // 存在惩罚系数
 
             // 池化类型（默认未指定）
             pooling_type: PoolingTypeMode::Unspecified.to_string(),

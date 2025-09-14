@@ -42,6 +42,8 @@ lazy_static = "1.5"   # 用于延迟初始化全局变量
 reqwest = "0.12"      # 用于 HTTP 客户端
 regex = "1.11"        # 正则表达式
 base64 = "0.22"       # 用于 base64 编码解码
+rust-embed = "8.7"    # 用于将静态文件嵌入到二进制文件中
+tempfile = "3.22"     # 用于创建临时文件和目录
 
 anyhow = "1.0"
 thiserror = "2.0"

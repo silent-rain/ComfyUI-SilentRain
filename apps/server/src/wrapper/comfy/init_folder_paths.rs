@@ -26,5 +26,11 @@ pub fn apply_custom_paths() {
     );
     folder_paths.add_model_folder_path("loras", folder_paths.model_path().join("loras"), false);
 
+    folder_paths.add_model_folder_path(
+        "text_encoders",
+        folder_paths.model_path().join("text_encoders"),
+        false,
+    );
+
     folder_paths.add_model_folder_path("LLM", folder_paths.model_path().join("LLM"), false);
 }

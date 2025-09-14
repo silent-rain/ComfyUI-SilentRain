@@ -139,6 +139,8 @@ impl LlamaCppMtmdContext {
             parse_special: true,
         };
 
+        info!("chat_template: {input_text:?}");
+
         let bitmap_refs: Vec<&MtmdBitmap> = self.bitmaps.iter().collect();
 
         if bitmap_refs.is_empty() {
