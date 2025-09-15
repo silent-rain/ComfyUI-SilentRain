@@ -41,6 +41,9 @@ pub struct LlamaCppPipeline {
     batch: LlamaBatch,
 }
 
+unsafe impl Send for LlamaCppPipeline {}
+unsafe impl Sync for LlamaCppPipeline {}
+
 impl LlamaCppPipeline {
     pub fn new(params: &LlamaCppOptions) -> Result<Self, Error> {
         // llama.cpp logs

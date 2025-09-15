@@ -1,6 +1,6 @@
 //! llama.cpp chat
 
-use std::sync::OnceLock;
+use std::sync::RwLock;
 
 use log::error;
 use pyo3::{
@@ -27,15 +27,30 @@ use crate::{
     },
 };
 
-const LLAMA_CPP_PIPELINE: OnceLock<LlamaCppPipeline> = OnceLock::new();
+static LLAMA_CPP_PIPELINE: RwLock<Option<LlamaCppPipeline>> = RwLock::new(None);
 
-#[pyclass(subclass)]
-pub struct LlamaCppChat {
-    pipeline: Option<LlamaCppPipeline>,
+// 设置值
+fn set_pipeline(pipeline: LlamaCppPipeline) -> Result<(), Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+    *w = Some(pipeline);
+
+    Ok(())
 }
 
-unsafe impl Send for LlamaCppChat {}
-unsafe impl Sync for LlamaCppChat {}
+// 读取值
+fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+
+    let pipeline = w.take();
+    Ok(pipeline)
+}
+
+#[pyclass(subclass)]
+pub struct LlamaCppChat {}
 
 impl PromptServer for LlamaCppChat {}
 
@@ -43,7 +58,7 @@ impl PromptServer for LlamaCppChat {}
 impl LlamaCppChat {
     #[new]
     fn new() -> Self {
-        Self { pipeline: None }
+        Self {}
     }
 
     #[classattr]
@@ -374,54 +389,27 @@ impl LlamaCppChat {
 impl LlamaCppChat {
     /// 生成结果
     pub fn generate(&mut self, params: &LlamaCppOptions) -> Result<(String,), Error> {
-        // if self.pipeline.is_none() {
-        //     let pipeline =
-        //         LlamaCppPipeline::new(&params).expect("Failed to create LlamaCppPipeline");
-        //     self.pipeline = Some(pipeline);
-        //     error!("=======================8");
-        // }
-        // error!("=======================6");
-        // let mut pipeline = self.pipeline.take().unwrap();
+        let pipeline = get_pipeline()?;
 
-        // let mut binding = LLAMA_CPP_PIPELINE;
-        // binding.get_or_init(|| {
-        //     LlamaCppPipeline::new(&params).expect("Failed to create LlamaCppPipeline")
-        // });
-
-        LLAMA_CPP_PIPELINE
-            .set(LlamaCppPipeline::new(&params).expect("Failed to create LlamaCppPipeline"))
-            .map_err(|_e| Error::OnceLock(format!("Failed to set pipeline")))?;
-
-        error!("=======================55");
-        LLAMA_CPP_PIPELINE.wait();
-        error!("=======================556");
-        // #[allow(const_item_mutation)]
-        // let mut pipeline = LLAMA_CPP_PIPELINE
-        //     .take()
-        //     .expect("Failed to get LlamaCppPipeline");
-
-        let mut binding = LLAMA_CPP_PIPELINE;
-        let pipeline = binding.get_mut().expect("Failed to get LlamaCppPipeline");
+        let mut pipeline = match pipeline {
+            Some(pipeline) => pipeline,
+            None => LlamaCppPipeline::new(&params).expect("Failed to create LlamaCppPipeline"),
+        };
 
         // 重新加载模型
         if !params.cache_model {
             pipeline.update_model(&params)?;
         }
 
-        error!("=======================5");
-
         pipeline.update_context(&params)?;
         pipeline.rest_batch(&params)?;
         pipeline.load_user_tokens(&params)?;
         let results = pipeline.generate_chat(&params)?;
 
-        error!("=======================3");
-
-        // LLAMA_CPP_PIPELINE
-        //     .set(pipeline)
-        //     .map_err(|_e| Error::OnceLock(format!("Failed to set pipeline")))?;
-
-        error!("=======================1");
+        // 保存模型
+        if params.cache_model {
+            set_pipeline(pipeline)?;
+        }
 
         Ok((results,))
     }
