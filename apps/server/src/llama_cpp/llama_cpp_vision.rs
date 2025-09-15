@@ -169,19 +169,6 @@ impl LlamaCppVision {
                 )?;
 
                 required.set_item(
-                    "media_marker",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.media_marker)?;
-                        params.set_item(
-                            "tooltip",
-                            "Media marker. If not provided, the default marker will be used.",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
                     "n_ctx",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -277,7 +264,7 @@ impl LlamaCppVision {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (images, model_path, mmproj_path, system_prompt, user_prompt, media_marker, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, extra_options=None))]
+    #[pyo3(name = "execute", signature = (images, model_path, mmproj_path, system_prompt, user_prompt, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, keep_context, cache_model, extra_options=None))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
@@ -286,12 +273,13 @@ impl LlamaCppVision {
         mmproj_path: String,
         system_prompt: String,
         user_prompt: String,
-        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
+        keep_context: bool,
+        cache_model: bool,
         extra_options: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(Bound<'py, PyAny>, String)> {
         let params = self
@@ -301,12 +289,13 @@ impl LlamaCppVision {
                 mmproj_path,
                 system_prompt,
                 user_prompt,
-                media_marker,
                 n_ctx,
                 n_predict,
                 seed,
                 main_gpu,
                 n_gpu_layers,
+                keep_context,
+                cache_model,
                 extra_options,
             )
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
@@ -339,12 +328,13 @@ impl LlamaCppVision {
         mmproj_path: String,
         system_prompt: String,
         user_prompt: String,
-        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
         main_gpu: i32,
         n_gpu_layers: u32,
+        keep_context: bool,
+        cache_model: bool,
         extra_options: Option<Bound<'py, PyDict>>,
     ) -> Result<LlamaCppOptions, Error> {
         let mut options = LlamaCppOptions::default();
@@ -357,12 +347,13 @@ impl LlamaCppVision {
         options.mmproj_path = mmproj_path;
         options.system_prompt = system_prompt;
         options.user_prompt = user_prompt;
-        options.media_marker = Some(media_marker);
         options.n_ctx = n_ctx;
         options.n_predict = n_predict;
         options.seed = seed;
         options.main_gpu = main_gpu;
         options.n_gpu_layers = n_gpu_layers;
+        options.keep_context = keep_context;
+        options.cache_model = cache_model;
         options.images = self.to_images_bs4(images)?;
 
         Ok(options)

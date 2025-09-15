@@ -211,14 +211,14 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub pooling_type: String,
 
+    /// Media marker. If not provided, the default marker will be used.
+    #[serde(default)]
+    pub media_marker: Option<String>,
+
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
     #[serde(default)]
     pub chat_template: Option<String>,
-
-    /// Media marker. If not provided, the default marker will be used.
-    #[serde(default)]
-    pub media_marker: Option<String>,
 
     /// Path to image file(s)
     #[serde(default)]
@@ -494,6 +494,19 @@ impl LlamaCppOptions {
                 )?;
 
                 required.set_item(
+                    "media_marker",
+                    (NODE_STRING, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.media_marker)?;
+                        params.set_item(
+                            "tooltip",
+                            "Media marker. If not provided, the default marker will be used.",
+                        )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
                     "chat_template",
                     (NODE_STRING, {
                         let params = PyDict::new(py);
@@ -671,8 +684,8 @@ impl Default for LlamaCppOptions {
             pooling_type: PoolingTypeMode::Unspecified.to_string(),
 
             // 多模态输入（默认留空）
-            chat_template: None, // 默认聊天模板（空）
             media_marker: None,  // 默认媒体标记（空）
+            chat_template: None, // 默认聊天模板（空）
             images: Vec::new(),
             audio: Vec::new(),
 

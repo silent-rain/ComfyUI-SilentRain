@@ -157,19 +157,6 @@ impl LlamaCppChat {
                 )?;
 
                 required.set_item(
-                    "media_marker",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", options.media_marker)?;
-                        params.set_item(
-                            "tooltip",
-                            "Media marker. If not provided, the default marker will be used.",
-                        )?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
                     "n_ctx",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -285,14 +272,13 @@ impl LlamaCppChat {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, media_marker, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, keep_context, cache_model, extra_options=None))]
+    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, keep_context, cache_model, extra_options=None))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
         model_path: String,
         system_prompt: String,
         user_prompt: String,
-        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
@@ -307,7 +293,6 @@ impl LlamaCppChat {
                 model_path,
                 system_prompt,
                 user_prompt,
-                media_marker,
                 n_ctx,
                 n_predict,
                 seed,
@@ -346,7 +331,6 @@ impl LlamaCppChat {
         model_path: String,
         system_prompt: String,
         user_prompt: String,
-        media_marker: String,
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
@@ -365,7 +349,6 @@ impl LlamaCppChat {
         options.model_path = model_path;
         options.system_prompt = system_prompt;
         options.user_prompt = user_prompt;
-        options.media_marker = Some(media_marker);
         options.n_ctx = n_ctx;
         options.n_predict = n_predict;
         options.seed = seed;

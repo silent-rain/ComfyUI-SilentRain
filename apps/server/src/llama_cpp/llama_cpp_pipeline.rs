@@ -28,7 +28,7 @@ use log::{error, info};
 
 use crate::{
     error::Error,
-    llama_cpp::{LlamaCppOptions, PromptMessageRole},
+    llama_cpp::{LlamaCppMtmdContext, LlamaCppOptions, PromptMessageRole},
 };
 
 pub struct LlamaCppPipeline {
@@ -37,6 +37,7 @@ pub struct LlamaCppPipeline {
     backend: LlamaBackend,
     model: Arc<LlamaModel>,
     context: Arc<RwLock<LlamaContext<'static>>>,
+    mtmd_context: Option<LlamaCppMtmdContext>,
     sampler: LlamaSampler,
     batch: LlamaBatch,
 }
@@ -64,6 +65,12 @@ impl LlamaCppPipeline {
             &backend,
             params,
         )?));
+
+        // Create the MTMD context
+        let mut mtmd_ctx = LlamaCppMtmdContext::new(&model, params)?;
+        info!("Loading mtmd projection: {}", params.mmproj_path);
+
+        info!("Model loaded successfully");
 
         // 创建批处理对象
         let batch = LlamaBatch::new(params.n_batch as usize, 1);
@@ -164,6 +171,9 @@ impl LlamaCppPipeline {
 
         Ok(results)
     }
+
+    // // 视觉推理
+    // pub fn generate_vision(&mut self, params: &LlamaCppOptions) -> Result<String, Error> {}
 }
 
 impl LlamaCppPipeline {
@@ -469,9 +479,9 @@ mod tests {
     fn test_simple() -> anyhow::Result<()> {
         let params = LlamaCppOptions::default();
         let mut pipeline = LlamaCppPipeline::new(&params)?;
-        pipeline.rest_batch(&params)?;
         pipeline.update_model(&params)?;
         pipeline.update_context(&params)?;
+        pipeline.rest_batch(&params)?;
         pipeline.load_user_tokens(&params)?;
         let results = pipeline.generate_chat(&params)?;
         println!("{results:?}");

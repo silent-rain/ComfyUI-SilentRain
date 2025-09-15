@@ -13,8 +13,11 @@ use crate::core::node::NodeRegister;
 mod llama_cpp_options;
 pub use llama_cpp_options::{LlamaCppOptions, PromptMessageRole};
 
-mod lllama_cpp_mtmd_context;
-pub use lllama_cpp_mtmd_context::LlamaCppMtmdContext;
+mod llama_cpp_base_context;
+pub use llama_cpp_base_context::LlamaCppBaseContext;
+
+mod llama_cpp_mtmd_context;
+pub use llama_cpp_mtmd_context::LlamaCppMtmdContext;
 
 mod llama_cpp_pipeline;
 pub use llama_cpp_pipeline::LlamaCppPipeline;
