@@ -42,6 +42,8 @@ rust-embed = { workspace = true, features = [
     "mime-guess",
 ] }
 tempfile = { workspace = true }
+image = { workspace = true }
+png = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }
@@ -54,12 +56,10 @@ candle-nn = { workspace = true }
 candle-onnx = { workspace = true }
 candle-transformers = { workspace = true }
 candle-flash-attn = { workspace = true, optional = true }
-candle-kernels = { workspace = true }
+candle-kernels = { workspace = true, optional = true }
 hf-hub = { workspace = true, features = ["rustls-tls"] }
 tokenizers = { workspace = true }
 parquet = { workspace = true }
-image = { workspace = true }
-png = { workspace = true }
 llama-cpp-2 = { workspace = true, features = [
     "dynamic-link", # 动态链接 llama.cpp 库（如 libllama.so），而非静态编译到应用中。
     "sampler",
