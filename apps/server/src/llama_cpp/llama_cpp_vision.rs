@@ -21,8 +21,8 @@ use crate::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
             types::{
-                NODE_IMAGE, NODE_INT, NODE_INT_MAX, NODE_LLAMA_CPP_OPTIONS, NODE_SEED_MAX,
-                NODE_STRING,
+                NODE_BOOLEAN, NODE_IMAGE, NODE_INT, NODE_INT_MAX, NODE_LLAMA_CPP_OPTIONS,
+                NODE_SEED_MAX, NODE_STRING,
             },
             PromptServer,
         },
@@ -249,6 +249,26 @@ impl LlamaCppVision {
                             "tooltip",
                             "Number of GPU layers to offload.",
                         )?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "keep_context",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.keep_context)?;
+                        params.set_item("tooltip", "Keep the context between requests")?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
+                    "cache_model",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.cache_model)?;
+                        params.set_item("tooltip", "Whether to cache model between requests")?;
                         params
                     }),
                 )?;
@@ -518,7 +538,7 @@ impl LlamaCppVision {
 
         let mut pipeline = match pipeline {
             Some(pipeline) => pipeline,
-            None => LlamaCppPipeline::new(params).expect("Failed to create LlamaCppPipeline"),
+            None => LlamaCppPipeline::new(params)?,
         };
 
         // 重新加载模型

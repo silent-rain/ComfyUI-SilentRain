@@ -381,7 +381,7 @@ impl LlamaCppChat {
 
         let mut pipeline = match pipeline {
             Some(pipeline) => pipeline,
-            None => LlamaCppPipeline::new(params).expect("Failed to create LlamaCppPipeline"),
+            None => LlamaCppPipeline::new(params)?,
         };
 
         // 重新加载模型
