@@ -9,5 +9,6 @@
         "ms-python.isort",
         "ms-python.vscode-pylance",
         "ms-python.black-formatter",
+        "samuelcolvin.jinjahtml",
     ]
 }

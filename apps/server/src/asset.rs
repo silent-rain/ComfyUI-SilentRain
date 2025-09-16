@@ -16,13 +16,13 @@ pub struct Resources;
 
 impl Resources {
     pub fn to_bytes(path: &str) -> Option<Vec<u8>> {
-        let asset = Self::get(&path)?;
+        let asset = Self::get(path)?;
         Some(asset.data.to_vec())
     }
 
     /// 获取文件类型
     pub fn mimetype(path: &str) -> Option<String> {
-        let asset = Self::get(&path)?;
+        let asset = Self::get(path)?;
         Some(asset.metadata.mimetype().to_string())
     }
 
@@ -36,7 +36,7 @@ impl Resources {
             .tempfile()?;
 
         temp_file.write_all(
-            &Self::get(&path)
+            &Self::get(path)
                 .ok_or_else(|| Error::FileNotFound(format!("resource file not found: {}", path)))?
                 .data,
         )?;
@@ -44,7 +44,7 @@ impl Resources {
         temp_file.flush()?;
         info!("create temp file: {}", temp_path.display());
 
-        if PathBuf::from(temp_path.clone()).exists() {
+        if temp_path.clone().exists() {
             println!("model file exists");
         } else {
             println!("model file not exists");

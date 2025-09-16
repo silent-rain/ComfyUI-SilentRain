@@ -1,20 +1,10 @@
 //! llama.cpp vision
 
-use std::{io::Cursor, num::NonZero};
+use std::{io::Cursor, sync::RwLock};
 
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, ImageBuffer, ImageFormat};
-use llama_cpp_2::{
-    context::{
-        params::{LlamaContextParams, LlamaPoolingType},
-        LlamaContext,
-    },
-    llama_backend::LlamaBackend,
-    model::{params::LlamaModelParams, LlamaChatMessage, LlamaModel},
-    sampling::LlamaSampler,
-    send_logs_to_tracing, LogOptions,
-};
-use log::{error, info};
+use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -22,12 +12,11 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 use pythonize::depythonize;
-use rand::TryRngCore;
 
 use crate::{
     core::category::CATEGORY_LLAMA_CPP,
     error::Error,
-    llama_cpp::{LlamaCppMtmdContext, LlamaCppOptions},
+    llama_cpp::{LlamaCppOptions, LlamaCppPipeline},
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
@@ -40,7 +29,27 @@ use crate::{
     },
 };
 
-const SUBFOLDER: &str = "LLM";
+static LLAMA_CPP_PIPELINE: RwLock<Option<LlamaCppPipeline>> = RwLock::new(None);
+
+// 设置值
+fn set_pipeline(pipeline: LlamaCppPipeline) -> Result<(), Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+    *w = Some(pipeline);
+
+    Ok(())
+}
+
+// 读取值
+fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+
+    let pipeline = w.take();
+    Ok(pipeline)
+}
 
 #[pyclass(subclass)]
 pub struct LlamaCppVision {}
@@ -124,7 +133,8 @@ impl LlamaCppVision {
 
 
                 // 获取模型列表
-                let model_list = FolderPaths::default().get_filename_list(SUBFOLDER);
+                let model_list = Self::get_model_list();
+                let mmproj_model_list = Self::get_mmproj_model_list();
 
                 required.set_item(
                     "model_path",
@@ -138,9 +148,9 @@ impl LlamaCppVision {
 
                 required.set_item(
                     "mmproj_path",
-                    (model_list, {
+                    (mmproj_model_list, {
                         let params = PyDict::new(py);
-                        params.set_item("default", options.mmproj_path)?;
+                        // params.set_item("default", options.mmproj_path)?;
                         params.set_item("tooltip", "mmproj model file path")?;
                         params
                     }),
@@ -281,7 +291,7 @@ impl LlamaCppVision {
         keep_context: bool,
         cache_model: bool,
         extra_options: Option<Bound<'py, PyDict>>,
-    ) -> PyResult<(Bound<'py, PyAny>, String)> {
+    ) -> PyResult<(Bound<'py, PyAny>, Vec<String>)> {
         let params = self
             .options_parser(
                 &images,
@@ -357,6 +367,33 @@ impl LlamaCppVision {
         options.images = self.to_images_bs4(images)?;
 
         Ok(options)
+    }
+
+    /// 获取模型列表
+    fn get_model_list() -> Vec<String> {
+        let llm_list = FolderPaths::default().get_filename_list("LLM");
+        let text_encoders_list = FolderPaths::default().get_filename_list("text_encoders");
+
+        [llm_list, text_encoders_list]
+            .concat()
+            .iter()
+            .filter(|v| v.ends_with(".gguf"))
+            .cloned()
+            .collect::<Vec<String>>()
+    }
+
+    /// 获取mmproj模型列表
+    fn get_mmproj_model_list() -> Vec<String> {
+        let llm_list = FolderPaths::default().get_filename_list("LLM");
+        let text_encoders_list = FolderPaths::default().get_filename_list("text_encoders");
+
+        [llm_list, text_encoders_list]
+            .concat()
+            .iter()
+            .filter(|v| v.ends_with(".gguf"))
+            .filter(|v| v.contains("mmproj"))
+            .cloned()
+            .collect::<Vec<String>>()
     }
 
     /// 将 python images tensor 转换为 base64 编码的图片 url
@@ -476,147 +513,33 @@ impl LlamaCppVision {
         &mut self,
         images: Bound<'py, PyAny>,
         params: &LlamaCppOptions,
-    ) -> Result<(Bound<'py, PyAny>, String), Error> {
-        // llama.cpp logs
-        send_logs_to_tracing(LogOptions::default().with_logs_enabled(params.verbose));
+    ) -> Result<(Bound<'py, PyAny>, Vec<String>), Error> {
+        let pipeline = get_pipeline()?;
 
-        // Initialize backend
-        let backend = LlamaBackend::init()?;
+        let mut pipeline = match pipeline {
+            Some(pipeline) => pipeline,
+            None => LlamaCppPipeline::new(params).expect("Failed to create LlamaCppPipeline"),
+        };
 
-        // Load model
-        let model = self.load_model(&backend, params)?;
-
-        // Load context
-        let mut context = self.load_context(&model, &backend, params)?;
-
-        // Load sampler
-        let mut sampler = self.load_sampler(params)?;
-
-        // Create the MTMD context
-        let mut mtmd_ctx = LlamaCppMtmdContext::new(&model, params)?;
-        info!("Loading mtmd projection: {}", params.mmproj_path);
-
-        info!("Model loaded successfully");
-
-        // Add media marker if not present
-        let mut user_prompt = params.user_prompt.clone();
-        let default_marker = llama_cpp_2::mtmd::mtmd_default_marker().to_string();
-        let media_marker = params.media_marker.as_ref().unwrap_or(&default_marker);
-        if !user_prompt.contains(media_marker) {
-            user_prompt.push_str(media_marker);
+        // 重新加载模型
+        if !params.cache_model {
+            pipeline.update_model(params)?;
+            pipeline.update_mtmd_context(params)?;
         }
 
-        // Load media files
-        // for image_path in &params.images {
-        //     info!("Loading image: {image_path}");
-        //     ctx.load_media_file(image_path)?;
-        // }
-        // for audio_path in &params.audio {
-        //     ctx.load_media_file(audio_path)?;
-        // }
+        let images_bs4 = self.to_images_bs4(&images)?;
+        let mut captions = Vec::new();
 
-        mtmd_ctx.load_image(&params.images[0])?;
+        for image in images_bs4 {
+            let result = pipeline.generate_vision(params, &image)?;
+            captions.push(result);
+        }
 
-        // Create user message
-        let msgs = vec![
-            LlamaChatMessage::new("system".to_string(), params.system_prompt.clone())?,
-            LlamaChatMessage::new("user".to_string(), user_prompt)?,
-        ];
+        // 保存模型
+        if params.cache_model {
+            set_pipeline(pipeline)?;
+        }
 
-        info!("Evaluating message: {msgs:?}");
-
-        // Evaluate the message (prefill)
-        mtmd_ctx.eval_message(&model, &mut context, msgs, true, params.n_batch as i32)?;
-
-        // Generate response (decode)
-        mtmd_ctx.generate_response(&model, &mut context, &mut sampler, params.n_predict)?;
-
-        Ok((images, String::new()))
-    }
-
-    /// Setup model parameters
-    fn load_model(
-        &self,
-        backend: &LlamaBackend,
-        params: &LlamaCppOptions,
-    ) -> Result<LlamaModel, Error> {
-        let model_path = params.get_model_path()?;
-
-        let model_params = LlamaModelParams::default().with_n_gpu_layers(params.n_gpu_layers); // Use n layers on GPU
-
-        // for (k, v) in &key_value_overrides {
-        //     let k = CString::new(k.as_bytes())?;
-        //     model_params.as_mut().append_kv_override(k.as_c_str(), *v);
-        // }
-
-        // Load model
-        let model = LlamaModel::load_from_file(backend, &model_path, &model_params)?;
-
-        info!("Loading model: {model_path:?}");
-
-        Ok(model)
-    }
-
-    /// Setup context parameters
-    fn load_context<'a>(
-        &self,
-        model: &'a LlamaModel,
-        backend: &LlamaBackend,
-        params: &LlamaCppOptions,
-    ) -> Result<LlamaContext<'a>, Error> {
-        let pooling_type = match params.pooling_type.as_str() {
-            "None" => LlamaPoolingType::None,
-            "Mean" => LlamaPoolingType::Mean,
-            "Cls" => LlamaPoolingType::Cls,
-            "Last" => LlamaPoolingType::Last,
-            "Rank" => LlamaPoolingType::Rank,
-            _ => LlamaPoolingType::Unspecified,
-        };
-
-        let context_params = LlamaContextParams::default()
-            .with_n_threads(params.n_threads)
-            .with_n_threads_batch(params.n_threads_batch)
-            .with_n_batch(params.n_batch)
-            .with_n_ctx(NonZero::new(params.n_ctx))
-            .with_embeddings(true)
-            .with_pooling_type(pooling_type);
-
-        // Create context
-        let context = model.new_context(backend, context_params)?;
-
-        Ok(context)
-    }
-
-    /// Setup sampler parameters
-    fn load_sampler(&self, params: &LlamaCppOptions) -> Result<LlamaSampler, Error> {
-        // 随机值
-        let seed = if params.seed == -1 {
-            // 随机值
-            rand::rng().try_next_u32().unwrap_or(0)
-        } else {
-            params.seed as u32
-        };
-
-        /* penalties:
-            减少重复性: penalties(64, 1.2, 0.0, 0.2)
-            增加多样性: penalties(64, 1.1, 0.1, 0.0)
-            默认平衡: penalties(64, 1.0, 0.0, 0.0)
-        */
-
-        let sampler = LlamaSampler::chain_simple([
-            LlamaSampler::top_k(params.top_k),
-            LlamaSampler::top_p(params.top_p, 0),
-            LlamaSampler::min_p(0.0, 0),
-            LlamaSampler::temp(params.temperature),
-            LlamaSampler::penalties(
-                64,  // penalty_last_n: 考虑最近64个token的重复情况
-                1.0, // penalty_repeat: 轻微惩罚重复token
-                0.0, // penalty_freq: 惩罚重复的 token（正值减少重复）。-2.0 至 2.0
-                0.0, // penalty_present: 惩罚新主题的出现（正值减少重复主题），-2.0 至 2.0
-            ),
-            // LlamaSampler::greedy(),   // 贪婪采样器，始终选择概率最高的 token, 应用于最后一个，该采样器会导致每次文本一样
-            LlamaSampler::dist(seed), // 随机种子，用于生成随机数, 应用于最后一个
-        ]);
-        Ok(sampler)
+        Ok((images, captions))
     }
 }

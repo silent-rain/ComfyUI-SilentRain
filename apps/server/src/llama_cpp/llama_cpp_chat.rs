@@ -365,7 +365,12 @@ impl LlamaCppChat {
         let llm_list = FolderPaths::default().get_filename_list("LLM");
         let text_encoders_list = FolderPaths::default().get_filename_list("text_encoders");
 
-        vec![llm_list, text_encoders_list].concat()
+        [llm_list, text_encoders_list]
+            .concat()
+            .iter()
+            .filter(|v| v.ends_with(".gguf"))
+            .cloned()
+            .collect::<Vec<String>>()
     }
 }
 
@@ -376,18 +381,16 @@ impl LlamaCppChat {
 
         let mut pipeline = match pipeline {
             Some(pipeline) => pipeline,
-            None => LlamaCppPipeline::new(&params).expect("Failed to create LlamaCppPipeline"),
+            None => LlamaCppPipeline::new(params).expect("Failed to create LlamaCppPipeline"),
         };
 
         // 重新加载模型
         if !params.cache_model {
-            pipeline.update_model(&params)?;
+            pipeline.update_model(params)?;
         }
 
-        pipeline.update_context(&params)?;
-        pipeline.rest_batch(&params)?;
-        pipeline.load_user_tokens(&params)?;
-        let results = pipeline.generate_chat(&params)?;
+        pipeline.update_context(params)?;
+        let results = pipeline.generate_chat(params)?;
 
         // 保存模型
         if params.cache_model {

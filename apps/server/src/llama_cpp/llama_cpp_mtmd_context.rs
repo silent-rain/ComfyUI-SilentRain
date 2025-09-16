@@ -7,50 +7,59 @@
 //!
 //!
 
-use std::{
-    ffi::CString,
-    io::{self, Write},
-};
+use std::{ffi::CString, io::Write, sync::Arc};
 
 use llama_cpp_2::{
-    context::LlamaContext,
+    llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
-    mtmd::{MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams, MtmdInputText},
+    mtmd::{
+        mtmd_default_marker, MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams,
+        MtmdInputText,
+    },
     sampling::LlamaSampler,
 };
 use log::{error, info};
 
-use crate::{error::Error, llama_cpp::LlamaCppOptions};
+use crate::{
+    error::Error,
+    llama_cpp::{LlamaCppBaseContext, LlamaCppOptions, PromptMessageRole},
+};
 
 /// State of the MTMD CLI application.
 #[allow(missing_debug_implementations)]
 pub struct LlamaCppMtmdContext {
+    model: Arc<LlamaModel>,
+    base_context: LlamaCppBaseContext,
     /// The MTMD context for multimodal processing.
-    pub mtmd_ctx: MtmdContext,
+    pub mtmd_context: MtmdContext,
     /// The batch used for processing tokens.
     pub batch: LlamaBatch,
     /// The list of loaded bitmaps (images/audio).
     pub bitmaps: Vec<MtmdBitmap>,
     /// The number of past tokens processed.
     pub n_past: i32,
-    /// The chat template used for formatting messages.
-    pub chat_template: LlamaChatTemplate,
-    /// The current chat messages history.
-    pub chat: Vec<LlamaChatMessage>,
+    /// Enables verbose logging from llama.cpp.
+    verbose: bool,
 }
 
 impl LlamaCppMtmdContext {
     /// Creates a new MTMD context
     ///
     /// # Errors
-    pub fn new(model: &LlamaModel, params: &LlamaCppOptions) -> Result<Self, Error> {
+    pub fn new(
+        model: Arc<LlamaModel>,
+        backend: &LlamaBackend,
+        params: &LlamaCppOptions,
+    ) -> Result<Self, Error> {
         let use_gpu = { params.n_gpu_layers > 0 };
+
+        let base_context = LlamaCppBaseContext::new(model.clone(), backend, params)?;
 
         // Initialize MTMD context
         let mtmd_params = MtmdContextParams {
             use_gpu,
-            print_timings: true,
+            print_timings: params.verbose,
             n_threads: params.n_threads,
             media_marker: CString::new(
                 params
@@ -61,54 +70,33 @@ impl LlamaCppMtmdContext {
             )?,
         };
 
-        let mtmd_ctx =
-            MtmdContext::init_from_file(&params.get_mmproj_path()?, model, &mtmd_params)?;
-
-        // 通过预定义模板进行格式化
-        // let chat_template = model
-        //     .chat_template(params.chat_template.as_deref())
-        //     .map_err(|e| {
-        //         error!("Failed to get chat template: {e}");
-        //         e
-        //     })?;
-
-        // 通过自定义模板进行格式化
-        // let chat_template = LlamaChatTemplate::new(
-        //     params
-        //         .chat_template
-        //         .clone()
-        //         .unwrap_or("default".to_string())
-        //         .as_str(),
-        // )?;
-
-        // 默认模板
-        let chat_template = model.chat_template(None).map_err(|e| {
-            error!("Failed to get chat template: {e}");
-            e
-        })?;
+        let mtmd_context =
+            MtmdContext::init_from_file(&params.get_mmproj_path()?, &model, &mtmd_params)?;
+        info!("Loading mtmd projection: {}", params.mmproj_path);
 
         let batch = LlamaBatch::new(params.n_ctx as usize, 1);
 
         Ok(Self {
-            mtmd_ctx,
+            model,
+            base_context,
+            mtmd_context,
             batch,
-            chat: Vec::new(),
             bitmaps: Vec::new(),
             n_past: 0,
-            chat_template,
+            verbose: params.verbose,
         })
     }
 
     /// Loads media (image or audio) from the specified file path
     /// # Errors
     pub fn load_media_file(&mut self, path: &str) -> Result<(), MtmdBitmapError> {
-        let bitmap = MtmdBitmap::from_file(&self.mtmd_ctx, path)?;
+        let bitmap = MtmdBitmap::from_file(&self.mtmd_context, path)?;
         self.bitmaps.push(bitmap);
         Ok(())
     }
 
     pub fn load_image(&mut self, image: &[u8]) -> Result<(), MtmdBitmapError> {
-        let bitmap = MtmdBitmap::from_buffer(&self.mtmd_ctx, image)?;
+        let bitmap = MtmdBitmap::from_buffer(&self.mtmd_context, image)?;
         self.bitmaps.push(bitmap);
         Ok(())
     }
@@ -117,47 +105,17 @@ impl LlamaCppMtmdContext {
     /// # Errors
     pub fn eval_message(
         &mut self,
-        model: &LlamaModel,
-        context: &mut LlamaContext,
-        msgs: Vec<LlamaChatMessage>,
+        params: &LlamaCppOptions,
         add_bos: bool,
-        batch_size: i32,
+        context_history: &[LlamaChatMessage],
     ) -> Result<(), Error> {
-        self.chat.extend(msgs);
+        let msgs = self.create_message(params, context_history)?;
+        let chat_template = self.chat_template(params)?;
 
-        // Format the message using chat template (simplified)
-        let formatted_prompt = model
-            .apply_chat_template(&self.chat_template, &self.chat, true)
-            .map_err(|e| {
-                error!("Failed to apply chat template: {e}");
-                e
-            })?;
+        self.process_multimodal_input(params, add_bos, msgs, chat_template)?;
 
-        let input_text = MtmdInputText {
-            text: formatted_prompt,
-            add_special: add_bos,
-            parse_special: true,
-        };
+        self.rest_batch(params.n_batch as usize)?;
 
-        info!("chat_template: {input_text:?}");
-
-        let bitmap_refs: Vec<&MtmdBitmap> = self.bitmaps.iter().collect();
-
-        if bitmap_refs.is_empty() {
-            info!("No bitmaps provided, only tokenizing text");
-        } else {
-            info!("Tokenizing with {} bitmaps", bitmap_refs.len());
-        }
-
-        // Tokenize the input
-        let chunks = self.mtmd_ctx.tokenize(input_text, &bitmap_refs)?;
-
-        info!("Tokenization complete, {} chunks created", chunks.len());
-
-        // Clear bitmaps after tokenization
-        self.bitmaps.clear();
-
-        self.n_past = chunks.eval_chunks(&self.mtmd_ctx, context, 0, 0, batch_size, true)?;
         Ok(())
     }
 
@@ -165,29 +123,48 @@ impl LlamaCppMtmdContext {
     /// # Errors
     pub fn generate_response(
         &mut self,
-        model: &LlamaModel,
-        context: &mut LlamaContext,
         sampler: &mut LlamaSampler,
         n_predict: i32,
-    ) -> Result<(), Error> {
+    ) -> Result<String, Error> {
+        // The `Decoder`
+        let mut decoder = encoding_rs::UTF_8.new_decoder();
+
         let mut generated_tokens = Vec::new();
         let max_predict = if n_predict < 0 { i32::MAX } else { n_predict };
+        let mut results = String::new();
 
         for _i in 0..max_predict {
             // Sample next token
-            let token = sampler.sample(context, -1);
+            let token = sampler.sample(&self.base_context.context, -1);
             generated_tokens.push(token);
             sampler.accept(token);
 
             // Check for end of generation
-            if model.is_eog_token(token) {
+            if self.model.is_eog_token(token) {
+                println!();
                 break;
             }
 
             // Print token
-            let piece = model.token_to_str(token, Special::Tokenize)?;
-            info!("{piece}");
-            io::stdout().flush()?;
+            // let output_string = self.model.token_to_str(token, Special::Tokenize)?;
+            // let output_string = self
+            //     .model
+            //     .tokens_to_str(&[token], Special::Tokenize)
+            //     .unwrap_or("口".to_string());
+
+            let output_bytes = self.model.token_to_bytes(token, Special::Tokenize)?;
+            // use `Decoder.decode_to_string()` to avoid the intermediate buffer
+            let mut output_string = String::with_capacity(32);
+            let _decode_result = decoder.decode_to_string(&output_bytes, &mut output_string, false);
+
+            if self.verbose {
+                // 打印解码后的字符串，不换行
+                print!("{output_string}");
+                // 刷新标准输出，确保文本立即显示
+                std::io::stdout().flush()?;
+            }
+
+            results.push_str(&output_string);
 
             // Prepare next batch
             self.batch.clear();
@@ -195,9 +172,182 @@ impl LlamaCppMtmdContext {
             self.n_past += 1;
 
             // Decode
-            context.decode(&mut self.batch)?;
+            self.base_context.context.decode(&mut self.batch)?;
         }
 
+        Ok(results)
+    }
+}
+
+impl LlamaCppMtmdContext {
+    pub fn rest_batch(&mut self, n_batch: usize) -> Result<(), Error> {
+        let batch = LlamaBatch::new(n_batch, 1);
+        self.batch = batch;
+        Ok(())
+    }
+}
+
+impl LlamaCppMtmdContext {
+    /// Create message
+    fn create_message(
+        &self,
+        params: &LlamaCppOptions,
+        context_history: &[LlamaChatMessage],
+    ) -> Result<Vec<LlamaChatMessage>, Error> {
+        // Add media marker if not present
+        let mut user_prompt = params.user_prompt.clone();
+        let default_marker = mtmd_default_marker().to_string();
+        let media_marker = params.media_marker.as_ref().unwrap_or(&default_marker);
+        if !user_prompt.contains(media_marker) {
+            user_prompt.push_str(media_marker);
+        }
+
+        // Create message
+        let mut msgs = vec![
+            LlamaChatMessage::new(
+                PromptMessageRole::System.to_string(),
+                params.system_prompt.clone(),
+            )?,
+            LlamaChatMessage::new(PromptMessageRole::User.to_string(), user_prompt.clone())?,
+        ];
+
+        // Add history messages
+        if params.keep_context {
+            msgs.extend(context_history.to_owned());
+        }
+
+        Ok(msgs)
+    }
+
+    /// 模板处理
+    fn chat_template(&self, params: &LlamaCppOptions) -> Result<LlamaChatTemplate, Error> {
+        // 通过预定义模板进行格式化, 当前模板读取存在问题
+        // let chat_template = model
+        //     .chat_template(params.chat_template.as_deref())
+        //     .map_err(|e| {
+        //         error!("Failed to get chat template: {e}");
+        //         e
+        //     })?;
+
+        // 默认模板
+        let mut chat_template = self.model.chat_template(None).map_err(|e| {
+            error!("Failed to get chat template: {e}");
+            e
+        })?;
+
+        // 通过自定义模板进行格式化
+        match params.chat_template.clone() {
+            Some(inner_chat_template) if !inner_chat_template.is_empty() => {
+                chat_template = LlamaChatTemplate::new(&inner_chat_template)?;
+            }
+            _ => (),
+        }
+        Ok(chat_template)
+    }
+
+    /// Processes and evaluates input text with optional media (images/audio) through the model
+    ///
+    /// # Arguments
+    /// * `params` - Configuration options for the LLM
+    /// * `add_bos` - Whether to add beginning-of-sequence token
+    /// * `msgs` - Chat messages to process
+    /// * `chat_template` - Template for formatting chat messages
+    ///
+    /// # Errors
+    /// Returns error if tokenization or evaluation fails
+    fn process_multimodal_input(
+        &mut self,
+        params: &LlamaCppOptions,
+        add_bos: bool,
+        msgs: Vec<LlamaChatMessage>,
+        chat_template: LlamaChatTemplate,
+    ) -> Result<(), Error> {
+        let formatted_prompt = self
+            .model
+            .apply_chat_template(&chat_template, &msgs, true)
+            .map_err(|e| {
+                error!("Failed to apply chat template: {e}");
+                e
+            })?;
+        let input_text = MtmdInputText {
+            text: formatted_prompt,
+            add_special: add_bos,
+            parse_special: true,
+        };
+        info!("MtmdInputText: {input_text:?}");
+        let bitmap_refs: Vec<&MtmdBitmap> = self.bitmaps.iter().collect();
+        if bitmap_refs.is_empty() {
+            info!("No bitmaps provided, only tokenizing text");
+        } else {
+            info!("Tokenizing with {} bitmaps", bitmap_refs.len());
+        }
+        let chunks = self.mtmd_context.tokenize(input_text, &bitmap_refs)?;
+        info!("Tokenization complete, {} chunks created", chunks.len());
+        self.bitmaps.clear();
+        self.n_past = chunks.eval_chunks(
+            &self.mtmd_context,
+            &self.base_context.context,
+            0,
+            0,
+            params.n_batch as i32,
+            true,
+        )?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use llama_cpp_2::model::params::LlamaModelParams;
+
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_simple() -> anyhow::Result<()> {
+        let params = LlamaCppOptions::default();
+
+        // Initialize backend
+        let backend = LlamaBackend::init()?;
+
+        // Load model
+        let model_path = params.get_model_path()?;
+        let model_params = LlamaModelParams::default();
+        let model = Arc::new(LlamaModel::load_from_file(
+            &backend,
+            &model_path,
+            &model_params,
+        )?);
+
+        // Load sampler
+        let mut sampler = LlamaSampler::chain_simple([
+            LlamaSampler::top_k(params.top_k),
+            LlamaSampler::top_p(params.top_p, 0),
+            LlamaSampler::temp(params.temperature),
+            LlamaSampler::dist(params.get_seed()), // 随机种子，用于生成随机数, 应用于最后一个
+        ]);
+
+        // 上下文
+        let context_history: Vec<LlamaChatMessage> = Vec::new();
+
+        let mut mtmd_conntext = LlamaCppMtmdContext::new(model.clone(), &backend, &params)?;
+
+        // Load media files
+        // for image_path in &params.images {
+        //     info!("Loading image: {image_path}");
+        //     mtmd_conntext.load_media_file(image_path)?;
+        // }
+        // for audio_path in &params.audio {
+        //     mtmd_conntext.load_media_file(audio_path)?;
+        // }
+
+        mtmd_conntext.load_image(&params.images[0])?;
+
+        mtmd_conntext.eval_message(&params, true, &context_history)?;
+
+        let results = mtmd_conntext.generate_response(&mut sampler, params.max_predict())?;
+
+        println!("{results:?}");
         Ok(())
     }
 }

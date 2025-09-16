@@ -16,8 +16,9 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{LlamaChatMessage, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
     sampling::LlamaSampler,
+    token::LlamaToken,
 };
 use log::{error, info};
 
@@ -33,18 +34,9 @@ pub struct LlamaCppBaseContext {
     /// The context for multimodal processing.
     pub context: LlamaContext<'static>,
     /// The batch used for processing tokens.
-    pub batch: LlamaBatch,
-    // /// The list of loaded bitmaps (images/audio).
-    // pub bitmaps: Vec<MtmdBitmap>,
-    // /// The number of past tokens processed.
-    // pub n_past: i32,
-    // /// The chat template used for formatting messages.
-    // pub chat_template: LlamaChatTemplate,
-    // /// The current chat messages history.
-    // pub chat: Vec<LlamaChatMessage>,
+    batch: LlamaBatch,
     /// Enables verbose logging from llama.cpp.
-    /// Useful for debugging and performance analysis.
-    pub verbose: bool,
+    verbose: bool,
 }
 
 impl LlamaCppBaseContext {
@@ -64,10 +56,6 @@ impl LlamaCppBaseContext {
             model,
             context,
             batch,
-            // chat: Vec::new(),
-            // bitmaps: Vec::new(),
-            // n_past: 0,
-            // chat_template,
             verbose: params.verbose,
         })
     }
@@ -84,6 +72,7 @@ impl LlamaCppBaseContext {
             "Cls" => LlamaPoolingType::Cls,
             "Last" => LlamaPoolingType::Last,
             "Rank" => LlamaPoolingType::Rank,
+            "Unspecified" => LlamaPoolingType::Unspecified,
             _ => {
                 info!("Unknown pooling type: {}", params.pooling_type);
                 LlamaPoolingType::Unspecified
@@ -102,7 +91,7 @@ impl LlamaCppBaseContext {
         let context = model.new_context(backend, context_params)?;
 
         // 确保 context 的生命周期不依赖于 model
-        let context = unsafe { std::mem::transmute(context) };
+        let context = unsafe { std::mem::transmute::<LlamaContext<'_>, LlamaContext<'_>>(context) };
 
         Ok(context)
     }
@@ -111,12 +100,21 @@ impl LlamaCppBaseContext {
     /// # Errors
     pub fn eval_message(
         &mut self,
-        model: &LlamaModel,
-        context: &mut LlamaContext,
-        msgs: Vec<LlamaChatMessage>,
-        add_bos: bool,
-        batch_size: i32,
+        params: &LlamaCppOptions,
+        context_history: &[LlamaChatMessage],
     ) -> Result<(), Error> {
+        let msgs = self.create_message(params, context_history)?;
+
+        let chat_template = self.chat_template(params)?;
+
+        let token_list = self.apply_chat_template(msgs, chat_template)?;
+
+        self.validate_tokens_size(token_list.len(), params.n_ctx, params.n_predict)?;
+
+        self.rest_batch(params.n_batch as usize)?;
+
+        self.process_user_tokens(token_list)?;
+
         Ok(())
     }
 
@@ -128,6 +126,9 @@ impl LlamaCppBaseContext {
         sampler: &mut LlamaSampler,
         n_predict: i32,
     ) -> Result<String, Error> {
+        // The `Decoder`
+        let mut decoder = encoding_rs::UTF_8.new_decoder();
+
         let t_main_start = ggml_time_us();
         // 获取当前批处理中的 token 数量，用作下一个 token 的位置索引
         let mut n_cur = self.batch.n_tokens();
@@ -152,10 +153,18 @@ impl LlamaCppBaseContext {
                 }
 
                 // 将 token 转换为字符串
-                let output_string = self
-                    .model
-                    .tokens_to_str(&[token], Special::Tokenize)
-                    .unwrap_or("口".to_string());
+                // let output_string = self
+                //     .model
+                //     .tokens_to_str(&[token], Special::Tokenize)
+                //     .unwrap_or("口".to_string());
+
+                // let output_string = self.model.token_to_str(token, Special::Tokenize)?;
+                let output_bytes = self.model.token_to_bytes(token, Special::Tokenize)?;
+                // use `Decoder.decode_to_string()` to avoid the intermediate buffer
+                let mut output_string = String::with_capacity(32);
+                let _decode_result =
+                    decoder.decode_to_string(&output_bytes, &mut output_string, false);
+
                 results.push_str(&output_string);
 
                 if self.verbose {
@@ -184,14 +193,6 @@ impl LlamaCppBaseContext {
             n_decode += 1;
         }
 
-        // 添加助手回复到上下文历史
-        // if !results.is_empty() {
-        //     let assistant_message =
-        //         LlamaChatMessage::new(PromptMessageRole::Assistant.to_string(), results.clone())?;
-
-        //     self.context_history.push(assistant_message);
-        // }
-
         let t_main_end = ggml_time_us();
         let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
         info!(
@@ -203,5 +204,204 @@ impl LlamaCppBaseContext {
 
         info!("{}", self.context.timings());
         Ok(results)
+    }
+}
+
+impl LlamaCppBaseContext {
+    pub fn rest_batch(&mut self, n_batch: usize) -> Result<(), Error> {
+        let batch = LlamaBatch::new(n_batch, 1);
+        self.batch = batch;
+        Ok(())
+    }
+}
+
+impl LlamaCppBaseContext {
+    /// Create message
+    pub fn create_message(
+        &self,
+        params: &LlamaCppOptions,
+        context_history: &[LlamaChatMessage],
+    ) -> Result<Vec<LlamaChatMessage>, Error> {
+        // Create message
+        let mut msgs = vec![
+            LlamaChatMessage::new(
+                PromptMessageRole::System.to_string(),
+                params.system_prompt.clone(),
+            )?,
+            LlamaChatMessage::new(
+                PromptMessageRole::User.to_string(),
+                params.user_prompt.clone(),
+            )?,
+        ];
+
+        // Add history messages
+        if params.keep_context {
+            msgs.extend(context_history.to_owned());
+        }
+
+        Ok(msgs)
+    }
+
+    /// 模板处理
+    fn chat_template(&self, params: &LlamaCppOptions) -> Result<LlamaChatTemplate, Error> {
+        // 通过预定义模板进行格式化, 当前模板读取存在问题
+        // let chat_template = model
+        //     .chat_template(params.chat_template.as_deref())
+        //     .map_err(|e| {
+        //         error!("Failed to get chat template: {e}");
+        //         e
+        //     })?;
+
+        // 默认模板
+        let mut chat_template = self.model.chat_template(None).map_err(|e| {
+            error!("Failed to get chat template: {e}");
+            e
+        })?;
+
+        // 通过自定义模板进行格式化
+        match params.chat_template.clone() {
+            Some(inner_chat_template) if !inner_chat_template.is_empty() => {
+                chat_template = LlamaChatTemplate::new(&inner_chat_template)?;
+            }
+            _ => (),
+        }
+        Ok(chat_template)
+    }
+
+    /// Apply chat template
+    fn apply_chat_template(
+        &self,
+        msgs: Vec<LlamaChatMessage>,
+        chat_template: LlamaChatTemplate,
+    ) -> Result<Vec<LlamaToken>, Error> {
+        // Format the message using chat template (simplified)
+        let formatted_prompt = self
+            .model
+            .apply_chat_template(&chat_template, &msgs, true)
+            .map_err(|e| {
+                error!("Failed to apply chat template: {e}");
+                e
+            })?;
+
+        // 将提示文本转换为 token 列表，AddBos::Always 表示始终在开头添加 BOS (Beginning of Sequence) token
+        let tokens_list = self
+            .model
+            .str_to_token(&formatted_prompt, AddBos::Always)
+            .map_err(|e| {
+                error!("failed to tokenize {:?}, err: {}", formatted_prompt, e);
+                e
+            })?;
+
+        // let tokens_list = self
+        //     .context
+        //     .model
+        //     .str_to_token(&params.user_prompt, AddBos::Always)?;
+
+        Ok(tokens_list)
+    }
+
+    /// Verify tokens size
+    pub fn validate_tokens_size(
+        &self,
+        tokens_size: usize,
+        n_ctx: u32,
+        n_predict: i32,
+    ) -> Result<(), Error> {
+        if n_predict < 0 {
+            if tokens_size >= n_ctx as usize {
+                return Err(Error::InvalidParameter(
+                    "the prompt is too long, it has more tokens than n_ctx".to_string(),
+                ));
+            }
+
+            return Ok(());
+        }
+
+        let n_kv_req = tokens_size as i32 + (n_predict - tokens_size as i32);
+        info!("n_predict = {n_predict}, n_ctx = {n_ctx}, k_kv_req = {n_kv_req}");
+
+        if n_kv_req > n_ctx as i32 {
+            return Err(Error::InvalidParameter(
+                "n_kv_req > n_ctx, the required kv cache size is not big enough either reduce n_predict or increase n_ctx"
+                    .to_string(),
+            ));
+        }
+        if tokens_size >= n_predict as usize {
+            return Err(Error::InvalidParameter(
+                "the prompt is too long, it has more tokens than n_predict".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Process user tokens
+    fn process_user_tokens(&mut self, tokens_list: Vec<LlamaToken>) -> Result<(), Error> {
+        // 计算 tokens_list 的最后一个索引
+        let last_index: i32 = (tokens_list.len() - 1) as i32;
+
+        // 遍历所有 token，i 是索引，token 是实际的 token 值
+        for (i, token) in (0_i32..).zip(tokens_list.into_iter()) {
+            // llama_decode 只会为提示的最后一个 token 输出 logits（概率分布）
+            // 判断当前 token 是否是最后一个
+            let is_last = i == last_index;
+
+            // 将 token 添加到批处理中
+            // 参数：token值, 位置索引, 序列ID数组, 是否是最后一个token
+            self.batch.add(token, i, &[0], is_last)?;
+        }
+
+        // 使用上下文解码批处理中的 token
+        self.context.decode(&mut self.batch).map_err(|e| {
+            error!("llama_decode failed: {}", e);
+            e
+        })?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use llama_cpp_2::model::params::LlamaModelParams;
+
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_simple() -> anyhow::Result<()> {
+        let params = LlamaCppOptions::default();
+
+        // Initialize backend
+        let backend = LlamaBackend::init()?;
+
+        // Load model
+        let model_path = params.get_model_path()?;
+        let model_params = LlamaModelParams::default();
+        let model = Arc::new(LlamaModel::load_from_file(
+            &backend,
+            &model_path,
+            &model_params,
+        )?);
+
+        // Load sampler
+        let mut sampler = LlamaSampler::chain_simple([
+            LlamaSampler::top_k(params.top_k),
+            LlamaSampler::top_p(params.top_p, 0),
+            LlamaSampler::temp(params.temperature),
+            LlamaSampler::dist(params.get_seed()), // 随机种子，用于生成随机数, 应用于最后一个
+        ]);
+
+        // 上下文
+        let context_history: Vec<LlamaChatMessage> = Vec::new();
+
+        let mut base_conntext = LlamaCppBaseContext::new(model.clone(), &backend, &params)?;
+
+        base_conntext.eval_message(&params, &context_history)?;
+
+        let results = base_conntext.generate_response(&mut sampler, params.max_predict())?;
+
+        println!("{results:?}");
+        Ok(())
     }
 }
