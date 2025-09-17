@@ -7,9 +7,10 @@
 //!
 //!
 
-use std::{ffi::CString, io::Write, sync::Arc};
+use std::{ffi::CString, io::Write, sync::Arc, time::Duration};
 
 use llama_cpp_2::{
+    ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
@@ -135,8 +136,10 @@ impl LlamaCppMtmdContext {
         // The `Decoder`
         let mut decoder = encoding_rs::UTF_8.new_decoder();
 
+        let t_main_start = ggml_time_us();
         let mut generated_tokens = Vec::new();
         let max_predict = if n_predict < 0 { i32::MAX } else { n_predict };
+        let mut n_decode = 0;
         let mut results = String::new();
 
         for _i in 0..max_predict {
@@ -179,7 +182,18 @@ impl LlamaCppMtmdContext {
 
             // Decode
             self.base_context.context.decode(&mut self.batch)?;
+
+            n_decode += 1;
         }
+
+        let t_main_end = ggml_time_us();
+        let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
+        info!(
+            "decoded {} tokens in {:.2} s, speed {:.2} t/s\n",
+            n_decode,
+            duration.as_secs_f32(),
+            n_decode as f32 / duration.as_secs_f32()
+        );
 
         Ok(results)
     }
