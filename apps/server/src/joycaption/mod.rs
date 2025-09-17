@@ -16,18 +16,18 @@ mod joycaption_predictor;
 pub use joycaption_predictor::JoyCaptionPredictorGGUF;
 
 mod joycaption_beta_one_gguf;
-pub use joycaption_beta_one_gguf::JoyCaptionnBetaOneGGUF;
+pub use joycaption_beta_one_gguf::JoyCaptionBetaOneGGUF;
 
 mod joycaption_beta_one_custom_gguf;
-pub use joycaption_beta_one_custom_gguf::JoyCaptionnBetaOneCustomGGUF;
+pub use joycaption_beta_one_custom_gguf::JoyCaptionBetaOneCustomGGUF;
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "joycaption")?;
     submodule.add_class::<JoyCaptionExtraOptions>()?;
     submodule.add_class::<JoyCaptionOllamaPrompter>()?;
-    submodule.add_class::<JoyCaptionnBetaOneGGUF>()?;
-    submodule.add_class::<JoyCaptionnBetaOneCustomGGUF>()?;
+    submodule.add_class::<JoyCaptionBetaOneGGUF>()?;
+    submodule.add_class::<JoyCaptionBetaOneCustomGGUF>()?;
     Ok(submodule)
 }
 
@@ -45,14 +45,14 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr JoyCaption Ollama Prompter",
         ),
         NodeRegister(
-            "JoyCaptionnBetaOneGGUF",
-            py.get_type::<JoyCaptionnBetaOneGGUF>(),
-            "Sr JoyCaptionn Beta One GGUF",
+            "JoyCaptionBetaOneGGUF",
+            py.get_type::<JoyCaptionBetaOneGGUF>(),
+            "Sr JoyCaption Beta One GGUF",
         ),
         NodeRegister(
-            "JoyCaptionnBetaOneCustomGGUF",
-            py.get_type::<JoyCaptionnBetaOneCustomGGUF>(),
-            "Sr JoyCaptionn Beta One Custom GGUF",
+            "JoyCaptionBetaOneCustomGGUF",
+            py.get_type::<JoyCaptionBetaOneCustomGGUF>(),
+            "Sr JoyCaption Beta One Custom GGUF",
         ),
     ];
     Ok(nodes)

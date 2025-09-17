@@ -119,9 +119,9 @@ impl LlamaCppMtmdContext {
 
         self.validate_tokens_size(token_list.len(), params.n_ctx, params.n_predict)?;
 
-        self.process_multimodal_input(params, add_bos, formatted_chat_template)?;
-
         self.rest_batch(params.n_batch as usize)?;
+
+        self.process_multimodal_input(params, add_bos, formatted_chat_template)?;
 
         Ok(())
     }
@@ -366,6 +366,7 @@ impl LlamaCppMtmdContext {
         info!("Tokenization complete, {} chunks created", chunks.len());
 
         self.bitmaps.clear();
+        self.base_context.context.clear_kv_cache();
 
         self.n_past = chunks.eval_chunks(
             &self.mtmd_context,

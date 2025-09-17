@@ -163,7 +163,7 @@ impl LlamaCppChat {
                         params.set_item("default", options.n_ctx)?;
                         params.set_item("min", 256)?;
                         params.set_item("max", NODE_INT_MAX)?;
-                        params.set_item("step", 10)?;
+                        params.set_item("step", 1)?;
                         params.set_item("tooltip", "Size of the prompt context window.")?;
                         params
                     }),
@@ -176,7 +176,7 @@ impl LlamaCppChat {
                         params.set_item("default", options.n_predict)?;
                         params.set_item("min", -1)?;
                         params.set_item("max", NODE_INT_MAX)?;
-                        params.set_item("step", 10)?;
+                        params.set_item("step", 1)?;
                         params.set_item(
                             "tooltip",
                             "Number of tokens to predict (-1 for unlimited).",
@@ -223,6 +223,7 @@ impl LlamaCppChat {
                         params.set_item("default", options.n_gpu_layers)?;
                         params.set_item("min", 0)?;
                         params.set_item("step", 1)?;
+                        params.set_item("max", 10000)?;
                         params.set_item(
                             "tooltip",
                             "Number of GPU layers to offload.",

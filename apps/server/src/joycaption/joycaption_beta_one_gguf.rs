@@ -54,12 +54,12 @@ fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
 
 /// JoyCaption Beta One GGUF
 #[pyclass(subclass)]
-pub struct JoyCaptionnBetaOneGGUF {}
+pub struct JoyCaptionBetaOneGGUF {}
 
-impl PromptServer for JoyCaptionnBetaOneGGUF {}
+impl PromptServer for JoyCaptionBetaOneGGUF {}
 
 #[pymethods]
-impl JoyCaptionnBetaOneGGUF {
+impl JoyCaptionBetaOneGGUF {
     #[new]
     fn new() -> Self {
         Self {}
@@ -122,11 +122,11 @@ impl JoyCaptionnBetaOneGGUF {
                 let required = PyDict::new(py);
 
                 required.set_item(
-                    "image",
+                    "images",
                     (NODE_IMAGE, {
-                        let image = PyDict::new(py);
-                        image.set_item("forceInput", true)?;
-                        image
+                        let images = PyDict::new(py);
+                        images.set_item("forceInput", true)?;
+                        images
                     }),
                 )?;
 
@@ -173,7 +173,7 @@ impl JoyCaptionnBetaOneGGUF {
                         let n_gpu_layers = PyDict::new(py);
                         n_gpu_layers.set_item("default", 0)?;
                         n_gpu_layers.set_item("min", 0)?;
-                        n_gpu_layers.set_item("max", 1000)?;
+                        n_gpu_layers.set_item("max", 10000)?;
                         n_gpu_layers.set_item("step", 1)?;
                         n_gpu_layers
                     }),
@@ -361,9 +361,9 @@ impl JoyCaptionnBetaOneGGUF {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("JoyCaptionnBetaOneGGUF error, {e}");
+                error!("JoyCaptionBetaOneGGUF error, {e}");
                 if let Err(e) =
-                    self.send_error(py, "JoyCaptionnBetaOneGGUF".to_string(), e.to_string())
+                    self.send_error(py, "JoyCaptionBetaOneGGUF".to_string(), e.to_string())
                 {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
@@ -374,7 +374,7 @@ impl JoyCaptionnBetaOneGGUF {
     }
 }
 
-impl JoyCaptionnBetaOneGGUF {
+impl JoyCaptionBetaOneGGUF {
     /// Parse the options from the parameters.
     ///
     /// images: [batch, height, width, channels]
@@ -479,7 +479,7 @@ impl JoyCaptionnBetaOneGGUF {
     }
 }
 
-impl JoyCaptionnBetaOneGGUF {
+impl JoyCaptionBetaOneGGUF {
     /// 推理
     #[allow(clippy::too_many_arguments)]
     fn generate<'py>(

@@ -47,13 +47,13 @@ fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
 
 /// JoyCaption Beta One Custom GGUF
 #[pyclass(subclass)]
-pub struct JoyCaptionnBetaOneCustomGGUF {
+pub struct JoyCaptionBetaOneCustomGGUF {
 }
 
-impl PromptServer for JoyCaptionnBetaOneCustomGGUF {}
+impl PromptServer for JoyCaptionBetaOneCustomGGUF {}
 
 #[pymethods]
-impl JoyCaptionnBetaOneCustomGGUF {
+impl JoyCaptionBetaOneCustomGGUF {
     #[new]
     fn new() -> Self {
         Self {
@@ -117,11 +117,11 @@ impl JoyCaptionnBetaOneCustomGGUF {
                 let required = PyDict::new(py);
 
                 required.set_item(
-                    "image",
+                    "images",
                     (NODE_IMAGE, {
-                        let image = PyDict::new(py);
-                        image.set_item("forceInput", true)?;
-                        image
+                        let images = PyDict::new(py);
+                        images.set_item("forceInput", true)?;
+                        images
                     }),
                 )?;
 
@@ -169,7 +169,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
                         let n_gpu_layers = PyDict::new(py);
                         n_gpu_layers.set_item("default", 0)?;
                         n_gpu_layers.set_item("min", 0)?;
-                        n_gpu_layers.set_item("max", 1000)?;
+                        n_gpu_layers.set_item("max", 10000)?;
                         n_gpu_layers.set_item("step", 1)?;
                         n_gpu_layers
                     }),
@@ -354,10 +354,10 @@ impl JoyCaptionnBetaOneCustomGGUF {
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
-                error!("JoyCaptionnBetaOneCustomGGUF error, {e}");
+                error!("JoyCaptionBetaOneCustomGGUF error, {e}");
                 if let Err(e) = self.send_error(
                     py,
-                    "JoyCaptionnBetaOneCustomGGUF".to_string(),
+                    "JoyCaptionBetaOneCustomGGUF".to_string(),
                     e.to_string(),
                 ) {
                     error!("send error failed, {e}");
@@ -370,7 +370,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
 }
 
 
-impl JoyCaptionnBetaOneCustomGGUF {
+impl JoyCaptionBetaOneCustomGGUF {
     /// Parse the options from the parameters.
     ///
     /// images: [batch, height, width, channels]
@@ -467,7 +467,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
 }
 
 
-impl JoyCaptionnBetaOneCustomGGUF {
+impl JoyCaptionBetaOneCustomGGUF {
     /// 推理
     #[allow(clippy::too_many_arguments)]
     fn generate<'py>(
