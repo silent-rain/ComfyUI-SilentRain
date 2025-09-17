@@ -197,12 +197,12 @@ impl JoyCaptionnBetaOneCustomGGUF {
                     }),
                 )?;
                 required.set_item(
-                    "user_query",
+                    "user_prompt",
                     (NODE_STRING, {
-                        let user_query = PyDict::new(py);
-                        user_query.set_item("default", "Write a detailed description for this image.")?;
-                        user_query.set_item("multiline", true)?;
-                        user_query
+                        let user_prompt = PyDict::new(py);
+                        user_prompt.set_item("default", "Write a detailed description for this image.")?;
+                        user_prompt.set_item("multiline", true)?;
+                        user_prompt
                     }),
                 )?;
 
@@ -318,7 +318,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
         n_gpu_layers: u32,
         n_ctx: u32,
         system_prompt: String,
-        user_query: String,
+        user_prompt: String,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
@@ -337,7 +337,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
                 n_gpu_layers,
                 n_ctx,
                 system_prompt,
-                user_query,
+                user_prompt,
                 max_new_tokens,
                 temperature,
                 top_p,
@@ -417,22 +417,23 @@ impl JoyCaptionnBetaOneCustomGGUF {
         };
 
 
-        let mut options = LlamaCppOptions::default();
-
-        options.model_path = gguf_model.to_string();
-        options.mmproj_path = mmproj_file.to_string();
-        options.system_prompt = system_prompt;
-        options.user_prompt = user_prompt;
-        options.n_ctx = n_ctx;
-        options.n_predict = max_new_tokens;
-        options.temperature = temperature;
-        options.top_p = top_p;
-        options.top_k = top_k;
-        options.seed = seed;
-        options.main_gpu = main_gpu;
-        options.n_gpu_layers = n_gpu_layers;
-        options.keep_context = keep_context;
-        options.cache_model = cache_model;
+        let options = LlamaCppOptions {
+            model_path: gguf_model.to_string(),
+            mmproj_path: mmproj_file.to_string(),
+            system_prompt,
+            user_prompt,
+            n_ctx,
+            n_predict: max_new_tokens,
+            temperature,
+            top_p,
+            top_k,
+            seed,
+            main_gpu,
+            n_gpu_layers,
+            keep_context,
+            cache_model,
+            ..Default::default()
+        };
 
         Ok(options)
     }

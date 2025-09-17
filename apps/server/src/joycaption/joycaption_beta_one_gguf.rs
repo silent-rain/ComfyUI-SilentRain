@@ -430,22 +430,23 @@ impl JoyCaptionnBetaOneGGUF {
             (system_prompt, user_prompt)
         };
 
-        let mut options = LlamaCppOptions::default();
-
-        options.model_path = gguf_model.to_string();
-        options.mmproj_path = mmproj_file.to_string();
-        options.system_prompt = system_prompt;
-        options.user_prompt = user_prompt;
-        options.n_ctx = n_ctx;
-        options.n_predict = max_new_tokens;
-        options.temperature = temperature;
-        options.top_p = top_p;
-        options.top_k = top_k;
-        options.seed = seed;
-        options.main_gpu = main_gpu;
-        options.n_gpu_layers = n_gpu_layers;
-        options.keep_context = keep_context;
-        options.cache_model = cache_model;
+        let options = LlamaCppOptions {
+            model_path: gguf_model.to_string(),
+            mmproj_path: mmproj_file.to_string(),
+            system_prompt,
+            user_prompt,
+            n_ctx,
+            n_predict: max_new_tokens,
+            temperature,
+            top_p,
+            top_k,
+            seed,
+            main_gpu,
+            n_gpu_layers,
+            keep_context,
+            cache_model,
+            ..Default::default()
+        };
 
         Ok(options)
     }
