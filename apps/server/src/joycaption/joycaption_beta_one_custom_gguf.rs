@@ -4,8 +4,9 @@
 //! 原项目: https://github.com/fpgaminer/joycaption_comfyui
 //! 引用: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF
 
-use candle_core::Device;
-use log::{error, info};
+use std::sync::RwLock;
+
+use log::{error, };
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -14,22 +15,39 @@ use pyo3::{
 };
 
 use crate::{
-    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_image},
-    error::Error,
-    joycaption::JoyCaptionPredictorGGUF,
-    wrapper::{
-        comfyui::{
+    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_raw_data}, error::Error,  llama_cpp::{LlamaCppOptions, LlamaCppPipeline}, wrapper::{
+        comfy::folder_paths::FolderPaths, comfyui::{
             types::{NODE_BOOLEAN, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_SEED_MAX, NODE_STRING},
             PromptServer,
         },
-        torch::tensor::TensorWrapper,
-    },
+    }
 };
+
+static LLAMA_CPP_PIPELINE: RwLock<Option<LlamaCppPipeline>> = RwLock::new(None);
+
+// 设置值
+fn set_pipeline(pipeline: LlamaCppPipeline) -> Result<(), Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+    *w = Some(pipeline);
+
+    Ok(())
+}
+
+// 读取值
+fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
+    let mut w = LLAMA_CPP_PIPELINE
+        .write()
+        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
+
+    let pipeline = w.take();
+    Ok(pipeline)
+}
 
 /// JoyCaption Beta One Custom GGUF
 #[pyclass(subclass)]
 pub struct JoyCaptionnBetaOneCustomGGUF {
-    device: Device,
 }
 
 impl PromptServer for JoyCaptionnBetaOneCustomGGUF {}
@@ -39,7 +57,6 @@ impl JoyCaptionnBetaOneCustomGGUF {
     #[new]
     fn new() -> Self {
         Self {
-            device: Device::Cpu,
         }
     }
 
@@ -108,9 +125,14 @@ impl JoyCaptionnBetaOneCustomGGUF {
                     }),
                 )?;
 
+
+                // 获取模型列表
+                let model_list = Self::get_model_list();
+                let mmproj_model_list = Self::get_mmproj_model_list();
+                
                 required.set_item(
                     "gguf_model",
-                    (NODE_STRING, {
+                    (model_list, {
                         let gguf_model = PyDict::new(py);
                         gguf_model.set_item("tooltip", "model file path")?;
                         gguf_model
@@ -119,10 +141,25 @@ impl JoyCaptionnBetaOneCustomGGUF {
 
                 required.set_item(
                     "mmproj_file",
-                    (NODE_STRING, {
+                    (mmproj_model_list, {
                         let mmproj_file = PyDict::new(py);
                         mmproj_file.set_item("tooltip", "mmproj model file path")?;
                         mmproj_file
+                    }),
+                )?;
+
+                required.set_item(
+                    "main_gpu",
+                    (NODE_INT, {
+                        let main_gpu = PyDict::new(py);
+                        main_gpu.set_item("default", 0)?;
+                        main_gpu.set_item("min", 0)?;
+                        main_gpu.set_item("step", 1)?;
+                        main_gpu.set_item(
+                            "tooltip",
+                            "Index of the main GPU to use. Relevant for multi-GPU systems.",
+                        )?;
+                        main_gpu
                     }),
                 )?;
 
@@ -155,6 +192,7 @@ impl JoyCaptionnBetaOneCustomGGUF {
                     (NODE_STRING, {
                         let system_prompt = PyDict::new(py);
                         system_prompt.set_item("default", "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions.")?;
+                        system_prompt.set_item("multiline", true)?;
                         system_prompt
                     }),
                 )?;
@@ -226,14 +264,25 @@ impl JoyCaptionnBetaOneCustomGGUF {
                         seed.set_item("step", 1)?;
                         seed
                     }),
-                )?; // Seed input remains, but not used in model_key for now
+                )?;
 
                 required.set_item(
-                    "unload_after_generate",
+                    "keep_context",
                     (NODE_BOOLEAN, {
-                        let unload_after_generate = PyDict::new(py);
-                        unload_after_generate.set_item("default", false)?;
-                        unload_after_generate
+                        let keep_context = PyDict::new(py);
+                        keep_context.set_item("default", false)?;
+                        keep_context.set_item("tooltip", "Keep the context between requests")?;
+                        keep_context
+                    }),
+                )?;
+
+                required.set_item(
+                    "cache_model",
+                    (NODE_BOOLEAN, {
+                        let cache_model = PyDict::new(py);
+                        cache_model.set_item("default", false)?;
+                        cache_model.set_item("tooltip", "Whether to cache model between requests")?;
+                        cache_model
                     }),
                 )?;
 
@@ -262,9 +311,10 @@ impl JoyCaptionnBetaOneCustomGGUF {
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
-        image: Bound<'py, PyAny>,
+        images: Bound<'py, PyAny>,
         gguf_model: &str,
         mmproj_file: &str,
+        main_gpu: i32,
         n_gpu_layers: u32,
         n_ctx: u32,
         system_prompt: String,
@@ -273,26 +323,33 @@ impl JoyCaptionnBetaOneCustomGGUF {
         temperature: f32,
         top_p: f32,
         top_k: i32,
-        seed: u32,
-        unload_after_generate: bool,
+        seed: i32,
+        keep_context: bool,
+        cache_model: bool,
         extra_options: Option<Vec<String>>,
-    ) -> PyResult<(String, String)> {
-        let results = self.generate(
-            image,
-            gguf_model,
-            mmproj_file,
-            n_gpu_layers,
-            n_ctx,
-            system_prompt,
-            user_query,
-            max_new_tokens,
-            temperature,
-            top_p,
-            top_k,
-            seed,
-            unload_after_generate,
-            extra_options,
-        );
+    ) -> PyResult<(Bound<'py, PyAny>, Vec<String>)> {
+         let params = self
+            .options_parser(
+                &images,
+                gguf_model,
+                mmproj_file,
+                main_gpu,
+                n_gpu_layers,
+                n_ctx,
+                system_prompt,
+                user_query,
+                max_new_tokens,
+                temperature,
+                top_p,
+                top_k,
+                seed,
+                keep_context,
+                cache_model,
+                extra_options,
+            )
+            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
+
+        let results = self.generate(images, &params, );
 
         match results {
             Ok(v) => Ok(v),
@@ -312,48 +369,46 @@ impl JoyCaptionnBetaOneCustomGGUF {
     }
 }
 
+
 impl JoyCaptionnBetaOneCustomGGUF {
-    /// 推理
+    /// Parse the options from the parameters.
+    ///
+    /// images: [batch, height, width, channels]
     #[allow(clippy::too_many_arguments)]
-    fn generate<'py>(
+    fn options_parser<'py>(
         &self,
-        image: Bound<'py, PyAny>,
+        images: &Bound<'py, PyAny>,
         gguf_model: &str,
         mmproj_file: &str,
+        main_gpu: i32,
         n_gpu_layers: u32,
         n_ctx: u32,
         system_prompt: String,
-        user_query: String,
+        user_prompt: String,
         max_new_tokens: i32,
         temperature: f32,
         top_p: f32,
         top_k: i32,
-        seed: u32,
-        _unload_after_generate: bool,
+        seed: i32,
+        keep_context: bool,
+        cache_model: bool,
         extra_options: Option<Vec<String>>,
-    ) -> Result<(String, String), Error> {
-        // 模型校验
-        if gguf_model.is_empty() || mmproj_file.is_empty() {
-            return  Err(Error::FileNotFound("Error: GGUF model or mmproj file not selected/found. Please place models in ComfyUI/models/llava_gguf and select them.".to_string()));
+    ) -> Result<LlamaCppOptions, Error> {
+        // 校验输入张量的形状
+        let images_shape = images.getattr("shape")?.extract::<Vec<usize>>()?;
+        if images_shape.len() != 4 {
+            return Err(Error::InvalidTensorShape(format!(
+                "Expected [batch, height, width, channels] tensor, images shape: {}",
+                images_shape.len()
+            )));
         }
-
-        // 图片转换
-        let image = {
-            let image = TensorWrapper::<f32>::new(&image, &self.device)?.into_tensor();
-            let images = tensor_to_image(&image)?;
-            if images.is_empty() {
-                return Err(Error::ListEmpty);
-            }
-
-            images[0].clone()
-        };
 
         // 提示词处理
         let (system_prompt, user_prompt) = {
             let system_prompt = system_prompt.trim().to_string();
 
             // user prompt
-            let mut user_prompt = user_query.trim().to_string();
+            let mut user_prompt = user_prompt.trim().to_string();
             if let Some(extra_options) = extra_options {
                 user_prompt += &extra_options.join(" ");
             }
@@ -361,29 +416,92 @@ impl JoyCaptionnBetaOneCustomGGUF {
             (system_prompt, user_prompt)
         };
 
-        let mut llm = JoyCaptionPredictorGGUF::new(
-            gguf_model,
-            mmproj_file,
-            Some("llava_gguf"),
-            n_gpu_layers,
-            n_ctx,
-            vec![],
-            None,
-            None,
-        )?;
-        let response = llm.generate(
-            &image,
-            &system_prompt,
-            &user_prompt,
-            max_new_tokens,
-            temperature,
-            top_p,
-            top_k,
-            seed,
-        )?;
 
-        info!("raw response: {:?}", response);
+        let mut options = LlamaCppOptions::default();
 
-        Ok((user_prompt, response))
+        options.model_path = gguf_model.to_string();
+        options.mmproj_path = mmproj_file.to_string();
+        options.system_prompt = system_prompt;
+        options.user_prompt = user_prompt;
+        options.n_ctx = n_ctx;
+        options.n_predict = max_new_tokens;
+        options.temperature = temperature;
+        options.top_p = top_p;
+        options.top_k = top_k;
+        options.seed = seed;
+        options.main_gpu = main_gpu;
+        options.n_gpu_layers = n_gpu_layers;
+        options.keep_context = keep_context;
+        options.cache_model = cache_model;
+
+        Ok(options)
+    }
+
+    /// 获取模型列表
+    fn get_model_list() -> Vec<String> {
+        let llm_list = FolderPaths::default().get_filename_list("LLM");
+        let text_encoders_list = FolderPaths::default().get_filename_list("llava_gguf");
+
+        [llm_list, text_encoders_list]
+            .concat()
+            .iter()
+            .filter(|v| v.ends_with(".gguf"))
+            .cloned()
+            .collect::<Vec<String>>()
+    }
+
+    /// 获取mmproj模型列表
+    fn get_mmproj_model_list() -> Vec<String> {
+        let llm_list = FolderPaths::default().get_filename_list("LLM");
+        let text_encoders_list = FolderPaths::default().get_filename_list("llava_gguf");
+
+        [llm_list, text_encoders_list]
+            .concat()
+            .iter()
+            .filter(|v| v.ends_with(".gguf"))
+            .filter(|v| v.contains("mmproj"))
+            .cloned()
+            .collect::<Vec<String>>()
+    }
+}
+
+
+impl JoyCaptionnBetaOneCustomGGUF {
+    /// 推理
+    #[allow(clippy::too_many_arguments)]
+    fn generate<'py>(
+        &self,
+         images: Bound<'py, PyAny>,
+        params: &LlamaCppOptions,
+      
+    ) ->  Result<(Bound<'py, PyAny>, Vec<String>), Error> {
+       let pipeline = get_pipeline()?;
+
+        let mut pipeline = match pipeline {
+            Some(pipeline) => pipeline,
+            None => LlamaCppPipeline::new(params)?,
+        };
+
+        // 有缓存时，如果参数更新则重新加载模型
+        if params.cache_model {
+            pipeline.update_model(params)?;
+            pipeline.update_mtmd_context(params)?;
+        }
+
+        let image_raw_datas = tensor_to_raw_data(&images)?;
+        let mut captions = Vec::new();
+
+        for image_raw_data in image_raw_datas {
+            let response = pipeline.generate_vision(params, &image_raw_data)?;
+
+            captions.push(response);
+        }
+
+        // 保存模型
+        if params.cache_model {
+            set_pipeline(pipeline)?;
+        }
+
+        Ok((images, captions))
     }
 }

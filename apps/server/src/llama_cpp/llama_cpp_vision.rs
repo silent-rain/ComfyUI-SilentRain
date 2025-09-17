@@ -1,9 +1,7 @@
 //! llama.cpp vision
 
-use std::{io::Cursor, sync::RwLock};
+use std::sync::RwLock;
 
-use base64::{engine::general_purpose, Engine};
-use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage};
 use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
@@ -14,7 +12,7 @@ use pyo3::{
 use pythonize::depythonize;
 
 use crate::{
-    core::category::CATEGORY_LLAMA_CPP,
+    core::{category::CATEGORY_LLAMA_CPP, utils::image::tensor_to_raw_data},
     error::Error,
     llama_cpp::{LlamaCppOptions, LlamaCppPipeline},
     wrapper::{
@@ -423,164 +421,6 @@ impl LlamaCppVision {
             .cloned()
             .collect::<Vec<String>>()
     }
-
-    /// 将未知格式的图片张量转换为 `data:image/...;base64,...` 格式的 URL
-    ///
-    /// # 参数
-    /// - `images`: 形状为 `[batch, height, width, channels]` 的 PyTorch 张量
-    /// - `preferred_format`: 优先尝试的格式（如 `"png"` 或 `"jpeg"`），失败时自动回退
-    ///
-    /// # 返回
-    /// - `Vec<String>`: 每个元素是一个 `data:image/...` 格式的 URL
-    pub fn tensor_to_images_data_url<'py>(
-        &mut self,
-        images: &Bound<'py, PyAny>,
-        preferred_format: Option<&str>,
-    ) -> Result<Vec<String>, Error> {
-        // 校验输入张量的形状
-        let images_shape = images.getattr("shape")?.extract::<Vec<usize>>()?;
-        if images_shape.len() != 4 {
-            return Err(Error::InvalidTensorShape(format!(
-                "Expected [batch, height, width, channels] tensor, images shape: {}",
-                images_shape.len()
-            )));
-        }
-        let batch = images_shape[0];
-        let height = images_shape[1];
-        let width = images_shape[2];
-        let channels = images_shape[3];
-
-        // 优先尝试的格式（默认 PNG）
-        let (mut mime_type, mut image_format) = match preferred_format {
-            Some("jpeg") | Some("jpg") => ("image/jpeg", ImageFormat::Jpeg),
-            _ => ("image/png", ImageFormat::Png), // 默认 PNG
-        };
-
-        let mut data_urls = Vec::new();
-
-        // 遍历每张图片
-        for i in 0..batch {
-            // 提取张量数据并转换为 NumPy 数组
-            let numpy_array = images
-                .call_method1("select", (0, i))?
-                .call_method0("numpy")?
-                .call_method1("__mul__", (255,))?
-                .call_method1("astype", ("uint8",))?
-                .call_method0("tobytes")?;
-
-            // 转换为字节数组
-            let pixel_bytes = numpy_array.extract::<Vec<u8>>()?;
-
-            // 根据通道数创建图像
-            let dynamic_img = match channels {
-                3 => {
-                    let img = RgbImage::from_raw(width as u32, height as u32, pixel_bytes)
-                        .ok_or_else(|| Error::ImageBuffer)?;
-                    DynamicImage::ImageRgb8(img)
-                }
-                4 => {
-                    let img = RgbaImage::from_raw(width as u32, height as u32, pixel_bytes)
-                        .ok_or_else(|| Error::ImageBuffer)?;
-                    DynamicImage::ImageRgba8(img)
-                }
-                _ => {
-                    error!(
-                        "Unsupported number of channels: {}. Expected 3 or 4.",
-                        channels
-                    );
-                    return Err(Error::ImageBuffer);
-                }
-            };
-
-            // 将图像编码为指定格式的字节流
-            // 将图像写入内存缓冲区 (使用Cursor包装Vec<u8>以满足Seek trait要求)
-            // 尝试编码为优先格式，失败时回退到 PNG
-            let mut buffer = Cursor::new(Vec::new());
-            let encode_result = dynamic_img.write_to(&mut buffer, image_format);
-            if encode_result.is_err() {
-                // 回退到 PNG
-                mime_type = "image/png";
-                image_format = ImageFormat::Png;
-                buffer = Cursor::new(Vec::new());
-                dynamic_img.write_to(&mut buffer, image_format)?;
-            }
-
-            // 将字节流编码为 Base64
-            let encoded = general_purpose::STANDARD.encode(buffer.into_inner());
-
-            // 拼接为 data URL
-            let data_url = format!("data:{};base64,{}", mime_type, encoded);
-            data_urls.push(data_url);
-        }
-
-        Ok(data_urls)
-    }
-
-    /// 将 Python 图片张量转换为图片 RAW 数据
-    ///
-    /// images: [batch, height, width, channels]
-    pub fn tensor_to_raw_data<'py>(
-        &self,
-        images: &Bound<'py, PyAny>,
-    ) -> Result<Vec<Vec<u8>>, Error> {
-        // 校验形状
-        let images_shape = images.getattr("shape")?.extract::<Vec<usize>>()?;
-        if images_shape.len() != 4 {
-            return Err(Error::InvalidTensorShape(format!(
-                "Expected [batch, height, width, channels] tensor, images shape: {}",
-                images_shape.len()
-            )));
-        }
-        let batch = images_shape[0];
-        let height = images_shape[1];
-        let width = images_shape[2];
-        let channels = images_shape[3];
-
-        let mut raw_data_list = Vec::new();
-
-        // 遍历 images 对象中的每个图像
-        for i in 0..batch {
-            let numpy_array = images
-                .call_method1("select", (0, i))?
-                .call_method0("numpy")?
-                .call_method1("__mul__", (255,))?
-                .call_method1("astype", ("uint8",))?
-                .call_method0("tobytes")?;
-
-            // 转换为字节数组
-            let pixel_bytes = numpy_array.extract::<Vec<u8>>()?;
-
-            // 根据通道数创建图像
-            let dynamic_img = match channels {
-                3 => {
-                    let img = RgbImage::from_raw(width as u32, height as u32, pixel_bytes)
-                        .ok_or_else(|| Error::ImageBuffer)?;
-                    DynamicImage::ImageRgb8(img)
-                }
-                4 => {
-                    let img = RgbaImage::from_raw(width as u32, height as u32, pixel_bytes)
-                        .ok_or_else(|| Error::ImageBuffer)?;
-                    DynamicImage::ImageRgba8(img)
-                }
-                _ => {
-                    error!(
-                        "Unsupported number of channels: {}. Expected 3 or 4.",
-                        channels
-                    );
-                    return Err(Error::ImageBuffer);
-                }
-            };
-
-            // 编码为PNG格式
-            let mut png_data = Vec::new();
-            let mut cursor = Cursor::new(&mut png_data);
-            dynamic_img.write_to(&mut cursor, ImageFormat::Png)?;
-
-            raw_data_list.push(png_data);
-        }
-
-        Ok(raw_data_list)
-    }
 }
 
 impl LlamaCppVision {
@@ -602,7 +442,7 @@ impl LlamaCppVision {
             pipeline.update_mtmd_context(params)?;
         }
 
-        let image_raw_datas = self.tensor_to_raw_data(&images)?;
+        let image_raw_datas = tensor_to_raw_data(&images)?;
         let mut captions = Vec::new();
 
         for image_raw_data in image_raw_datas {
