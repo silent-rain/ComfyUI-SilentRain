@@ -26,6 +26,8 @@ pub struct LlamaCppPipeline {
     base_context: LlamaCppBaseContext,
     mtmd_context: Option<LlamaCppMtmdContext>,
     sampler: LlamaSampler,
+    model_cache_key: String,
+    mtmd_context_cache_key: String,
 }
 
 unsafe impl Send for LlamaCppPipeline {}
@@ -55,6 +57,10 @@ impl LlamaCppPipeline {
 
         info!("Model loaded successfully");
 
+        // 缓存 key
+        let model_cache_key = Self::compute_model_cache_key(params);
+        let mtmd_context_cache_key = Self::compute_mtmd_context_cache_key(params);
+
         Ok(Self {
             context_history: Vec::new(),
             backend,
@@ -62,6 +68,8 @@ impl LlamaCppPipeline {
             base_context,
             mtmd_context,
             sampler,
+            model_cache_key,
+            mtmd_context_cache_key,
         })
     }
 }
@@ -111,7 +119,7 @@ impl LlamaCppPipeline {
         //     mtmd_conntext.load_media_file(audio_path)?;
         // }
 
-        mtmd_conntext.load_image(image)?;
+        mtmd_conntext.load_data_buffer(image)?;
 
         mtmd_conntext.eval_message(params, true, &self.context_history)?;
 
@@ -183,9 +191,17 @@ impl LlamaCppPipeline {
 
     /// update model parameters
     pub fn update_model(&mut self, params: &LlamaCppOptions) -> Result<(), Error> {
+        // 如果参数没有更新，则不重新加载
+        let model_cache_key = Self::compute_model_cache_key(params);
+        if self.model_cache_key == model_cache_key {
+            return Ok(());
+        }
+
         let model = Arc::new(Self::load_model(&self.backend, params)?);
+        let base_context = LlamaCppBaseContext::new(self.model.clone(), &self.backend, params)?;
 
         self.model = model;
+        self.base_context = base_context;
         Ok(())
     }
 
@@ -205,6 +221,15 @@ impl LlamaCppPipeline {
 
     /// Update context parameters
     pub fn update_mtmd_context(&mut self, params: &LlamaCppOptions) -> Result<(), Error> {
+        if self.mtmd_context.is_none() {
+            return Ok(());
+        }
+        // 如果参数没有更新，则不重新加载
+        let mtmd_context_cache_key = Self::compute_mtmd_context_cache_key(params);
+        if self.mtmd_context_cache_key == mtmd_context_cache_key {
+            return Ok(());
+        }
+
         let mtmd_context = Some(LlamaCppMtmdContext::new(
             self.model.clone(),
             &self.backend,
@@ -219,7 +244,7 @@ impl LlamaCppPipeline {
 impl LlamaCppPipeline {
     /// 计算模型缓存的哈希键
     /// 只包含影响模型加载的参数
-    fn _compute_model_cache_key(&self, params: &LlamaCppOptions) -> String {
+    fn compute_model_cache_key(params: &LlamaCppOptions) -> String {
         let mut hasher = DefaultHasher::new();
 
         // 只包含影响模型加载的关键参数
@@ -228,6 +253,22 @@ impl LlamaCppPipeline {
         params.main_gpu.hash(&mut hasher);
         params.flash_attention.hash(&mut hasher);
         params.n_ctx.hash(&mut hasher);
+
+        format!("{:x}", hasher.finish())
+    }
+
+    /// 计算 mtmd_context 缓存的哈希键
+    /// 只包含影响 mtmd_context 加载的参数
+    fn compute_mtmd_context_cache_key(params: &LlamaCppOptions) -> String {
+        let mut hasher = DefaultHasher::new();
+
+        // 只包含影响模型加载的关键参数
+        params.model_path.hash(&mut hasher); // 主模型更新, 需要重新加载
+        params.mmproj_path.hash(&mut hasher);
+        params.media_marker.hash(&mut hasher);
+        params.n_gpu_layers.hash(&mut hasher);
+        params.n_threads.hash(&mut hasher);
+        params.verbose.hash(&mut hasher);
 
         format!("{:x}", hasher.finish())
     }

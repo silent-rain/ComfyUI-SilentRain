@@ -516,16 +516,6 @@ impl LlamaCppOptions {
                     }),
                 )?;
 
-                // TODO 尚未实现
-                required.set_item(
-                    "unload_after_generate",
-                    (NODE_BOOLEAN, {
-                        let unload_after_generate = PyDict::new(py);
-                        unload_after_generate.set_item("default", false)?;
-                        unload_after_generate
-                    }),
-                )?;
-
                 required.set_item(
                     "verbose",
                     (NODE_BOOLEAN, {
@@ -662,8 +652,8 @@ impl Default for LlamaCppOptions {
             n_threads: 0,       // 0 表示自动使用所有可用线程
             n_threads_batch: 0, // 0 表示自动使用所有可用线程
             n_batch: 512,       // 默认批处理大小
-            n_ctx: 2048,        // 默认上下文窗口大小
-            n_predict: -1,      // 要预测的Token数量， -1 表示无限生成
+            n_ctx: 4096,        // 默认上下文窗口大小
+            n_predict: 2048,    // 要预测的Token数量， -1 表示无限生成
 
             // GPU 相关参数
             main_gpu: 0,     // 默认主 GPU 索引
@@ -684,8 +674,8 @@ impl Default for LlamaCppOptions {
             pooling_type: PoolingTypeMode::Unspecified.to_string(),
 
             // 多模态输入（默认留空）
-            media_marker: None,  // 默认媒体标记（空）
-            chat_template: None, // 默认聊天模板（空）
+            media_marker: Some("<__media__>".to_string()), // 默认媒体标记
+            chat_template: None,                           // 默认聊天模板
             images: Vec::new(),
             audio: Vec::new(),
 

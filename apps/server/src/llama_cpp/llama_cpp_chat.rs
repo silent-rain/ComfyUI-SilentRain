@@ -384,8 +384,8 @@ impl LlamaCppChat {
             None => LlamaCppPipeline::new(params)?,
         };
 
-        // 重新加载模型
-        if !params.cache_model {
+        // 有缓存时，如果参数更新则重新加载模型
+        if params.cache_model {
             pipeline.update_model(params)?;
         }
 

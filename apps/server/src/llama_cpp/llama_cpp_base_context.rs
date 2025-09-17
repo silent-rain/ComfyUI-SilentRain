@@ -308,7 +308,7 @@ impl LlamaCppBaseContext {
         n_predict: i32,
     ) -> Result<(), Error> {
         if n_predict < 0 {
-            if tokens_size >= n_ctx as usize {
+            if tokens_size > n_ctx as usize {
                 return Err(Error::InvalidParameter(
                     "the prompt is too long, it has more tokens than n_ctx".to_string(),
                 ));

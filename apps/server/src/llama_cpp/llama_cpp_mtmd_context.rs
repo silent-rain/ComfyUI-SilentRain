@@ -12,12 +12,13 @@ use std::{ffi::CString, io::Write, sync::Arc};
 use llama_cpp_2::{
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
     mtmd::{
         mtmd_default_marker, MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams,
         MtmdInputText,
     },
     sampling::LlamaSampler,
+    token::LlamaToken,
 };
 use log::{error, info};
 
@@ -95,7 +96,7 @@ impl LlamaCppMtmdContext {
         Ok(())
     }
 
-    pub fn load_image(&mut self, image: &[u8]) -> Result<(), MtmdBitmapError> {
+    pub fn load_data_buffer(&mut self, image: &[u8]) -> Result<(), MtmdBitmapError> {
         let bitmap = MtmdBitmap::from_buffer(&self.mtmd_context, image)?;
         self.bitmaps.push(bitmap);
         Ok(())
@@ -112,7 +113,12 @@ impl LlamaCppMtmdContext {
         let msgs = self.create_message(params, context_history)?;
         let chat_template = self.chat_template(params)?;
 
-        self.process_multimodal_input(params, add_bos, msgs, chat_template)?;
+        let (formatted_chat_template, token_list) =
+            self.apply_chat_template(&msgs, &chat_template)?;
+
+        self.validate_tokens_size(token_list.len(), params.n_ctx, params.n_predict)?;
+
+        self.process_multimodal_input(params, add_bos, formatted_chat_template)?;
 
         self.rest_batch(params.n_batch as usize)?;
 
@@ -245,6 +251,73 @@ impl LlamaCppMtmdContext {
         Ok(chat_template)
     }
 
+    /// Apply chat template
+    fn apply_chat_template(
+        &self,
+        msgs: &[LlamaChatMessage],
+        chat_template: &LlamaChatTemplate,
+    ) -> Result<(String, Vec<LlamaToken>), Error> {
+        // Format the message using chat template (simplified)
+        let formatted_template = self
+            .model
+            .apply_chat_template(chat_template, msgs, true)
+            .map_err(|e| {
+                error!("Failed to apply chat template: {e}");
+                e
+            })?;
+
+        // 将提示文本转换为 token 列表，AddBos::Always 表示始终在开头添加 BOS (Beginning of Sequence) token
+        let tokens_list = self
+            .model
+            .str_to_token(&formatted_template, AddBos::Always)
+            .map_err(|e| {
+                error!("failed to tokenize {:?}, err: {}", formatted_template, e);
+                e
+            })?;
+
+        // let tokens_list = self
+        //     .context
+        //     .model
+        //     .str_to_token(&params.user_prompt, AddBos::Always)?;
+
+        Ok((formatted_template, tokens_list))
+    }
+
+    /// Verify tokens size
+    pub fn validate_tokens_size(
+        &self,
+        tokens_size: usize,
+        n_ctx: u32,
+        n_predict: i32,
+    ) -> Result<(), Error> {
+        if n_predict < 0 {
+            if tokens_size > n_ctx as usize {
+                return Err(Error::InvalidParameter(
+                    "the prompt is too long, it has more tokens than n_ctx".to_string(),
+                ));
+            }
+
+            return Ok(());
+        }
+
+        let n_kv_req = tokens_size as i32 + (n_predict - tokens_size as i32);
+        info!("n_predict = {n_predict}, n_ctx = {n_ctx}, k_kv_req = {n_kv_req}");
+
+        if n_kv_req > n_ctx as i32 {
+            return Err(Error::InvalidParameter(
+                "n_kv_req > n_ctx, the required kv cache size is not big enough either reduce n_predict or increase n_ctx"
+                    .to_string(),
+            ));
+        }
+        if tokens_size >= n_predict as usize {
+            return Err(Error::InvalidParameter(
+                "the prompt is too long, it has more tokens than n_predict".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Processes and evaluates input text with optional media (images/audio) through the model
     ///
     /// # Arguments
@@ -259,31 +332,27 @@ impl LlamaCppMtmdContext {
         &mut self,
         params: &LlamaCppOptions,
         add_bos: bool,
-        msgs: Vec<LlamaChatMessage>,
-        chat_template: LlamaChatTemplate,
+        formatted_chat_template: String,
     ) -> Result<(), Error> {
-        let formatted_prompt = self
-            .model
-            .apply_chat_template(&chat_template, &msgs, true)
-            .map_err(|e| {
-                error!("Failed to apply chat template: {e}");
-                e
-            })?;
         let input_text = MtmdInputText {
-            text: formatted_prompt,
+            text: formatted_chat_template,
             add_special: add_bos,
             parse_special: true,
         };
         info!("MtmdInputText: {input_text:?}");
+
         let bitmap_refs: Vec<&MtmdBitmap> = self.bitmaps.iter().collect();
         if bitmap_refs.is_empty() {
             info!("No bitmaps provided, only tokenizing text");
         } else {
             info!("Tokenizing with {} bitmaps", bitmap_refs.len());
         }
+
         let chunks = self.mtmd_context.tokenize(input_text, &bitmap_refs)?;
         info!("Tokenization complete, {} chunks created", chunks.len());
+
         self.bitmaps.clear();
+
         self.n_past = chunks.eval_chunks(
             &self.mtmd_context,
             &self.base_context.context,
@@ -341,7 +410,7 @@ mod tests {
         //     mtmd_conntext.load_media_file(audio_path)?;
         // }
 
-        mtmd_conntext.load_image(&params.images[0])?;
+        mtmd_conntext.load_data_buffer(&params.images[0])?;
 
         mtmd_conntext.eval_message(&params, true, &context_history)?;
 
