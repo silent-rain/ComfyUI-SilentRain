@@ -3,7 +3,7 @@
 use std::{io::Cursor, sync::RwLock};
 
 use base64::{engine::general_purpose, Engine};
-use image::{DynamicImage, ImageBuffer, ImageFormat, RgbImage, RgbaImage};
+use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage};
 use log::error;
 use pyo3::{
     exceptions::PyRuntimeError,
@@ -448,6 +448,7 @@ impl LlamaCppVision {
         let batch = images_shape[0];
         let height = images_shape[1];
         let width = images_shape[2];
+        let channels = images_shape[3];
 
         // 优先尝试的格式（默认 PNG）
         let (mut mime_type, mut image_format) = match preferred_format {
@@ -463,20 +464,33 @@ impl LlamaCppVision {
             let numpy_array = images
                 .call_method1("select", (0, i))?
                 .call_method0("numpy")?
-                .call_method1("astype", ("uint8",))?;
+                .call_method1("__mul__", (255,))?
+                .call_method1("astype", ("uint8",))?
+                .call_method0("tobytes")?;
 
             // 转换为字节数组
-            let bytes = numpy_array.call_method0("tobytes")?.extract::<Vec<u8>>()?;
+            let pixel_bytes = numpy_array.extract::<Vec<u8>>()?;
 
-            // 使用 image 库处理图像数据
-            let img_buffer = ImageBuffer::from_raw(
-                width as u32,  // 替换为实际宽度
-                height as u32, // 替换为实际高度
-                bytes,
-            )
-            .ok_or_else(|| Error::ImageBuffer)?;
-
-            let dynamic_img = DynamicImage::ImageRgb8(img_buffer);
+            // 根据通道数创建图像
+            let dynamic_img = match channels {
+                3 => {
+                    let img = RgbImage::from_raw(width as u32, height as u32, pixel_bytes)
+                        .ok_or_else(|| Error::ImageBuffer)?;
+                    DynamicImage::ImageRgb8(img)
+                }
+                4 => {
+                    let img = RgbaImage::from_raw(width as u32, height as u32, pixel_bytes)
+                        .ok_or_else(|| Error::ImageBuffer)?;
+                    DynamicImage::ImageRgba8(img)
+                }
+                _ => {
+                    error!(
+                        "Unsupported number of channels: {}. Expected 3 or 4.",
+                        channels
+                    );
+                    return Err(Error::ImageBuffer);
+                }
+            };
 
             // 将图像编码为指定格式的字节流
             // 将图像写入内存缓冲区 (使用Cursor包装Vec<u8>以满足Seek trait要求)
