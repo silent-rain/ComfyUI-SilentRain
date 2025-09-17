@@ -329,7 +329,7 @@ impl LlamaCppVision {
             )
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
 
-        let results = self.generate(images, &params);
+        let results = self.generate(py, images, &params);
 
         match results {
             Ok(v) => Ok(v),
@@ -427,9 +427,21 @@ impl LlamaCppVision {
 impl LlamaCppVision {
     pub fn generate<'py>(
         &mut self,
+        py: Python<'py>,
         images: Bound<'py, PyAny>,
         params: &LlamaCppOptions,
     ) -> Result<(Bound<'py, PyAny>, Vec<String>), Error> {
+        let image_raw_datas = tensor_to_raw_data(&images)?;
+
+        // 进度条
+        // from comfy.utils import ProgressBar
+        // pbar = ProgressBar(len(pil_images))
+        // pbar.update(1)
+        let pbar = py
+            .import("comfy")?
+            .getattr("utils")?
+            .call_method1("ProgressBar", (image_raw_datas.len(),))?;
+
         let pipeline = get_pipeline()?;
 
         let mut pipeline = match pipeline {
@@ -443,12 +455,12 @@ impl LlamaCppVision {
             pipeline.update_mtmd_context(params)?;
         }
 
-        let image_raw_datas = tensor_to_raw_data(&images)?;
         let mut captions = Vec::new();
 
         for image_raw_data in image_raw_datas {
             let result = pipeline.generate_vision(params, &image_raw_data)?;
             captions.push(result);
+            pbar.call_method1("update", (1,))?;
         }
 
         // 保存模型
