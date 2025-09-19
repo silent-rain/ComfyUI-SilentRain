@@ -38,6 +38,7 @@ fi
 
 # switch venv
 echo "switch venv ..."
+# source /data/ComfyUI/.venv/bin/activate
 source .venv/bin/activate
 
 # GUP 编译参数
@@ -45,7 +46,7 @@ export NVCC_FLAGS="-D__CORRECT_ISO_CPP_MATH_H_PROTO"
 
 # build
 echo "build release whl ..."
-uv tool run maturin build -r
+uv tool run maturin build -r --features vulkan
 
 
 # del old dir
