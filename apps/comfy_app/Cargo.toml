@@ -1,17 +1,13 @@
 [package]
-name = "web"
+name = "comfy_app"
 version = "0.1.0"
 edition = "2024"
 
-
-[lib]
-crate-type = ["cdylib"]
-
-
 [dependencies]
 wasm-bindgen = { workspace = true }
-js-sys = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
+wasm-bindgen-test = { workspace = true }
+js-sys = { workspace = true }
 web-sys = { workspace = true, features = [
     "Window",
     "Document",
@@ -19,9 +15,7 @@ web-sys = { workspace = true, features = [
     "HtmlElement",
     "console",
 ] }
-wasm-bindgen-test = "0.3"
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-
-comfy_app = { path = "../comfy_app" }
+# log = { workspace = true }

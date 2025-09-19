@@ -49,27 +49,6 @@ pub struct ComfyApp {
 
 #[allow(unused)]
 impl ComfyApp {
-    /// 从 JavaScript 的 app 对象创建 ComfyApp
-    ///
-    /// import { app } from "../../scripts/app.js";
-    pub fn new(app: JsValue) -> Self {
-        Self { app }
-    }
-
-    /// 从指定路径加载 app 对象
-    pub async fn load(script_path: &str) -> Result<Self, JsValue> {
-        // 动态导入 JavaScript 模块
-        console::log_1(&JsValue::from_str(&format!(
-            "正在加载 ComfyUI app: {}",
-            script_path
-        )));
-
-        let module = JsFuture::from(js_import(script_path)).await?;
-        let app = Reflect::get(&module, &JsValue::from_str("app"))?;
-
-        Ok(Self { app })
-    }
-
     /// 注册扩展
     pub fn register_extension(self, config: ExtensionConfig) -> Result<(), JsValue> {
         // 将 self 转换为 Rc<Self>，这样可以在闭包中安全地使用

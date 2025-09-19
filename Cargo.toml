@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["apps/server", "apps/web"]
+members = ["apps/comfy_app", "apps/server", "apps/web"]
 
 
 [profile.dev]
@@ -21,9 +21,10 @@ numpy = "0.26.0"     # rust-numpy
 
 # web
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wasm-bindgen-test = "0.3"
 js-sys = "0.3"
 web-sys = "0.3"
-wasm-bindgen-futures = "0.4"
 
 
 serde = "1.0"         # 用于序列化和反序列化

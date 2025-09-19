@@ -1,9 +1,9 @@
-import init, { register_extension } from './pkg/web.js';
+import init, { run } from './pkg/web.js';
 
 
-async function run() {
+async function main() {
 	await init();
-	await register_extension();
+	await run();
 	console.log("Hello from Rust!");
 }
-run();
+main();

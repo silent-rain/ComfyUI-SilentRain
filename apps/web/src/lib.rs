@@ -1,81 +1,50 @@
 use js_sys::eval;
-use std::collections::HashMap;
 use wasm_bindgen::{JsValue, prelude::*};
 use web_sys::{console, window};
 
-mod comfy_app;
-use comfy_app::{ComfyApp, ExtensionConfig, NodeDef};
+use comfy_app::{ComfyApp, Extension};
 
-#[wasm_bindgen]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
-}
+#[wasm_bindgen(start)]
+fn run() -> Result<(), JsValue> {
+    let mut extension = Extension::new("test.hook.types");
 
-#[wasm_bindgen]
-pub async fn register_extension() -> Result<(), JsValue> {
-    console::log_1(&JsValue::from_str("正在加载Rust脚本"));
+    extension.init(|| {
+        console::log_1(&"🚀 JS init called!".into());
+        Ok(())
+    })?;
 
-    // 加载 ComfyUI app
-    let app = ComfyApp::load("/scripts/app.js").await?;
+    extension.get_custom_widgets(|app| {
+        console::log_1(&"🎨 JS getCustomWidgets called!".into());
+        console::log_1(&app);
+        Ok(())
+    })?;
 
-    // 创建扩展配置
-    let config = ExtensionConfig {
-        name: "a.unique.name.for.a.useless.extension".to_string(),
-        setup_fn: Some(Box::new(|_app| {
-            console::log_1(&JsValue::from_str("Setup complete 0!"));
+    extension.before_register_node_def(|node_type, node_data, app| {
+        console::log_1(&"📋 JS beforeRegisterNodeDef".into());
+        console::log_1(&node_type);
+        console::log_1(&node_data);
+        console::log_1(&app);
 
-            let _ = eval("alert('Setup complete 1!');");
+        Ok(JsValue::undefined())
+    })?;
 
-            if let Some(window) = window() {
-                let _ = window.alert_with_message("Setup complete 2!");
-            }
+    extension.setup(|| {
+        console::log_1(&"⚙️  JS setup called!".into());
 
-            Ok(())
-        })),
-        init_fn: None,
-        before_register_node_def_fn: None,
-    };
+        // let _ = eval("alert('Setup complete 1!');");
 
-    // 注册扩展
-    app.register_extension(config)?;
+        // if let Some(window) = window() {
+        //     let _ = window.alert_with_message("Setup complete 2!");
+        // }
 
-    Ok(())
-}
+        Ok(())
+    })?;
 
-#[wasm_bindgen]
-pub async fn register_custom_node() -> Result<(), JsValue> {
-    console::log_1(&JsValue::from_str("注册自定义节点"));
+    let app = ComfyApp::new()?;
 
-    // 加载 ComfyUI app
-    let app = ComfyApp::load("/scripts/app.js").await?;
+    app.register_extension(&extension)?;
 
-    // 创建自定义节点定义
-    let mut properties = HashMap::new();
-
-    // 添加节点执行函数
-    let execute_fn = js_sys::Function::new_with_args(
-        "inputs",
-        r#"
-        return {
-            output: "Hello from Rust WASM Node: " + (inputs.text || "")
-        };
-        "#,
-    );
-    properties.insert("execute".to_string(), execute_fn.into());
-
-    // 创建节点定义
-    let node_def = NodeDef {
-        name: "RustWasmTextNode".to_string(),
-        display_name: Some("Rust WASM Text Node".to_string()),
-        category: "utils".to_string(),
-        input_names: vec!["text".to_string()],
-        output_names: vec!["output".to_string()],
-        output_types: vec!["STRING".to_string()],
-        properties,
-    };
-
-    // 注册节点
-    app.register_node(node_def)?;
+    console::log_1(&"🚀 Rust init called!".into());
 
     Ok(())
 }
