@@ -19,6 +19,8 @@ use wasm_bindgen::{
 };
 use web_sys::console;
 
+use crate::{ComfyApp, NodeData, NodeType};
+
 /// 扩展
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -115,12 +117,14 @@ impl Extension {
     /// async getCustomWidgets(app)
     pub fn get_custom_widgets<F>(&mut self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(JsValue) -> Result<(), JsValue> + 'static,
+        F: Fn(ComfyApp) -> Result<(), JsValue> + 'static,
     {
         console::log_1(&JsValue::from_str("get_custom_widgets ..."));
 
-        let handler =
-            Closure::wrap(Box::new(handler) as Box<dyn Fn(JsValue) -> Result<(), JsValue>>);
+        let handler = Closure::wrap(Box::new(move |app: Object| {
+            let app = ComfyApp::from_app(app);
+            handler(app)
+        }) as Box<dyn Fn(Object) -> Result<(), JsValue>>);
 
         // 设置getCustomWidgets方法
         Reflect::set(
@@ -137,15 +141,20 @@ impl Extension {
     /// async beforeRegisterNodeDef(nodeType, nodeData, app)
     pub fn before_register_node_def<F>(&mut self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(JsValue, JsValue, JsValue) -> Result<JsValue, JsValue> + 'static,
+        F: Fn(NodeType, NodeData, ComfyApp) -> Result<JsValue, JsValue> + 'static,
     {
         console::log_1(&JsValue::from_str("before_register_node_def ..."));
 
-        let handler =
-            Closure::wrap(Box::new(handler)
-                as Box<dyn Fn(JsValue, JsValue, JsValue) -> Result<JsValue, JsValue>>);
+        let handler = Closure::wrap(Box::new(
+            move |node_type: Object, node_data: Object, app: Object| {
+                let node_type = NodeType::new(node_type);
+                let node_data = NodeData::new(node_data);
+                let app = ComfyApp::from_app(app);
+                handler(node_type, node_data, app)
+            },
+        )
+            as Box<dyn Fn(Object, Object, Object) -> Result<JsValue, JsValue>>);
 
-        // 设置beforeRegisterNodeDef方法
         Reflect::set(
             &self.extension,
             &"beforeRegisterNodeDef".into(),

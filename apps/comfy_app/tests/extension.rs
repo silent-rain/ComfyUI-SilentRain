@@ -25,16 +25,16 @@ fn test_extension_hook() -> Result<(), JsValue> {
     // 返回自定义小部件类型
     extension.get_custom_widgets(|app| {
         console::log_1(&"🎨 JS getCustomWidgets called!".into());
-        console::log_1(&app);
+        console::log_1(&app.into());
         Ok(())
     })?;
 
     // 修改节点行为
     extension.before_register_node_def(|node_type, node_data, app| {
         console::log_1(&"📋 JS beforeRegisterNodeDef".into());
-        console::log_1(&node_type);
-        console::log_1(&node_data);
-        console::log_1(&app);
+        console::log_1(&node_type.into());
+        console::log_1(&node_data.into());
+        console::log_1(&app.into());
 
         Ok(JsValue::undefined())
     })?;

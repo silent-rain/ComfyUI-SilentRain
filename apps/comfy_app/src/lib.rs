@@ -5,3 +5,9 @@ pub use app::ComfyApp;
 
 mod extension;
 pub use extension::Extension;
+
+mod node_type;
+pub use node_type::NodeType;
+
+mod node_data;
+pub use node_data::NodeData;
