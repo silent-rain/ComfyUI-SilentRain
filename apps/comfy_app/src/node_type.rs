@@ -1,6 +1,6 @@
 //! 节点类型的对象
 
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use js_sys::{Object, Reflect};
 use serde::{Deserialize, Serialize};
@@ -9,11 +9,12 @@ use wasm_bindgen::{
     JsValue,
     prelude::{Closure, wasm_bindgen},
 };
+use web_sys::console;
 
 /// 连接信息封装
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LinkInfo {
-    id: u32,
+    id: f32,
     #[serde(rename = "type")]
     link_type: String,
     origin_id: u32,
@@ -21,9 +22,9 @@ pub struct LinkInfo {
     target_id: u32,
     target_slot: u32,
     #[serde(rename = "_data")]
-    data: Option<Value>,
+    data: Value,
     #[serde(rename = "_pos")]
-    pos: BTreeMap<String, u64>,
+    pos: HashMap<Value, Value>,
 }
 
 impl LinkInfo {
@@ -39,11 +40,13 @@ impl LinkInfo {
     }
 }
 
-// impl From<LinkInfo> for Object {
-//     fn from(value: LinkInfo) -> Self {
-//         value.get_inner()
-//     }
-// }
+impl TryFrom<LinkInfo> for JsValue {
+    type Error = JsValue;
+
+    fn try_from(value: LinkInfo) -> Result<Self, Self::Error> {
+        value.to_js()
+    }
+}
 
 /// 节点类型封装
 #[wasm_bindgen]
@@ -69,14 +72,19 @@ impl NodeType {
     /// 设置原型方法 `onConnectionsChange`
     pub fn on_connections_change<F>(&self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(i32, i32, i32, LinkInfo) -> Result<(), JsValue> + 'static,
+        F: Fn(i32, i32, i32, Option<LinkInfo>) -> Result<(), JsValue> + 'static,
     {
         // 将 Rust 闭包转换为 JavaScript 函数
         let handler = Closure::wrap(Box::new(
             move |r#type: i32, index: i32, connected: i32, link_info: JsValue| {
-                let link_info = LinkInfo::from_js(link_info)?;
+                if link_info.is_null() {
+                    return handler(r#type, index, connected, None);
+                }
 
-                handler(r#type, index, connected, link_info)
+                console::log_1(&format!("link_info: {:#?}", link_info).into());
+                let link_info = LinkInfo::from_js(link_info.clone())?;
+
+                handler(r#type, index, connected, Some(link_info))
             },
         )
             as Box<dyn Fn(i32, i32, i32, JsValue) -> Result<(), JsValue>>);

@@ -53,7 +53,7 @@ impl Extension {
     }
 
     /// 注册扩展
-    pub fn register(self, app: JsValue) -> Result<(), JsValue> {
+    pub fn _register(self, app: JsValue) -> Result<(), JsValue> {
         Reflect::set(&self.extension, &"name".into(), &self.name.into())?;
 
         let register_func =

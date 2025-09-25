@@ -5,7 +5,7 @@ use comfy_app::{ComfyApp, Extension};
 
 #[wasm_bindgen(start)]
 fn run() -> Result<(), JsValue> {
-    let mut extension = Extension::new("test.hook.types");
+    let mut extension = Extension::new("ComfyUI-SilentRain");
 
     extension.init(|| Ok(()))?;
 
@@ -20,10 +20,14 @@ fn run() -> Result<(), JsValue> {
             console::log_1(&app.into());
 
             node_type.on_connections_change(|r#type, index, connected, link_info| {
+                let link_info = match link_info {
+                    Some(link_info) => link_info,
+                    None => return Ok(()),
+                };
                 console::log_1(&format!("🔗 连接类型: {}", r#type).into());
-                console::log_1(&format!("🔗 连接类型: {}", index).into());
-                console::log_1(&format!("🔗 连接类型: {}", connected).into());
-                console::log_1(&format!("🔗 连接类型: {:#?}", link_info).into());
+                console::log_1(&format!("🔗 连接索引: {}", index).into());
+                console::log_1(&format!("🔗 是否连接: {}", connected).into());
+                console::log_1(&format!("🔗 连接参数: {:#?}", link_info).into());
 
                 Ok(())
             })?;
