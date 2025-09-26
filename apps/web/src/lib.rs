@@ -19,7 +19,8 @@ fn run() -> Result<(), JsValue> {
             console::log_1(&node_data.into());
             console::log_1(&app.into());
 
-            node_type.on_connections_change(|r#type, index, connected, link_info| {
+            let node_type_c = node_type.clone();
+            node_type.on_connections_change(move |r#type, index, connected, link_info| {
                 let link_info = match link_info {
                     Some(link_info) => link_info,
                     None => return Ok(()),
@@ -28,6 +29,9 @@ fn run() -> Result<(), JsValue> {
                 console::log_1(&format!("🔗 连接索引: {}", index).into());
                 console::log_1(&format!("🔗 是否连接: {}", connected).into());
                 console::log_1(&format!("🔗 连接参数: {:#?}", link_info).into());
+
+                console::log_1(&format!("🔗 node_type_c: {:#?}", node_type_c.get_input(0)).into());
+                console::log_1(&format!("🔗 node_type_c: {:#?}", node_type_c.get_widget(0)).into());
 
                 Ok(())
             })?;

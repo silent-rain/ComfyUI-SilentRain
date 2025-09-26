@@ -2,14 +2,16 @@
 
 use std::collections::HashMap;
 
-use js_sys::{Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wasm_bindgen::{
-    JsValue,
+    JsCast, JsValue,
     prelude::{Closure, wasm_bindgen},
 };
 use web_sys::console;
+
+use crate::{SlotInfo, Widget};
 
 /// 连接信息封装
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -66,6 +68,94 @@ impl NodeType {
     fn get_inner(&self) -> Object {
         self.inner.clone()
     }
+
+    /// 获取输入槽位列表
+    #[wasm_bindgen(getter)]
+    pub fn inputs(&self) -> Result<Array, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::get(&prototype, &"inputs".into())?.dyn_into::<Array>()
+    }
+
+    /// 设置输入槽位列表
+    #[wasm_bindgen(setter)]
+    pub fn set_inputs(&self, inputs: &Array) -> Result<bool, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::set(&prototype, &"inputs".into(), inputs)
+    }
+
+    /// 获取输出槽位列表
+    #[wasm_bindgen(getter)]
+    pub fn outputs(&self) -> Result<Array, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::get(&prototype, &"outputs".into())?.dyn_into::<Array>()
+    }
+
+    /// 设置输出槽位列表
+    #[wasm_bindgen(setter)]
+    pub fn set_outputs(&self, outputs: &Array) -> Result<bool, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::set(&prototype, &"outputs".into(), outputs)
+    }
+
+    /// 获取小部件列表
+    #[wasm_bindgen(getter)]
+    pub fn widgets(&self) -> Result<Array, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        let on_configure = Reflect::get(&prototype, &"onConfigure".into())?;
+        console::log_1(&format!("widgets widgets prototype: {:#?}", on_configure).into());
+
+        let widgets = Reflect::get(&on_configure, &"widgets".into())?;
+        console::log_1(&format!("widgets widgets: {:#?}", widgets).into());
+
+        let prototype = Reflect::get(&self.inner, &"outputs".into());
+        console::log_1(&format!("widgets outputs2: {:#?}", prototype).into());
+
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::get(&prototype, &"widgets".into())?.dyn_into::<Array>()
+    }
+
+    /// 设置小部件列表
+    #[wasm_bindgen(setter)]
+    pub fn set_widgets(&self, widgets: &Array) -> Result<bool, JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        Reflect::set(&prototype, &"widgets".into(), widgets)
+    }
+
+    /// 添加输入槽位
+    pub fn add_input(&self, name: &str, slot_type: &str) -> Result<(), JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        let add_input_fn = Reflect::get(&prototype, &"addInput".into())?.dyn_into::<Function>()?;
+
+        add_input_fn.call2(
+            &prototype,
+            &JsValue::from_str(name),
+            &JsValue::from_str(slot_type),
+        )?;
+
+        Ok(())
+    }
+
+    /// 移除输入槽位
+    pub fn remove_input(&self, index: i32) -> Result<(), JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        let remove_input_fn =
+            Reflect::get(&prototype, &"removeInput".into())?.dyn_into::<Function>()?;
+
+        remove_input_fn.call1(&prototype, &JsValue::from_f64(index as f64))?;
+
+        Ok(())
+    }
+
+    /// 断开输入连接
+    pub fn disconnect_input(&self, slot: i32) -> Result<(), JsValue> {
+        let prototype = Reflect::get(&self.inner, &"prototype".into())?;
+        let disconnect_input_fn =
+            Reflect::get(&prototype, &"disconnectInput".into())?.dyn_into::<Function>()?;
+
+        disconnect_input_fn.call1(&prototype, &JsValue::from_f64(slot as f64))?;
+
+        Ok(())
+    }
 }
 
 impl NodeType {
@@ -101,6 +191,112 @@ impl NodeType {
 
         // 保持闭包生命周期
         handler.forget();
+
+        Ok(())
+    }
+
+    /// 获取输入槽位
+    pub fn get_input(&self, index: usize) -> Result<SlotInfo, JsValue> {
+        let inputs = self.inputs()?;
+        let input = inputs.get(index as u32);
+        SlotInfo::from_js(input)
+    }
+
+    /// 获取输出槽位
+    pub fn get_output(&self, index: usize) -> Result<SlotInfo, JsValue> {
+        let outputs = self.outputs()?;
+        let output = outputs.get(index as u32);
+        SlotInfo::from_js(output)
+    }
+
+    /// 获取小部件
+    pub fn get_widget(&self, index: usize) -> Result<Widget, JsValue> {
+        let widgets = self.widgets()?;
+        let widget = widgets.get(index as u32);
+        Widget::from_js(widget)
+    }
+
+    /// 设置小部件值
+    pub fn set_widget_value(&self, index: usize, value: f64) -> Result<(), JsValue> {
+        let widgets = self.widgets()?;
+        let widget = widgets.get(index as u32);
+
+        if !widget.is_undefined() {
+            Reflect::set(&widget, &"value".into(), &JsValue::from_f64(value))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置小部件选项最大值
+    pub fn set_widget_option_max(&self, index: usize, max: f64) -> Result<(), JsValue> {
+        let widgets = self.widgets()?;
+        let widget = widgets.get(index as u32);
+
+        if !widget.is_undefined() {
+            let options = Reflect::get(&widget, &"options".into())?;
+            Reflect::set(&options, &"max".into(), &JsValue::from_f64(max))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置输出槽位类型
+    pub fn set_output_type(&self, index: usize, slot_type: &str) -> Result<(), JsValue> {
+        let outputs = self.outputs()?;
+        let output = outputs.get(index as u32);
+
+        if !output.is_undefined() {
+            Reflect::set(&output, &"type".into(), &JsValue::from_str(slot_type))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置输出槽位标签
+    pub fn set_output_label(&self, index: usize, label: &str) -> Result<(), JsValue> {
+        let outputs = self.outputs()?;
+        let output = outputs.get(index as u32);
+
+        if !output.is_undefined() {
+            Reflect::set(&output, &"label".into(), &JsValue::from_str(label))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置输出槽位名称
+    pub fn set_output_name(&self, index: usize, name: &str) -> Result<(), JsValue> {
+        let outputs = self.outputs()?;
+        let output = outputs.get(index as u32);
+
+        if !output.is_undefined() {
+            Reflect::set(&output, &"name".into(), &JsValue::from_str(name))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置输入槽位类型
+    pub fn set_input_type(&self, index: usize, slot_type: &str) -> Result<(), JsValue> {
+        let inputs = self.inputs()?;
+        let input = inputs.get(index as u32);
+
+        if !input.is_undefined() {
+            Reflect::set(&input, &"type".into(), &JsValue::from_str(slot_type))?;
+        }
+
+        Ok(())
+    }
+
+    /// 设置输入槽位名称
+    pub fn set_input_name(&self, index: usize, name: &str) -> Result<(), JsValue> {
+        let inputs = self.inputs()?;
+        let input = inputs.get(index as u32);
+
+        if !input.is_undefined() {
+            Reflect::set(&input, &"name".into(), &JsValue::from_str(name))?;
+        }
 
         Ok(())
     }

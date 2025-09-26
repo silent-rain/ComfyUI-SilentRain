@@ -9,5 +9,8 @@ pub use extension::Extension;
 mod node_type;
 pub use node_type::NodeType;
 
+mod widget;
+pub use widget::{SlotInfo, Widget, WidgetOptions};
+
 mod node_data;
 pub use node_data::NodeData;
