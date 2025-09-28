@@ -6,13 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "comfyui_silentrain"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 
 [dependencies]
 pyo3 = { workspace = true, features = [
     "extension-module",
-    # "auto-initialize",  # 将 Python 嵌入到 Rust 二进制文件中
+    # "auto-initialize",
+    # "generate-import-lib", # 用于为 MinGW-w64 和 MSVC（交叉）编译目标生成 Python DLL 的导入库。
     # "multiple-pymethods",
     # "macros",
     # "abi3-py312",

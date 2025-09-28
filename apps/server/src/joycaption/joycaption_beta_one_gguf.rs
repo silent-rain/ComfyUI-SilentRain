@@ -65,11 +65,11 @@ impl JoyCaptionBetaOneGGUF {
         Self {}
     }
 
-    #[classattr]
-    #[pyo3(name = "EXPERIMENTAL")]
-    fn experimental() -> bool {
-        true
-    }
+    // #[classattr]
+    // #[pyo3(name = "EXPERIMENTAL")]
+    // fn experimental() -> bool {
+    //     true
+    // }
 
     #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]

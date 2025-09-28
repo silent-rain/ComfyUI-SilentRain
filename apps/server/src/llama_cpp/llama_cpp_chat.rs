@@ -61,11 +61,11 @@ impl LlamaCppChat {
         Self {}
     }
 
-    #[classattr]
-    #[pyo3(name = "EXPERIMENTAL")]
-    fn experimental() -> bool {
-        false
-    }
+    // #[classattr]
+    // #[pyo3(name = "EXPERIMENTAL")]
+    // fn experimental() -> bool {
+    //     false
+    // }
 
     #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
