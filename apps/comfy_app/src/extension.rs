@@ -29,13 +29,13 @@ pub struct Extension {
     #[wasm_bindgen(skip)]
     pub name: String,
     // 扩展对象
-    extension: Object,
+    inner: JsValue,
 }
 
 /// Debug 展示
 impl fmt::Debug for Extension {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Extension {{ extension: Object, name: {} }}", self.name)
+        write!(f, "Extension {{ extension: JsValue, name: {} }}", self.name)
     }
 }
 
@@ -43,25 +43,33 @@ impl Extension {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            extension: Object::new(),
+            inner: Object::new().into(),
         }
     }
 
     /// 获取扩展对象
-    pub fn as_js_value(&self) -> JsValue {
-        self.extension.clone().into()
+    pub fn get_inner(&self) -> JsValue {
+        self.inner.clone()
     }
 
     /// 注册扩展
-    pub fn _register(self, app: JsValue) -> Result<(), JsValue> {
-        Reflect::set(&self.extension, &"name".into(), &self.name.into())?;
+    pub fn _register(self, app: Object) -> Result<(), JsValue> {
+        Reflect::set(&self.inner, &"name".into(), &self.name.into())?;
 
         let register_func =
             Reflect::get(&app, &"registerExtension".into())?.dyn_into::<Function>()?;
 
-        register_func.call1(&app, &self.extension)?;
+        register_func.call1(&app, &self.inner)?;
 
         Ok(())
+    }
+}
+
+#[wasm_bindgen]
+impl Extension {
+    #[wasm_bindgen(getter)]
+    pub fn name(&self) -> Result<String, JsValue> {
+        Reflect::get(&self.inner, &"name".into()).and_then(|v| v.as_string().ok_or(JsValue::NULL))
     }
 }
 
@@ -84,7 +92,7 @@ impl Extension {
         });
 
         // 设置init方法
-        Reflect::set(&self.extension, &"init ...".into(), &handler)?;
+        Reflect::set(&self.inner, &"init ...".into(), &handler)?;
 
         Ok(())
     }
@@ -104,7 +112,7 @@ impl Extension {
 
         // 设置addCustomNodeDefs方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"addCustomNodeDefs".into(),
             &handler.as_ref().clone(),
         )?;
@@ -128,7 +136,7 @@ impl Extension {
 
         // 设置getCustomWidgets方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"getCustomWidgets".into(),
             &handler.as_ref().clone(),
         )?;
@@ -156,7 +164,7 @@ impl Extension {
             as Box<dyn Fn(Object, Object, Object) -> Result<JsValue, JsValue>>);
 
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"beforeRegisterNodeDef".into(),
             &handler.as_ref().clone(),
         )?;
@@ -181,7 +189,7 @@ impl Extension {
 
         // 设置registerCustomNodes方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"registerCustomNodes".into(),
             &handler.as_ref().clone(),
         )?;
@@ -206,7 +214,7 @@ impl Extension {
 
         // 设置nodeCreated方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"nodeCreated".into(),
             &handler.as_ref().clone(),
         )?;
@@ -232,7 +240,7 @@ impl Extension {
 
         // 设置loadedGraphNode方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"loadedGraphNode".into(),
             &handler.as_ref().clone(),
         )?;
@@ -257,7 +265,7 @@ impl Extension {
 
         // 设置afterConfigureGraph方法
         Reflect::set(
-            &self.extension,
+            &self.inner,
             &"afterConfigureGraph".into(),
             &handler.as_ref().clone(),
         )?;
@@ -285,7 +293,7 @@ impl Extension {
         });
 
         // 设置setup方法
-        Reflect::set(&self.extension, &"setup".into(), &js_func.as_ref().clone())?;
+        Reflect::set(&self.inner, &"setup".into(), &js_func.as_ref().clone())?;
 
         Ok(())
     }

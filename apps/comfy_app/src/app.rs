@@ -38,7 +38,7 @@ impl ComfyApp {
     ///
     /// registerExtension
     pub fn register_extension(&self, extension: &Extension) -> Result<(), JsValue> {
-        let extension_obj = extension.as_js_value();
+        let extension_obj = extension.get_inner();
 
         // 设置name属性
         Reflect::set(
