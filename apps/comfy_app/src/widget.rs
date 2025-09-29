@@ -86,7 +86,6 @@ impl SlotInfo {
 
 /// 表示单个 Input
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Input {
     pub name: String,
     pub localized_name: String,
@@ -95,6 +94,7 @@ pub struct Input {
     pub input_type: String,
     #[serde(default)]
     pub shape: Option<i32>,
+    #[serde(rename = "boundingRect")]
     pub bounding_rect: BoundingRect,
     #[serde(default)]
     pub widget: Option<WidgetRef>,
@@ -117,7 +117,6 @@ impl Input {
 
 /// 表示单个 Output
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Output {
     pub name: String,
     pub localized_name: String,
@@ -126,6 +125,7 @@ pub struct Output {
     pub output_type: String,
     #[serde(default)]
     pub shape: Option<i32>,
+    #[serde(default, rename = "boundingRect")]
     pub bounding_rect: BoundingRect,
     #[serde(default)]
     pub links: Option<Vec<i32>>,
@@ -145,7 +145,7 @@ impl Output {
 }
 
 /// 表示边界矩形
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoundingRect {
     #[serde(rename = "0")]
