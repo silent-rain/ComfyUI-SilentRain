@@ -1,10 +1,10 @@
-use js_sys::{Boolean, Reflect};
+use js_sys::{Boolean, Function, Reflect};
 use wasm_bindgen::{
     JsCast, JsValue,
     prelude::{Closure, wasm_bindgen},
 };
 
-use crate::node_type::LinkInfo;
+use crate::{NodeType, node_type::LinkInfo};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
@@ -45,31 +45,53 @@ impl LGraphNode {
     /// binding: onConnectionsChange
     pub fn on_connections_change<F>(&self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(i32, i32, i32, Option<LinkInfo>) -> Result<(), JsValue> + 'static,
+        F: Fn(NodeType, i32, i32, i32, Option<LinkInfo>) -> Result<(), JsValue> + 'static,
     {
-        // 将 Rust 闭包转换为 JavaScript 函数
-        let handler = Closure::wrap(Box::new(
-            move |r#type: i32, index: i32, connected: i32, link_info: JsValue| {
+        // 创建 Rust 闭包，接受 this 作为第一个参数
+        let rust_handler = Closure::wrap(Box::new(
+            move |this: JsValue, r#type: i32, index: i32, connected: i32, link_info: JsValue| {
+                let node_type_this = NodeType::new(this.into());
+
                 if link_info.is_null() {
-                    return handler(r#type, index, connected, None);
+                    return handler(node_type_this.clone(), r#type, index, connected, None);
                 }
 
                 let link_info = LinkInfo::from_js(link_info.clone())?;
 
-                handler(r#type, index, connected, Some(link_info))
+                // 调用用户提供的处理函数
+                handler(
+                    node_type_this.clone(),
+                    r#type,
+                    index,
+                    connected,
+                    Some(link_info),
+                )
             },
         )
-            as Box<dyn Fn(i32, i32, i32, JsValue) -> Result<(), JsValue>>);
+            as Box<dyn Fn(JsValue, i32, i32, i32, JsValue) -> Result<(), JsValue>>);
 
-        // 将 `onConnectionsChange` 方法设置到原型上
-        Reflect::set(
-            &self.inner,
-            &"onConnectionsChange".into(),
-            &handler.as_ref().clone(),
-        )?;
+        // 创建 JavaScript 包装函数, 用于透传 this 对象到rust的闭包
+        // 在包装函数中添加错误捕获
+        let wrapper_js = r#"
+            return function(type, index, connected, linkInfo) {
+                try {
+                    rustHandler(this, type, index, connected, linkInfo);
+                } catch (e) {
+                    console.error("Error in onConnectionsChange:", e);
+                    throw e;
+                }
+            };
+        "#;
+
+        let create_wrapper = Function::new_with_args("rustHandler", wrapper_js);
+        let wrapper = create_wrapper
+            .call1(&JsValue::NULL, &rust_handler.as_ref().clone())?
+            .dyn_into::<Function>()?;
+
+        Reflect::set(&self.inner, &"onConnectionsChange".into(), &wrapper)?;
 
         // 保持闭包生命周期
-        handler.forget();
+        rust_handler.forget();
 
         Ok(())
     }
