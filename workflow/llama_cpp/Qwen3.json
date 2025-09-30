@@ -1,0 +1,339 @@
+{
+  "id": "ddb537c3-2773-4dbc-a6a5-4f95b3cf4bf3",
+  "revision": 0,
+  "last_node_id": 41,
+  "last_link_id": 47,
+  "nodes": [
+    {
+      "id": 38,
+      "type": "LlamaCppChat",
+      "pos": [
+        4104.3212890625,
+        4145.83642578125
+      ],
+      "size": [
+        400,
+        358
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptions",
+          "link": 45
+        }
+      ],
+      "outputs": [
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "IMAGE",
+          "links": [
+            47
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppChat"
+      },
+      "widgets_values": [
+        "Qwen3-0.6B-Q8_0.gguf",
+        "你是一个AI绘图提示词专家，根据用户描述扩展提示词。",
+        "在河边拍摄，河边的风景优美",
+        4096,
+        2048,
+        5363553,
+        "randomize",
+        0,
+        0,
+        false,
+        false
+      ]
+    },
+    {
+      "id": 40,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        4593.93701171875,
+        4151.14599609375
+      ],
+      "size": [
+        386.5408020019531,
+        283.7882080078125
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 47
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-crystools",
+        "ver": "1.27.3",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 39,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        4581.1982421875,
+        3748.306396484375
+      ],
+      "size": [
+        379.3757019042969,
+        287.7688293457031
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-crystools",
+        "ver": "1.27.3",
+        "Node name for S&R": "Show any to JSON [Crystools]"
+      }
+    },
+    {
+      "id": 37,
+      "type": "LlamaCppChat",
+      "pos": [
+        4095.843017578125,
+        3733.869873046875
+      ],
+      "size": [
+        400,
+        358
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptions",
+          "link": 44
+        }
+      ],
+      "outputs": [
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "IMAGE",
+          "links": [
+            46
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppChat"
+      },
+      "widgets_values": [
+        "Qwen3-0.6B-Q8_0.gguf",
+        "你是一个AI绘图提示词专家，根据用户描述扩展提示词。/no_think",
+        "在河边拍摄，河边的风景优美",
+        4096,
+        2048,
+        6627409,
+        "randomize",
+        0,
+        0,
+        false,
+        false
+      ]
+    },
+    {
+      "id": 36,
+      "type": "LlamaCppOptions",
+      "pos": [
+        3749.0595703125,
+        3735.505615234375
+      ],
+      "size": [
+        270,
+        394
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "type": "LlamaCppExtraOptions",
+          "links": [
+            44,
+            45
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppOptions"
+      },
+      "widgets_values": [
+        40,
+        0.949999988079071,
+        0.6000000238418579,
+        0,
+        0,
+        512,
+        false,
+        64,
+        1.2000000476837158,
+        1.100000023841858,
+        0,
+        "Unspecified",
+        "<__media__>",
+        "",
+        false
+      ]
+    },
+    {
+      "id": 41,
+      "type": "Note",
+      "pos": [
+        3757.984130859375,
+        4191.4736328125
+      ],
+      "size": [
+        272.8788757324219,
+        107.78977966308594
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Qwen3 支持提示词中设置是否进行思考，\n/no_think：禁止思考"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      29,
+      26,
+      0,
+      24,
+      2,
+      "STRING"
+    ],
+    [
+      36,
+      26,
+      0,
+      34,
+      2,
+      "STRING"
+    ],
+    [
+      38,
+      26,
+      0,
+      34,
+      3,
+      "STRING"
+    ],
+    [
+      41,
+      26,
+      0,
+      34,
+      4,
+      "STRING"
+    ],
+    [
+      42,
+      26,
+      0,
+      34,
+      5,
+      "STRING"
+    ],
+    [
+      44,
+      36,
+      0,
+      37,
+      0,
+      "LlamaCppExtraOptions"
+    ],
+    [
+      45,
+      36,
+      0,
+      38,
+      0,
+      "LlamaCppExtraOptions"
+    ],
+    [
+      46,
+      37,
+      0,
+      39,
+      0,
+      "*"
+    ],
+    [
+      47,
+      38,
+      0,
+      40,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.0380881356082894,
+      "offset": [
+        -3068.811886775348,
+        -3603.533861556511
+      ]
+    },
+    "frontendVersion": "1.25.11"
+  },
+  "version": 0.4
+}
