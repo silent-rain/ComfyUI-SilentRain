@@ -24,6 +24,9 @@ pub use string_list::StringList;
 mod string_dyn_list;
 pub use string_dyn_list::StringDynList;
 
+mod string_dyn_list2;
+pub use string_dyn_list2::StringDynList2;
+
 mod save_text;
 pub use save_text::{SaveText, SaveTextMode};
 
@@ -54,6 +57,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<StringListToSting>()?;
     submodule.add_class::<StringList>()?;
     submodule.add_class::<StringDynList>()?;
+    submodule.add_class::<StringDynList2>()?;
     submodule.add_class::<SaveText>()?;
     submodule.add_class::<RegularString>()?;
     submodule.add_class::<LoadKontextPresets>()?;
@@ -84,6 +88,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "StringDynList",
             py.get_type::<StringDynList>(),
             "Sr String Dyn List",
+        ),
+        NodeRegister(
+            "StringDynList2",
+            py.get_type::<StringDynList2>(),
+            "Sr String Dyn List 2",
         ),
         NodeRegister("SaveText", py.get_type::<SaveText>(), "Sr Save Text"),
         NodeRegister(
