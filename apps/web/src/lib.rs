@@ -29,27 +29,27 @@ fn run() -> Result<(), JsValue> {
                             .into(),
                     );
 
-                    let widgets = this.widgets()?;
-                    console::log_1(&format!("widgets: {:#?}", widgets).into());
+                    // let widgets = this.widgets()?;
+                    // console::log_1(&format!("widgets: {:#?}", widgets).into());
 
-                    let widget = this.get_widget(0)?;
-                    console::log_1(&format!("widget: {:#?}", widget).into());
+                    // let widget = this.get_widget(0)?;
+                    // console::log_1(&format!("widget: {:#?}", widget).into());
 
-                    console::log_1(&"---------------------".into());
+                    // console::log_1(&"---------------------".into());
 
-                    let inputs = this.inputs()?;
-                    console::log_1(&format!("inputs: {:#?}", inputs).into());
+                    // let inputs = this.inputs()?;
+                    // console::log_1(&format!("inputs: {:#?}", inputs).into());
 
-                    let input = this.get_input(0)?;
-                    console::log_1(&format!("input: {:#?}", input).into());
+                    // let input = this.get_input(0)?;
+                    // console::log_1(&format!("input: {:#?}", input).into());
 
-                     console::log_1(&"---------------------".into());
+                    //  console::log_1(&"---------------------".into());
 
-                    let outputs = this.outputs()?;
-                    console::log_1(&format!("outputs: {:#?}", outputs).into());
+                    // let outputs = this.outputs()?;
+                    // console::log_1(&format!("outputs: {:#?}", outputs).into());
 
-                    let output = this.get_output(0)?;
-                    console::log_1(&format!("output: {:#?}", output).into());
+                    // let output = this.get_output(0)?;
+                    // console::log_1(&format!("output: {:#?}", output).into());
 
                     Ok(())
                 },

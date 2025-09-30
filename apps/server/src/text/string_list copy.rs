@@ -13,7 +13,7 @@ use crate::{
     error::Error,
     wrapper::comfyui::{
         node_input::InputKwargs,
-        types::{NODE_STRING, NODE_STRING_LIST},
+        types::{any_type, NODE_INT, NODE_STRING},
         PromptServer,
     },
 };
@@ -41,20 +41,20 @@ impl StringList {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str, &'static str) {
-        (NODE_STRING_LIST, NODE_STRING, NODE_STRING)
+    fn return_types() -> (&'static str, &'static str, &'static str, &'static str) {
+        (NODE_STRING, NODE_STRING, NODE_STRING, NODE_INT)
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str, &'static str) {
-        ("string_list", "prompt_strings", "strings")
+    fn return_names() -> (&'static str, &'static str, &'static str, &'static str) {
+        ("string_list", "prompt_strings", "strings", "total")
     }
 
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool, bool) {
-        (false, true, false)
+    fn output_is_list() -> (bool, bool, bool, bool) {
+        (false, true, false, false)
     }
 
     #[classattr]
@@ -66,6 +66,13 @@ impl StringList {
     fn description() -> &'static str {
         "Return a list of strings and the merged strings.
         "
+    }
+
+    // 实验性的, 可选
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        true
     }
 
     #[classattr]
@@ -95,7 +102,7 @@ impl StringList {
                 let optional = PyDict::new(py);
                 optional.set_item(
                     "optional_string_list",
-                    (NODE_STRING_LIST, {
+                    (any_type(py)?, {
                         let any = PyDict::new(py);
                         any.set_item("tooltip", "Input any list")?;
                         any
@@ -141,7 +148,7 @@ impl StringList {
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<(Vec<String>, Vec<String>, String)> {
+    ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
         let result = self.list_to_strings(delimiter, optional_string_list, &kwargs);
 
         match result {
@@ -190,16 +197,17 @@ impl StringList {
     /// 需要搭配 lazy 属性实用
     /// 如果有任何懒加载输入（lazy inputs）尚未被评估，当请求的字段值可用时，这个函数将被调用。
     /// 评估过的输入会作为参数传递给此函数，未评估的输入会传入值为 None。
-    #[pyo3(name = "check_lazy_status", signature = (delimiter, optional_string_list=None, **kwargs))]
+    #[pyo3(name = "check_lazy_status", signature = (string_num, delimiter, optional_string_list=None, **kwargs))]
     fn check_lazy_status(
         &mut self,
+        string_num: u64,
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
         if false {
             error!(
-                "check_lazy_status: {delimiter:?} ==== {optional_string_list:?} ==== {kwargs:?}"
+                "check_lazy_status: {string_num:?}  ==== {delimiter:?} ==== {optional_string_list:?} ==== {kwargs:?}"
             );
         }
 
@@ -227,7 +235,7 @@ impl StringList {
         delimiter: String,
         optional_string_list: Option<Bound<'_, PyAny>>,
         kwargs: &Option<Bound<'_, PyDict>>,
-    ) -> Result<(Vec<String>, Vec<String>, String), Error> {
+    ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
         // 添加输入字符串个数的缓存
         if let Some(kwargs) = kwargs {
             let kwargs = InputKwargs::new(kwargs);
@@ -281,9 +289,10 @@ impl StringList {
             }
         }
 
+        let total = new_strings.len();
         let strings = new_strings.join(&delimiter);
 
-        Ok((new_strings.clone(), new_strings, strings))
+        Ok((new_strings.clone(), new_strings, strings, total))
     }
 }
 
@@ -294,7 +303,7 @@ impl StringList {
         T: IntoPyObject<'py>,
     {
         let input_dict = PyDict::new(py);
-        // input_dict.set_item("string_num", vec![5])?;
+        input_dict.set_item("string_num", vec![5])?;
 
         let dict = PyDict::new(py);
         dict.set_item("ui", input_dict)?;
