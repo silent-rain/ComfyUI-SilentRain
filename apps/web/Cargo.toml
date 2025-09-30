@@ -12,6 +12,8 @@ crate-type = ["cdylib"]
 wasm-bindgen = { workspace = true }
 js-sys = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
+wasm-bindgen-test = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
 web-sys = { workspace = true, features = [
     "Window",
     "Document",
@@ -19,7 +21,9 @@ web-sys = { workspace = true, features = [
     "HtmlElement",
     "console",
 ] }
-wasm-bindgen-test = "0.3"
+
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }

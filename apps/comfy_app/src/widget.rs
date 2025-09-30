@@ -4,30 +4,25 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsValue;
 
 /// 小部件信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Widget {
     pub name: String,
     pub label: String,
     #[serde(rename = "type")]
-    pub widget_type: String,
-    pub value: f64,
-    pub y: u32,
+    pub r#type: String,
     pub options: WidgetOptions,
+    pub y: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_y: Option<f64>,
+    #[serde(rename = "computedDisabled", skip_serializing_if = "Option::is_none")]
+    pub computed_disabled: Option<bool>,
+    #[serde(rename = "computedHeight", skip_serializing_if = "Option::is_none")]
+    pub computed_height: Option<f64>,
 }
 
 impl Widget {
-    /// 创建新的小部件
-    pub fn new(name: &str, value: f64) -> Self {
-        Self {
-            name: name.to_string(),
-            value,
-            options: WidgetOptions::default(),
-            label: name.to_string(),
-            widget_type: name.to_string(),
-            y: 0,
-        }
-    }
-
     /// 从 JsValue 反序列化
     pub fn from_js(js_value: JsValue) -> Result<Widget, JsValue> {
         let result: Widget = serde_wasm_bindgen::from_value(js_value)?;
@@ -43,9 +38,13 @@ impl Widget {
 /// 小部件选项
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct WidgetOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub values: Option<Vec<String>>,
 }
 
@@ -84,21 +83,45 @@ impl SlotInfo {
     }
 }
 
+/*
+obj: Object {
+        obj: JsValue([
+        Object({"name":"delimiter","localized_name":"delimiter","label":"delimiter","type":"STRING","widget":{"name":"delimiter"},
+        "boundingRect":{"0":3780,"1":4406,"2":15,"3":20},"pos":[10,76],"link":null}),
+        Object({"name":"string_1","localized_name":"string_1","label":"string_1","type":"STRING","shape":7,"widget":{"name":"string_1"},
+        "boundingRect":{"0":3780,"1":4430,"2":15,"3":20},"pos":[10,100],"link":81}),
+        Object({"name":"string_5","label":"string_5","type":"STRING","boundingRect":{"0":3780,"1":4344,"2":20,"3":20},"link":83}),
+        Object({"name":"string_5","label":"string_5","type":"STRING","boundingRect":{"0":3780,"1":4364,"2":20,"3":20},"link":null}),
+        Object({"name":"string_6","label":"string_6","type":"STRING","boundingRect":{"0":3780,"1":4384,"2":20,"3":20},"link":85})]),
+*/
+
 /// 表示单个 Input
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Input {
     pub name: String,
-    pub localized_name: String,
-    pub label: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+
     #[serde(rename = "type")]
-    pub input_type: String,
-    #[serde(default)]
+    pub r#type: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub localized_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub shape: Option<i32>,
-    #[serde(rename = "boundingRect")]
-    pub bounding_rect: BoundingRect,
-    #[serde(default)]
+
+    #[serde(rename = "boundingRect", skip_serializing_if = "Option::is_none")]
+    pub bounding_rect: Option<BoundingRect>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub widget: Option<WidgetRef>,
-    #[serde(default)]
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pos: Option<Vec<i32>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub link: Option<i32>,
 }
 
@@ -122,7 +145,7 @@ pub struct Output {
     pub localized_name: String,
     pub label: String,
     #[serde(rename = "type")]
-    pub output_type: String,
+    pub r#type: String,
     #[serde(default)]
     pub shape: Option<i32>,
     #[serde(default, rename = "boundingRect")]
@@ -146,7 +169,6 @@ impl Output {
 
 /// 表示边界矩形
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct BoundingRect {
     #[serde(rename = "0")]
     pub x1: i32,
@@ -160,7 +182,6 @@ pub struct BoundingRect {
 
 /// 表示 Widget 引用
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct WidgetRef {
     pub name: String,
 }

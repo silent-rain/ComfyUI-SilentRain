@@ -1,4 +1,4 @@
-//! 字符串列表 - EXPERIMENTAL
+//! 字符串列表
 
 use log::{error, info};
 use pyo3::{

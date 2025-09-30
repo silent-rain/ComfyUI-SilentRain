@@ -16,4 +16,4 @@ mod node_data;
 pub use node_data::NodeData;
 
 mod l_graph_node;
-pub use l_graph_node::LGraphNode;
+pub use l_graph_node::{ConnectionType, LGraphNode};
