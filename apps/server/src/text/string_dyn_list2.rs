@@ -17,8 +17,6 @@ use crate::{
     },
 };
 
-const MAX_STRING_NUM: usize = 2;
-
 /// 字符串动态列表
 #[pyclass(subclass)]
 pub struct StringDynList2 {}
@@ -81,6 +79,8 @@ impl StringDynList2 {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        let max_string_num = 2;
+
         Python::attach(|py| {
             let dict = PyDict::new(py);
             dict.set_item("required", {
@@ -100,7 +100,7 @@ impl StringDynList2 {
             dict.set_item("optional", {
                 let optional = PyDict::new(py);
                 // 动态输入
-                for i in 1..=MAX_STRING_NUM {
+                for i in 1..=max_string_num {
                     optional.set_item(
                         format!("string_{i}"),
                         (NODE_STRING, {
@@ -136,7 +136,7 @@ impl StringDynList2 {
         py: Python,
         delimiter: String,
         kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<(Vec<String>, Vec<String>, String, usize)> {
+    ) -> PyResult<(Vec<String>, String, usize)> {
         let result = self.list_to_strings(delimiter, &kwargs);
 
         match result {
@@ -188,7 +188,7 @@ impl StringDynList2 {
         &self,
         delimiter: String,
         kwargs: &Option<Bound<'_, PyDict>>,
-    ) -> Result<(Vec<String>, Vec<String>, String, usize), Error> {
+    ) -> Result<(Vec<String>, String, usize), Error> {
         let mut new_strings: Vec<String> = Vec::new();
 
         if let Some(kwargs) = kwargs {
@@ -205,6 +205,6 @@ impl StringDynList2 {
         let total = new_strings.len();
         let strings = new_strings.join(&delimiter);
 
-        Ok((new_strings.clone(), new_strings, strings, total))
+        Ok((new_strings, strings, total))
     }
 }
