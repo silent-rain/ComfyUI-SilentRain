@@ -1,6 +1,6 @@
 //! Node
 
-use js_sys::{Array, Function, Object, Reflect};
+use js_sys::{Array, Float32Array, Function, Object, Reflect};
 use wasm_bindgen::{
     JsCast, JsValue,
     prelude::{Closure, wasm_bindgen},
@@ -141,6 +141,43 @@ impl Node {
 
         Ok(())
     }
+
+    /// 计算大小
+    ///
+    /// computeSize()
+    pub fn compute_size(&self) -> Result<Vec<f32>, JsValue> {
+        let compute_size_fn =
+            Reflect::get(&self.inner, &"computeSize".into())?.dyn_into::<Function>()?;
+
+        let results = compute_size_fn
+            .call0(&self.inner)?
+            .dyn_into::<Float32Array>()?
+            .to_vec();
+        Ok(results)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn size(&self) -> Result<Vec<f32>, JsValue> {
+        let results = Reflect::get(&self.inner, &"size".into())?
+            .dyn_into::<Float32Array>()?
+            .to_vec();
+
+        Ok(results)
+    }
+
+    /// 设置大小
+    ///
+    /// node.setSize([x, y])
+    pub fn set_size(&self, x: f32, y: f32) -> Result<(), JsValue> {
+        let compute_size_fn =
+            Reflect::get(&self.inner, &"setSize".into())?.dyn_into::<Function>()?;
+
+        let size = vec![x, y];
+        let size_js = serde_wasm_bindgen::to_value(&size)?;
+
+        compute_size_fn.call1(&self.inner, &size_js)?;
+        Ok(())
+    }
 }
 
 /// 便捷接口
@@ -253,6 +290,38 @@ impl Node {
 
         widgets.set(index as u32, widget);
         self.set_widgets(&widgets)?;
+        Ok(())
+    }
+
+    /// 用于处理小部件的模式切换（例如，从编辑模式切换到预览模式，或切换小部件的状态）。
+    /// widget.doModeChange(!widget.value, skipOtherNodeCheck);
+    pub fn widget_do_mode_change(
+        &self,
+        index: usize,
+        widget_value: bool,
+        skip_other_node_check: bool,
+    ) -> Result<(), JsValue> {
+        let widgets = self.widgets()?;
+        let widget = widgets.get(index as u32);
+
+        let do_mode_change_fn =
+            Reflect::get(&widget, &"doModeChange".into())?.dyn_into::<Function>()?;
+
+        do_mode_change_fn.call2(
+            &self.inner,
+            &JsValue::from_bool(widget_value),
+            &JsValue::from_bool(skip_other_node_check),
+        )?;
+
+        Ok(())
+    }
+
+    /// 重置节点大小
+    pub fn reset_size(&self) -> Result<(), JsValue> {
+        let size = self.size()?;
+        let compute_size = self.compute_size()?;
+        self.set_size(size[0], compute_size[1])?;
+
         Ok(())
     }
 }

@@ -1,7 +1,6 @@
 //! StringDynList
 
 use comfy_app::{Node, NodeType, WidgetValue};
-use js_sys::Reflect;
 use serde_json::json;
 use wasm_bindgen::JsValue;
 use web_sys::console;
@@ -150,10 +149,21 @@ impl StringDynList {
                     );
                 } else if value < string_widget_len as i64 && string_widget_len > 2 {
                     // 删除组件
-                    for _i in value..(string_widget_len as i64) {
-                        widgets.pop();
+                    {
+                        for _i in value..(string_widget_len as i64) {
+                            widgets.pop();
+                        }
+                        node_c.set_widgets(&widgets)?;
                     }
-                    node_c.set_widgets(&widgets)?;
+
+                    // 重置窗口大小
+                    {
+                        // let size = node_c.size()?;
+                        // let compute_size = node_c.compute_size()?;
+                        // node_c.set_size(size[0], compute_size[1])?;
+
+                        node_c.reset_size()?;
+                    }
                 }
             }
 
