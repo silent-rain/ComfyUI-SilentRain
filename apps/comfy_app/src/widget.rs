@@ -13,7 +13,7 @@ pub struct Widget {
     pub r#type: String,
     pub options: WidgetOptions,
     pub y: f64,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
     pub value: Option<WidgetValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_y: Option<f64>,

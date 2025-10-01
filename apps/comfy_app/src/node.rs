@@ -224,7 +224,7 @@ impl Node {
 
     /// 为指定索引的小部件添加回调函数
     ///
-    /// node.widgets[0].callback = (value, canvas, node, pos, e) => {}
+    /// node.widgets[i].callback = (value, canvas, node, pos, e) => {}
     pub fn add_widget_callback<F>(&self, index: usize, handler: F) -> Result<(), JsValue>
     where
         F: Fn(WidgetValue, Object, Node, Object, Object) -> Result<JsValue, JsValue> + 'static,
@@ -272,12 +272,17 @@ impl Node {
         let add_widget_fn =
             Reflect::get(&self.inner, &"addWidget".into())?.dyn_into::<Function>()?;
 
+        let callback = match callback {
+            Some(callback) => callback,
+            None => &Function::new_with_args("value", ""),
+        };
+
         add_widget_fn.call5(
             &self.inner,
             &JsValue::from_str(r#type),
             &JsValue::from_str(name),
             &value,
-            &callback.cloned().unwrap_or(JsValue::NULL.into()).into(),
+            callback,
             &options,
         )?;
 

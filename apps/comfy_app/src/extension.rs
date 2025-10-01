@@ -234,13 +234,16 @@ impl Extension {
     /// loadedGraphNode(node, app)
     pub fn loaded_graph_node<F>(&mut self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(JsValue, JsValue) -> Result<JsValue, JsValue> + 'static,
+        F: Fn(Node, ComfyApp) -> Result<JsValue, JsValue> + 'static,
     {
         console::log_1(&JsValue::from_str("loaded_graph_node ..."));
 
-        let handler = Closure::wrap(
-            Box::new(handler) as Box<dyn Fn(JsValue, JsValue) -> Result<JsValue, JsValue>>
-        );
+        let handler = Closure::wrap(Box::new(move |node: Object, app: Object| {
+            let node = Node::new(node);
+            let app = ComfyApp::from_app(app);
+            handler(node, app)
+        })
+            as Box<dyn Fn(Object, Object) -> Result<JsValue, JsValue>>);
 
         // 设置loadedGraphNode方法
         Reflect::set(

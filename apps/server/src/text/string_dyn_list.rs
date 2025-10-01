@@ -206,6 +206,8 @@ impl StringDynList {
         delimiter: String,
         kwargs: &Option<Bound<'_, PyDict>>,
     ) -> Result<(Vec<String>, String, usize), Error> {
+        error!("check_lazy_status: {kwargs:?}");
+
         let mut new_strings: Vec<String> = Vec::new();
 
         if let Some(kwargs) = kwargs {

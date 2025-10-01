@@ -128,4 +128,45 @@ impl LGraphNode {
 
         Ok(())
     }
+
+    /// onNodeCreated钩子
+    ///
+    /// binding: onNodeCreated
+    pub fn on_node_created<F>(&self, handler: F) -> Result<(), JsValue>
+    where
+        F: Fn(Node) -> Result<(), JsValue> + 'static,
+    {
+        // 创建 Rust 闭包，接受 this 作为第一个参数
+        let rust_handler = Closure::wrap(Box::new(move |this: Object| {
+            let node_this = Node::new(this);
+
+            // 调用用户提供的处理函数
+            handler(node_this.clone())
+        }) as Box<dyn Fn(Object) -> Result<(), JsValue>>);
+
+        // 创建 JavaScript 包装函数, 用于透传 this 对象到rust的闭包
+        // 在包装函数中添加错误捕获
+        let wrapper_js = r#"
+            return function() {
+                try {
+                    rustHandler(this);
+                } catch (e) {
+                    console.error("Error in onNodeCreated:", e);
+                    throw e;
+                }
+            };
+        "#;
+
+        let create_wrapper = Function::new_with_args("rustHandler", wrapper_js);
+        let wrapper = create_wrapper
+            .call1(&JsValue::NULL, &rust_handler.as_ref().clone())?
+            .dyn_into::<Function>()?;
+
+        Reflect::set(&self.inner, &"onNodeCreated".into(), &wrapper)?;
+
+        // 保持闭包生命周期
+        rust_handler.forget();
+
+        Ok(())
+    }
 }

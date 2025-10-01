@@ -57,8 +57,8 @@ fn test_extension_hook() -> Result<(), JsValue> {
     // 处理节点加载
     extension.loaded_graph_node(|node, app| {
         console::log_1(&"📥 JS loadedGraphNode".into());
-        console::log_1(&node);
-        console::log_1(&app);
+        console::log_1(&node.into());
+        console::log_1(&app.into());
 
         Ok(JsValue::undefined())
     })?;
