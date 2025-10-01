@@ -142,11 +142,6 @@ impl StringDynList {
                             )?;
                         }
                     }
-
-                    let widgets = node_c.widgets()?;
-                    console::log_1(
-                        &format!("🚀string widgets on_node_create111d: {:#?}", widgets).into(),
-                    );
                 } else if value < string_widget_len as i64 && string_widget_len > 2 {
                     // 删除组件
                     {
@@ -165,6 +160,10 @@ impl StringDynList {
                         node_c.reset_size()?;
                     }
                 }
+
+                // 打印组件
+                let widgets = node_c.widgets()?;
+                console::log_1(&format!("🚀string widgets on_node_created: {:#?}", widgets).into());
             }
 
             Ok(JsValue::undefined())
