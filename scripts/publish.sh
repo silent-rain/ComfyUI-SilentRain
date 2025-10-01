@@ -20,7 +20,7 @@ nodesDir=${root}/nodes
 
 # switch venv
 echo "switch venv ..."
-source .venv/bin/activate
+source ./apps/server/.venv/bin/activate
 
 
 # build
