@@ -1,110 +1,54 @@
 //! StringDynList
 
-use comfy_app::{ConnectionType, NodeType};
-use serde_json::json;
+use comfy_app::{Node, WidgetValue};
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
 pub struct StringDynList {}
 
 impl StringDynList {
-    pub fn on_connections_change(node_type: &NodeType) -> Result<(), JsValue> {
-        node_type.prototype()?.on_connections_change(
-            move |mut this, r#type, index, connected, link_info| {
-                if link_info.is_none() {
-                    return Ok(());
-                }
+    pub fn add_widget_callback(node: &Node) -> Result<(), JsValue> {
+        let node_c = node.clone();
+        // string_num 添加回调函数
+        node.add_widget_callback(0, move |value, _canvas, _node, _pos, _pointer_event| {
+            console::log_1(&format!("🚀 小部件值变化: {:#?}", value).into());
 
-                if r#type == ConnectionType::Input {
-                    // connect input
+            if let WidgetValue::Int(value) = value {
+                console::log_1(&format!("🚀 String Dyn List widget value: {:#?}", value).into());
 
-                    if connected {
-                        let inputs = this.get_inputs()?;
-                        let inputs_length = inputs.len();
+                // 添加组件
+                let widgets = node_c.widgets()?;
+                let string_widget_len = widgets.length() as usize - 2;
+                console::log_1(
+                    &format!("🚀string widgets length: {:#?}", string_widget_len).into(),
+                );
 
-                        let has_empty_slot = inputs
-                            .into_iter()
-                            .filter(|v| v.name.starts_with("string_"))
-                            .any(|v| v.link.is_none());
-                        if inputs_length > 2 && !has_empty_slot {
-                            // 添加空卡槽
-                            let extra_info = json!({
-                                "widget": {"name":format!("string_{}", inputs_length )},
-                                "shape": 7,
-                            }); // TODO 此处参数未生效，需要确认
-                            let extra_info = serde_wasm_bindgen::to_value(&extra_info)?;
-                            let first_string_input = this.get_input(1)?;
-                            this.add_input(
-                                &format!("string_{}", inputs_length),
-                                &first_string_input.r#type,
-                                extra_info,
-                            )
-                            .map_err(|e| {
-                                console::log_1(&format!("🔗 添加空卡槽失败: {:#?}", e).into());
-                                e
-                            })?;
-                        }
+                // string_*, index: 2
+                // 添加组件
+                if value > string_widget_len as i64 {
+                    for i in string_widget_len..(value as usize) {
+                        let mut widget = node_c.get_widget(2)?;
+                        widget.name = format!("string_{}", i + 1);
+                        widget.label = format!("string_{}", i + 1);
+                        widget.value = Some(WidgetValue::String("".to_string()));
+                        widgets.push(&widget.to_js()?);
                     }
-
-                    if !connected {
-                        // 移除当前空卡槽
-                        {
-                            this.remove_input(index)?;
-                        }
-
-                        // 添加空卡槽
-                        {
-                            let inputs = this.get_inputs()?;
-                            let inputs_length = inputs.len();
-
-                            let has_empty_slot = inputs
-                                .into_iter()
-                                .filter(|v| v.name.starts_with("string_"))
-                                .any(|v| v.link.is_none());
-                            if inputs_length > 2 && !has_empty_slot {
-                                let extra_info = json!({
-                                    "widget": {"name":format!("string_{}", inputs_length )},
-                                    "shape": 7,
-                                }); // TODO 此处参数未生效，需要确认
-                                let extra_info = serde_wasm_bindgen::to_value(&extra_info)?;
-                                let first_string_input = this.get_input(1)?;
-                                this.add_input(
-                                    &format!("string_{}", inputs_length),
-                                    &first_string_input.r#type,
-                                    extra_info,
-                                )
-                                .map_err(|e| {
-                                    console::log_1(&format!("🔗 添加空卡槽失败: {:#?}", e).into());
-                                    e
-                                })?;
-                            }
-                        }
-
-                        // 重命名"string_"卡槽
-                        {
-                            let inputs = this.get_inputs()?;
-                            let mut input_count = 0;
-                            for (i, input) in inputs.iter().enumerate() {
-                                let mut input = input.clone();
-
-                                if !input.name.starts_with("string_") {
-                                    continue;
-                                }
-                                input_count += 1;
-
-                                input.name = format!("string_{}", input_count);
-                                input.label = Some(format!("string_{}", input_count));
-                                this.set_input(i, input.clone())?;
-                            }
-                        }
+                    node_c.set_widgets(&widgets)?;
+                } else if value < string_widget_len as i64 && string_widget_len > 2 {
+                    // 删除组件
+                    for _i in value..(string_widget_len as i64) {
+                        widgets.pop();
                     }
-                } else {
-                    // connect output
+                    node_c.set_widgets(&widgets)?;
                 }
+            }
 
-                Ok(())
-            },
-        )?;
+            Ok(JsValue::undefined())
+        })?;
+
+        let string_num = node.get_widget_by_name("string_num")?;
+
+        console::log_1(&format!("🚀 string_num: {:#?}", string_num).into());
 
         Ok(())
     }

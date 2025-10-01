@@ -46,9 +46,10 @@ fn test_extension_hook() -> Result<(), JsValue> {
         Ok(JsValue::undefined())
     })?;
 
-    extension.node_created(|app| {
+    extension.node_created(|node, app| {
         console::log_1(&"📦 JS nodeCreated".into());
-        console::log_1(&app);
+        console::log_1(&node.into());
+        console::log_1(&app.into());
 
         Ok(JsValue::undefined())
     })?;

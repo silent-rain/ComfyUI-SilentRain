@@ -1,4 +1,4 @@
-use wasm_bindgen::{JsValue, prelude::*};
+use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use web_sys::console;
 
 use comfy_app::{ComfyApp, Extension};
@@ -17,11 +17,18 @@ fn run() -> Result<(), JsValue> {
 
     // extension.get_custom_widgets(|_app| Ok(()))?;
 
-    extension.before_register_node_def(|node_type, node_data, _app| {
-        // if node_data.name()? == "StringDynList" {
-        //     StringDynList::on_connections_change(&node_type)?;
-        // }
+    extension.node_created(|node, _app| {
+        if node.title()? == "Sr String Dyn List" {
+            let _ = StringDynList::add_widget_callback(&node).map_err(|e| {
+                console::log_1(&format!("🔗 更新 StringDynList UI 失败， err: {:#?}", e).into());
+                e
+            });
+        }
 
+        Ok(JsValue::undefined())
+    })?;
+
+    extension.before_register_node_def(|node_type, node_data, _app| {
         if node_data.name()? == "StringDynList2" {
             let _ = StringDynList2::on_connections_change(&node_type).map_err(|e| {
                 console::log_1(&format!("🔗 更新 StringDynList2 UI 失败， err: {:#?}", e).into());

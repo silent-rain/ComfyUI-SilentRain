@@ -19,7 +19,7 @@ use wasm_bindgen::{
 };
 use web_sys::console;
 
-use crate::{ComfyApp, NodeData, NodeType};
+use crate::{ComfyApp, Node, NodeData, NodeType};
 
 /// 扩展
 #[wasm_bindgen]
@@ -205,12 +205,16 @@ impl Extension {
     /// async nodeCreated(node)
     pub fn node_created<F>(&mut self, handler: F) -> Result<(), JsValue>
     where
-        F: Fn(JsValue) -> Result<JsValue, JsValue> + 'static,
+        F: Fn(Node, ComfyApp) -> Result<JsValue, JsValue> + 'static,
     {
         console::log_1(&JsValue::from_str("node_created ..."));
 
-        let handler =
-            Closure::wrap(Box::new(handler) as Box<dyn Fn(JsValue) -> Result<JsValue, JsValue>>);
+        let handler = Closure::wrap(Box::new(move |node: Object, app: Object| {
+            let node = Node::new(node);
+            let app = ComfyApp::from_app(app);
+            handler(node, app)
+        })
+            as Box<dyn Fn(Object, Object) -> Result<JsValue, JsValue>>);
 
         // 设置nodeCreated方法
         Reflect::set(

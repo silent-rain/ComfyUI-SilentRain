@@ -1,6 +1,7 @@
 //! 部件节点
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 use wasm_bindgen::JsValue;
 
 /// 小部件信息
@@ -13,7 +14,7 @@ pub struct Widget {
     pub options: WidgetOptions,
     pub y: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<String>,
+    pub value: Option<WidgetValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_y: Option<f64>,
     #[serde(rename = "computedDisabled", skip_serializing_if = "Option::is_none")]
@@ -35,6 +36,70 @@ impl Widget {
     }
 }
 
+/// 小部件值
+#[derive(Debug, Clone)]
+pub enum WidgetValue {
+    Int(i64),
+    Float(f64),
+    String(String),
+    Bool(bool),
+    Other(Value),
+}
+
+impl<'de> Deserialize<'de> for WidgetValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // 先尝试将 JSON 反序列化为 serde_json::Value
+        let value = Value::deserialize(deserializer)?;
+
+        // 根据 Value 的类型转换为 WidgetValue
+        match value {
+            Value::Number(num) => {
+                if let Some(int) = num.as_i64() {
+                    Ok(WidgetValue::Int(int))
+                } else if let Some(float) = num.as_f64() {
+                    Ok(WidgetValue::Float(float))
+                } else {
+                    Err(serde::de::Error::custom("Invalid number format"))
+                }
+            }
+            Value::String(s) => Ok(WidgetValue::String(s)),
+            Value::Bool(b) => Ok(WidgetValue::Bool(b)),
+            _ => Ok(WidgetValue::Other(value)),
+        }
+    }
+}
+
+impl Serialize for WidgetValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            WidgetValue::Int(i) => serializer.serialize_i64(*i),
+            WidgetValue::Float(f) => serializer.serialize_f64(*f),
+            WidgetValue::String(s) => serializer.serialize_str(s),
+            WidgetValue::Bool(b) => serializer.serialize_bool(*b),
+            WidgetValue::Other(v) => v.serialize(serializer),
+        }
+    }
+}
+
+impl WidgetValue {
+    /// 从 JsValue 反序列化
+    pub fn from_js(js_value: JsValue) -> Result<WidgetValue, JsValue> {
+        let result: WidgetValue = serde_wasm_bindgen::from_value(js_value)?;
+        Ok(result)
+    }
+
+    /// 序列化为 JsValue
+    pub fn to_js(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self)?)
+    }
+}
+
 /// 小部件选项
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct WidgetOptions {
@@ -44,6 +109,10 @@ pub struct WidgetOptions {
     pub max: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step2: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub values: Option<Vec<String>>,
 }
@@ -60,40 +129,6 @@ impl WidgetOptions {
         Ok(serde_wasm_bindgen::to_value(&self)?)
     }
 }
-
-/// 输入/输出槽位信息
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct SlotInfo {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub slot_type: String,
-    pub label: Option<String>,
-}
-
-impl SlotInfo {
-    /// 从 JsValue 反序列化
-    pub fn from_js(js_value: JsValue) -> Result<SlotInfo, JsValue> {
-        let result: SlotInfo = serde_wasm_bindgen::from_value(js_value)?;
-        Ok(result)
-    }
-
-    /// 序列化为 JsValue
-    pub fn to_js(&self) -> Result<JsValue, JsValue> {
-        Ok(serde_wasm_bindgen::to_value(&self)?)
-    }
-}
-
-/*
-obj: Object {
-        obj: JsValue([
-        Object({"name":"delimiter","localized_name":"delimiter","label":"delimiter","type":"STRING","widget":{"name":"delimiter"},
-        "boundingRect":{"0":3780,"1":4406,"2":15,"3":20},"pos":[10,76],"link":null}),
-        Object({"name":"string_1","localized_name":"string_1","label":"string_1","type":"STRING","shape":7,"widget":{"name":"string_1"},
-        "boundingRect":{"0":3780,"1":4430,"2":15,"3":20},"pos":[10,100],"link":81}),
-        Object({"name":"string_5","label":"string_5","type":"STRING","boundingRect":{"0":3780,"1":4344,"2":20,"3":20},"link":83}),
-        Object({"name":"string_5","label":"string_5","type":"STRING","boundingRect":{"0":3780,"1":4364,"2":20,"3":20},"link":null}),
-        Object({"name":"string_6","label":"string_6","type":"STRING","boundingRect":{"0":3780,"1":4384,"2":20,"3":20},"link":85})]),
-*/
 
 /// 表示单个 Input
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -184,4 +219,26 @@ pub struct BoundingRect {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WidgetRef {
     pub name: String,
+}
+
+/// 输入/输出槽位信息
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct SlotInfo {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub slot_type: String,
+    pub label: Option<String>,
+}
+
+impl SlotInfo {
+    /// 从 JsValue 反序列化
+    pub fn from_js(js_value: JsValue) -> Result<SlotInfo, JsValue> {
+        let result: SlotInfo = serde_wasm_bindgen::from_value(js_value)?;
+        Ok(result)
+    }
+
+    /// 序列化为 JsValue
+    pub fn to_js(&self) -> Result<JsValue, JsValue> {
+        Ok(serde_wasm_bindgen::to_value(&self)?)
+    }
 }
