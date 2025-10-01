@@ -18,12 +18,7 @@ fn run() -> Result<(), JsValue> {
     // extension.get_custom_widgets(|_app| Ok(()))?;
 
     extension.node_created(|_node, _app| {
-        // if node.title()? == "Sr String Dyn List" {
-        //     let _ = StringDynList::on_node_created(&node).map_err(|e| {
-        //         console::log_1(&format!("🔗 更新 StringDynList UI 失败， err: {:#?}", e).into());
-        //         e
-        //     });
-        // }
+        console::log_1(&"🚀 node_created called!".into());
 
         Ok(JsValue::undefined())
     })?;
@@ -46,8 +41,15 @@ fn run() -> Result<(), JsValue> {
         Ok(JsValue::undefined())
     })?;
 
-    extension.loaded_graph_node(|_node, _app| {
+    extension.loaded_graph_node(|node, _app| {
         console::log_1(&"🚀 loaded_graph_nodes called!".into());
+
+        if node.title()? == "Sr String Dyn List" {
+            let _ = StringDynList::init_widget(&node).map_err(|e| {
+                console::log_1(&format!("🔗 更新 StringDynList UI 失败， err: {:#?}", e).into());
+                e
+            });
+        }
 
         Ok(JsValue::undefined())
     })?;

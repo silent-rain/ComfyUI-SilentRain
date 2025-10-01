@@ -79,7 +79,7 @@ impl StringDynList {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        let max_string_num = 2;
+        let max_string_num = 20;
 
         Python::attach(|py| {
             let dict = PyDict::new(py);
@@ -90,9 +90,9 @@ impl StringDynList {
                     "string_num",
                     (NODE_INT, {
                         let params = PyDict::new(py);
-                        params.set_item("default", max_string_num)?;
+                        params.set_item("default", 2)?;
                         params.set_item("min", 2)?;
-                        params.set_item("max", 20)?;
+                        params.set_item("max", max_string_num)?;
                         params.set_item("step", 1)?;
                         params
                     }),
@@ -206,8 +206,6 @@ impl StringDynList {
         delimiter: String,
         kwargs: &Option<Bound<'_, PyDict>>,
     ) -> Result<(Vec<String>, String, usize), Error> {
-        error!("check_lazy_status: {kwargs:?}");
-
         let mut new_strings: Vec<String> = Vec::new();
 
         if let Some(kwargs) = kwargs {
@@ -216,6 +214,9 @@ impl StringDynList {
                 let key_str: String = key.extract()?;
                 if key_str.starts_with("string_") {
                     let value_str: String = value.extract()?;
+                    if value_str.is_empty() {
+                        continue;
+                    }
                     new_strings.push(value_str);
                 }
             }
