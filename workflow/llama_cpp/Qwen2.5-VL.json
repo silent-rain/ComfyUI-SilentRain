@@ -1,0 +1,553 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "revision": 0,
+  "last_node_id": 189,
+  "last_link_id": 1809,
+  "nodes": [
+    {
+      "id": 173,
+      "type": "Show any to JSON [Crystools]",
+      "pos": [
+        2760,
+        1190
+      ],
+      "size": [
+        360,
+        310
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "任意值",
+          "name": "any_value",
+          "shape": 7,
+          "type": "*",
+          "link": 1803
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "string",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-crystools",
+        "ver": "2af9ccf0a29c6910e6fcbdd7d2fe96f9bde44eed",
+        "Node name for S&R": "Show any to JSON [Crystools]",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 175,
+      "type": "PreviewImage",
+      "pos": [
+        3120,
+        1660
+      ],
+      "size": [
+        210,
+        258
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1804
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59",
+        "Node name for S&R": "PreviewImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 176,
+      "type": "ShowText|pysssss",
+      "pos": [
+        2740,
+        1650
+      ],
+      "size": [
+        310,
+        340
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 1805
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "f2838ed5e59de4d73cde5c98354b87a8d3200190",
+        "Node name for S&R": "ShowText|pysssss",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "这是一张彩色照片，显示一个亚洲女性站在一条平直的黑色铺路上。背景是晚霞的黄色和橙色天空，反映在一片静水和周围的树木中，形成美丽的自然景观。女性站在路的中心，面向摄影机。\n\n她身着一件白色的，绒绣胸罩，露肩且紧身，衬着一个黑色高腰短裙，短裙紧身，衬着她白色的腿。她脚上穿着一对黑色高跟鞋。她的皮肤是光滑的，呈白色。她的头发是黑色的，盘在头顶，形成一个高髷式的发型。她的脸带着淡妆，红唇，眼睛清晰，给人一种自然的美感。\n\n她手放于身边，指尖微微向下，姿势端庄。周围的草地是绿色的，路两侧是草地，草地上有几片落叶。照片的边缘是灰色的，背景的色彩渐变，更加衬托出女性的身影。整体照片给人一种清新自然的感觉。",
+        "这张照片是对一个亚洲女性的头部和上身的摄影。女性有浅白皮肤，黑发，头发上用了轻微的卷，盘在头顶上。她的眼睛是深色的，唇色是红的，表情是平静的。她穿着一件白色的 Strapless 衣物，胸口和肩膀都露着。她的脖子上戴着一个小的金色项链，项链上有一个小黑色宝石状的饰品。背景是黄昏时的天空，色调从蓝色渐变到橙色。后面有一个木质的桥，桥上有树影。左边的背景中有树的树枝。路面是黑色的，右边有绿色的草地。底部有一个灰色框，中间有白色的中文文字。整体风格是自然的，清晰的，平静的。摄影的光线是自然光，柔和的。"
+      ]
+    },
+    {
+      "id": 181,
+      "type": "LlamaCppOptions",
+      "pos": [
+        1910,
+        1190
+      ],
+      "size": [
+        270,
+        394
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "type": "LlamaCppExtraOptions",
+          "links": [
+            1801,
+            1802
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppOptions"
+      },
+      "widgets_values": [
+        40,
+        0.949999988079071,
+        0.6000000238418579,
+        0,
+        0,
+        512,
+        false,
+        64,
+        1.2000000476837158,
+        1.100000023841858,
+        0,
+        "Unspecified",
+        "<start_of_image>",
+        "",
+        true
+      ]
+    },
+    {
+      "id": 182,
+      "type": "LlamaCppVision",
+      "pos": [
+        2260,
+        1650
+      ],
+      "size": [
+        400,
+        402
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1809
+        },
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptions",
+          "link": 1802
+        }
+      ],
+      "outputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            1804
+          ]
+        },
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "STRING",
+          "links": [
+            1805
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppVision"
+      },
+      "widgets_values": [
+        "Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf",
+        "Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf",
+        "",
+        "请详细描述这张图像",
+        4100,
+        2049,
+        4313963,
+        "randomize",
+        0,
+        1000,
+        false,
+        true
+      ]
+    },
+    {
+      "id": 183,
+      "type": "LlamaCppChat",
+      "pos": [
+        2250,
+        1190
+      ],
+      "size": [
+        410,
+        390
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptions",
+          "link": 1801
+        }
+      ],
+      "outputs": [
+        {
+          "label": "captions",
+          "name": "captions",
+          "type": "IMAGE",
+          "links": [
+            1803
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppChat"
+      },
+      "widgets_values": [
+        "Qwen2.5-VL-3B-Instruct.gguf",
+        "你将扮演一位Flux AI绘画专家，根据要求提供AI绘画需要进行扩写提示词。\n\n\n输出示例：\n1. **环境**：河水清澈见底，河岸边的绿树和蓝天构成一幅美丽的背景画面，河水在阳光下闪烁着微光。\n2. **光线**：阳光从右上方斜射下来，给整个场景投下柔和的金黄色光芒，美少女的红色裙子在阳光下显得格外醒目。\n3. **服装**：美少女穿着一袭红色长裙，裙子剪裁简洁，裙摆轻盈地随风飘动。她的衣服设计有精美的刺绣花纹，增添了几分优雅。\n4. **表情**：美少女面带微笑，眼神中流露出一丝宁静和愉悦，她的眼睛看向对岸的景色，似乎完全沉浸在大自然的美景中。\n5. **动作**：她站在河边的一个白色石凳上，右手轻轻扶着裙子一角，左手握着一部相机，正专注地调整着拍摄角度，镜头正对河对岸的自然风光。\n6. **细节**：美少女留着一头披肩长发，发丝随风轻轻摆动，显得既柔美又自然。在她的脚下，有一个小巧的摄影包放在石凳上，可能是她的拍摄装备。\n7. **背景**：河对岸可以看到一些模糊的树木和野花，它们与河岸边的植物一起，构成了一幅和谐的自然景象。\n8. **氛围**：整个画面散发着一种宁静、愉悦和自然的氛围，仿佛时间在此刻静止，只有美少女与大自然之间的美好互动在持续。\n",
+        "请描述一位穿着红色裙子，站在河边拍照的美少女",
+        4096,
+        2048,
+        3828900,
+        "fixed",
+        0,
+        1000,
+        false,
+        false
+      ]
+    },
+    {
+      "id": 184,
+      "type": "LoadImage",
+      "pos": [
+        1230,
+        1690
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1807
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "ComfyUI_temp_qehkv_00007_.png",
+        "image"
+      ]
+    },
+    {
+      "id": 185,
+      "type": "Note",
+      "pos": [
+        1520,
+        1210
+      ],
+      "size": [
+        340,
+        270
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "你将扮演一位Flux AI绘画专家，根据要求提供AI绘画需要进行扩写提示词。\n\n\n输出示例：\n1. **环境**：河水清澈见底，河岸边的绿树和蓝天构成一幅美丽的背景画面，河水在阳光下闪烁着微光。\n2. **光线**：阳光从右上方斜射下来，给整个场景投下柔和的金黄色光芒，美少女的红色裙子在阳光下显得格外醒目。\n3. **服装**：美少女穿着一袭红色长裙，裙子剪裁简洁，裙摆轻盈地随风飘动。她的衣服设计有精美的刺绣花纹，增添了几分优雅。\n4. **表情**：美少女面带微笑，眼神中流露出一丝宁静和愉悦，她的眼睛看向对岸的景色，似乎完全沉浸在大自然的美景中。\n5. **动作**：她站在河边的一个白色石凳上，右手轻轻扶着裙子一角，左手握着一部相机，正专注地调整着拍摄角度，镜头正对河对岸的自然风光。\n6. **细节**：美少女留着一头披肩长发，发丝随风轻轻摆动，显得既柔美又自然。在她的脚下，有一个小巧的摄影包放在石凳上，可能是她的拍摄装备。\n7. **背景**：河对岸可以看到一些模糊的树木和野花，它们与河岸边的植物一起，构成了一幅和谐的自然景象。\n8. **氛围**：整个画面散发着一种宁静、愉悦和自然的氛围，仿佛时间在此刻静止，只有美少女与大自然之间的美好互动在持续。\n"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 186,
+      "type": "LoadImage",
+      "pos": [
+        1530,
+        1690
+      ],
+      "size": [
+        270,
+        314.0001220703125
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1808
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "rgthree.compare._temp_glbsl_00013_.png",
+        "image"
+      ]
+    },
+    {
+      "id": 187,
+      "type": "ImageBatchMulti",
+      "pos": [
+        1860,
+        1690
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像_1",
+          "name": "image_1",
+          "type": "IMAGE",
+          "link": 1807
+        },
+        {
+          "label": "图像_2",
+          "name": "image_2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 1808
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            1809
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "468fcc86f0b29e79a8510e8239eb15714d6747a6"
+      },
+      "widgets_values": [
+        2,
+        null
+      ]
+    },
+    {
+      "id": 189,
+      "type": "MarkdownNote",
+      "pos": [
+        1080,
+        1220
+      ],
+      "size": [
+        400,
+        140
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "# model\n\n- [mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF](https://hf-mirror.com/mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF)\n\n- [mradermacher/Qwen2.5-VL-3B-Instruct-GGUF](https://hf-mirror.com/mradermacher/Qwen2.5-VL-3B-Instruct-GGUF)"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1801,
+      181,
+      0,
+      183,
+      0,
+      "LlamaCppExtraOptions"
+    ],
+    [
+      1802,
+      181,
+      0,
+      182,
+      1,
+      "LlamaCppExtraOptions"
+    ],
+    [
+      1803,
+      183,
+      0,
+      173,
+      0,
+      "*"
+    ],
+    [
+      1804,
+      182,
+      0,
+      175,
+      0,
+      "IMAGE"
+    ],
+    [
+      1805,
+      182,
+      1,
+      176,
+      0,
+      "STRING"
+    ],
+    [
+      1807,
+      184,
+      0,
+      187,
+      0,
+      "IMAGE"
+    ],
+    [
+      1808,
+      186,
+      0,
+      187,
+      1,
+      "IMAGE"
+    ],
+    [
+      1809,
+      187,
+      0,
+      182,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "ds": {
+      "scale": 1.2839025177495247,
+      "offset": [
+        -992.9751835778017,
+        -1128.1357544944053
+      ]
+    },
+    "frontendVersion": "1.26.11",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

@@ -3,7 +3,7 @@
 
 
 # ComfyUI 部署路径
-ComfyUI=~/code/ComfyUI
+ComfyUI=/home/one/code/ComfyUI
 
 
 # switch ComfyUI dir
@@ -12,6 +12,7 @@ cd ${ComfyUI}
 # switch venv
 echo "switch venv ..."
 source .venv/bin/activate
+# uv add --dev pip setuptools
 
 # 更新 comfyui-frontend-package
 # pip install --upgrade comfyui-frontend-package

@@ -1,0 +1,14 @@
+[
+    {
+        "model_name": "llama-joycaption-beta-one-hf-llava-i1-GGUF",
+        "media_marker": "<start_of_image>",
+        "chat_template": "llama-joycaption-beta-one-hf-llava-i1-GGUF.j2",
+        "vision": true
+    },
+    {
+        "model_name": "Qwen3 0.6B Instruct",
+        "media_marker": "",
+        "chat_template": "Qwen3_0.6B_Instruct.j2",
+        "vision": false
+    }
+]

@@ -16,17 +16,16 @@ echo "====================== root:${root} ======================"
 App=comfyui_silentrain
 # ComfyUI 节点目录
 nodesDir=${root}/nodes
-# 编译目录
-buildDir=./target/wheels
 
 
 # switch venv
 echo "switch venv ..."
-source .venv/bin/activate
+source ./apps/server/.venv/bin/activate
 
 
 # build
 ./scripts/build.sh
+./scripts/build_web.sh
 
 
 cd ${nodesDir}

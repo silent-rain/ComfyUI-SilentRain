@@ -6,14 +6,20 @@ target = 'x86_64-unknown-linux-gnu'
 # 并行化加载来提高链接器性
 # [target.x86_64-unknown-linux-gnu]
 # # linker = "clang"
-# rustflags = [
-#     # "-C", "link-arg=-fuse-ld=/usr/bin/mold", # mold 链接器 
-#     # "-C", "-Zhint-mostly-unused", # 优化编译速度
-# ]
+rustflags = [
+    # "-C", "link-arg=-fuse-ld=/usr/bin/mold", # mold 链接器 
+    # "-C", "-Zhint-mostly-unused", # 优化编译速度
+    # "-C", "target-feature=-avx", # 禁用avx指令集
+    # "-C", "target-feature=-avx512f",
+]
+
 
 [alias]
 t = "test -- --nocapture" # 单元测试显示println!宏的打印信息
 
 
 [env]
-LD_LIBRARY_PATH = "/home/one/.local/share/uv/python/cpython-3.12.7-linux-x86_64-gnu/lib"
+BINDGEN_EXTRA_CLANG_ARGS = "--target=x86_64-unknown-linux-gnu"
+# LD_LIBRARY_PATH = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib" # python
+# LIBRARY_PATH = "/usr/lib" # g++ clang
+# PYO3_PYTHON = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3" # python

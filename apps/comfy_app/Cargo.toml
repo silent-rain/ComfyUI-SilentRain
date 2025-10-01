@@ -1,0 +1,25 @@
+[package]
+name = "comfy_app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wasm-bindgen = { workspace = true, features = ["serde-serialize"] }
+serde-wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+wasm-bindgen-test = { workspace = true }
+js-sys = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "console",
+] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_repr = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+# log = { workspace = true }

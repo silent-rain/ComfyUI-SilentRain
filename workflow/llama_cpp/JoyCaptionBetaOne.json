@@ -1,0 +1,594 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "revision": 0,
+  "last_node_id": 203,
+  "last_link_id": 1833,
+  "nodes": [
+    {
+      "id": 184,
+      "type": "LoadImage",
+      "pos": [
+        1870,
+        1870
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1807
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59",
+        "Node name for S&R": "LoadImage",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "image": true,
+            "upload": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "00089-915810967 (1).png",
+        "image"
+      ]
+    },
+    {
+      "id": 186,
+      "type": "LoadImage",
+      "pos": [
+        1870,
+        2240
+      ],
+      "size": [
+        270,
+        314.0001220703125
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1808
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59",
+        "Node name for S&R": "LoadImage",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "image": true,
+            "upload": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "00391-266575192.png",
+        "image"
+      ]
+    },
+    {
+      "id": 187,
+      "type": "ImageBatchMulti",
+      "pos": [
+        1870,
+        1710
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像_1",
+          "name": "image_1",
+          "type": "IMAGE",
+          "link": 1807
+        },
+        {
+          "label": "图像_2",
+          "name": "image_2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 1808
+        }
+      ],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            1828,
+            1831
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "468fcc86f0b29e79a8510e8239eb15714d6747a6",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "inputcount": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        2,
+        null
+      ]
+    },
+    {
+      "id": 189,
+      "type": "MarkdownNote",
+      "pos": [
+        1870,
+        1500
+      ],
+      "size": [
+        400,
+        140
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "# model\n\n- [concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf](https://huggingface.co/concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf/tree/main)\n- [mradermacher/llama-joycaption-beta-one-hf-llava-i1-GGUF](https://huggingface.co/mradermacher/llama-joycaption-beta-one-hf-llava-i1-GGUF/tree/main)"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 192,
+      "type": "JoyCaptionExtraOptions",
+      "pos": [
+        2180,
+        1700
+      ],
+      "size": [
+        382.783203125,
+        706
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "type": "STRING",
+          "links": [
+            1829,
+            1832
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "JoyCaptionExtraOptions",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "refer_character_name": true,
+            "exclude_people_info": true,
+            "include_lighting": true,
+            "include_camera_angle": true,
+            "include_watermark_info": true,
+            "include_JPEG_artifacts": true,
+            "include_exif": true,
+            "exclude_sexual": true,
+            "exclude_image_resolution": true,
+            "include_aesthetic_quality": true,
+            "include_composition_style": true,
+            "exclude_text": true,
+            "specify_depth_field": true,
+            "specify_lighting_sources": true,
+            "do_not_use_ambiguous_language": true,
+            "include_nsfw_rating": true,
+            "only_describe_most_important_elements": true,
+            "do_not_include_artist_name_or_title": true,
+            "identify_image_orientation": true,
+            "use_vulgar_slang_and_profanity": true,
+            "do_not_use_polite_euphemisms": true,
+            "include_character_age": true,
+            "include_camera_shot_type": true,
+            "exclude_mood_feeling": true,
+            "include_camera_vantage_height": true,
+            "mention_watermark_explicitly": true,
+            "avoid_meta_descriptive_phrases": true,
+            "character_name": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        ""
+      ]
+    },
+    {
+      "id": 193,
+      "type": "ShowText|pysssss",
+      "pos": [
+        3000,
+        2170
+      ],
+      "size": [
+        310,
+        340
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 1833
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "f2838ed5e59de4d73cde5c98354b87a8d3200190",
+        "Node name for S&R": "ShowText|pysssss",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "This is a photograph of a young Asian woman standing against a plain gray background. She has a slender build, long dark brown hair that falls in loose waves over her shoulders, and a light to medium skin tone. She is wearing a sleeveless, knee-length black satin dress that fits closely at the waist and flares out into a full skirt. The dress has a subtle sheen, highlighting its smooth texture. She is also wearing black high-heeled shoes. Her arms are relaxed by her sides, and she is standing with a slight, confident smile. Her makeup is minimal, emphasizing her natural beauty. The overall style is elegant and sophisticated, with a hint of glamour. The image is SFW (safe for work) and focuses on the woman's stylish appearance and the simplicity of the background. There are no additional objects or decorations in the image, keeping the focus entirely on the subject. The lighting is even, with no harsh shadows, allowing the details of the dress and her features to be clearly visible.",
+        "This is a photograph of an attractive woman standing against a plain, beige background. She has long, wavy black hair that cascades over her shoulders and down her back. Her skin tone is light, and she has a slender, elegant physique. She is wearing a stunning, strapless, form-fitting, floor-length red satin gown that hugs her curves and flares slightly at the bottom, creating a mermaid-like silhouette. The gown has a smooth, shiny texture that reflects the light. She is accessorized with a silver bracelet on her right wrist and a simple, elegant ring on her left hand. Her makeup is subtle, with a focus on her eyes and a natural lip color. She is standing with her right hand resting on her hip and her left hand relaxed by her side. The image is sfw (safe for work) and emphasizes her beauty and the elegance of her attire. The photograph has a professional, studio-like quality with even lighting that highlights the vibrant red of her dress and the smoothness of the satin fabric. The overall style is glamorous and sophisticated."
+      ],
+      "bgcolor": "hsla(0, 0%, 20.8%, 1)"
+    },
+    {
+      "id": 201,
+      "type": "ShowText|pysssss",
+      "pos": [
+        3000,
+        1710
+      ],
+      "size": [
+        310,
+        340
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 1830
+        }
+      ],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "shape": 6,
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-custom-scripts",
+        "ver": "f2838ed5e59de4d73cde5c98354b87a8d3200190",
+        "Node name for S&R": "ShowText|pysssss",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "Photograph of an attractive Asian woman with long, wavy black hair, standing against a plain gray background. She's wearing a sleeveless, black satin dress with a fitted bodice and a flared skirt that falls just above her knees. She's also wearing black high heels. Her skin tone is light, and she has a confident, slightly smiling expression. The image is sfw and focuses on her elegant, stylish look. The lighting is even, highlighting the texture of the satin dress.",
+        "Photograph of an attractive Asian woman with long black hair standing in a studio against a plain beige background. She's wearing a strapless, form-fitting, red satin gown that flares out at the bottom. Her skin is smooth and light, and she's looking directly at the camera with a slight smile. She's wearing a silver bracelet on her left wrist and a simple ring on her right hand. The image is SFW and highlights her elegant and stylish appearance."
+      ],
+      "bgcolor": "hsla(0, 0%, 20.8%, 1)"
+    },
+    {
+      "id": 202,
+      "type": "JoyCaptionBetaOneGGUF",
+      "pos": [
+        2640,
+        1700
+      ],
+      "size": [
+        300,
+        414
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1828
+        },
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "STRING",
+          "link": 1829
+        }
+      ],
+      "outputs": [
+        {
+          "label": "query",
+          "name": "query",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "label": "caption",
+          "name": "caption",
+          "type": "STRING",
+          "links": [
+            1830
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "JoyCaptionBetaOneGGUF"
+      },
+      "widgets_values": [
+        "llava_gguf/llama-joycaption-beta-one-hf-llava.i1-Q6_K.gguf",
+        "llava_gguf/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf",
+        0,
+        20,
+        2048,
+        "Descriptive (Casual)",
+        "medium-length",
+        512,
+        0.6,
+        0.9,
+        40,
+        6815044,
+        "randomize",
+        false,
+        true
+      ]
+    },
+    {
+      "id": 203,
+      "type": "JoyCaptionBetaOneCustomGGUF",
+      "pos": [
+        2640,
+        2170
+      ],
+      "size": [
+        300,
+        474
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1831
+        },
+        {
+          "label": "extra_options",
+          "name": "extra_options",
+          "shape": 7,
+          "type": "STRING",
+          "link": 1832
+        }
+      ],
+      "outputs": [
+        {
+          "label": "query",
+          "name": "query",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "label": "caption",
+          "name": "caption",
+          "type": "STRING",
+          "links": [
+            1833
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "JoyCaptionBetaOneCustomGGUF"
+      },
+      "widgets_values": [
+        "llava_gguf/llama-joycaption-beta-one-hf-llava.i1-Q6_K.gguf",
+        "llava_gguf/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf",
+        0,
+        20,
+        2048,
+        "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions.",
+        "Write a detailed description for this image.",
+        512,
+        0.6,
+        0.9,
+        40,
+        1170025,
+        "randomize",
+        false,
+        true
+      ]
+    }
+  ],
+  "links": [
+    [
+      1807,
+      184,
+      0,
+      187,
+      0,
+      "IMAGE"
+    ],
+    [
+      1808,
+      186,
+      0,
+      187,
+      1,
+      "IMAGE"
+    ],
+    [
+      1828,
+      187,
+      0,
+      202,
+      0,
+      "IMAGE"
+    ],
+    [
+      1829,
+      192,
+      0,
+      202,
+      1,
+      "STRING"
+    ],
+    [
+      1830,
+      202,
+      1,
+      201,
+      0,
+      "STRING"
+    ],
+    [
+      1831,
+      187,
+      0,
+      203,
+      0,
+      "IMAGE"
+    ],
+    [
+      1832,
+      192,
+      0,
+      203,
+      1,
+      "STRING"
+    ],
+    [
+      1833,
+      203,
+      1,
+      193,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "ds": {
+      "scale": 0.8769226950000042,
+      "offset": [
+        -1977.4188437502698,
+        -1613.609379175005
+      ]
+    },
+    "frontendVersion": "1.26.11",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
