@@ -32,7 +32,7 @@ impl StringDynList {
                 // node.set_widgets(&widgets)?;
 
                 // 添加组件2
-                // let widget = node.get_widget(2)?;
+                let widget = node.get_widget(2)?;
                 for i in string_widget_len..(value as usize) {
                     let options = json!({
                         // "serialize":false,
@@ -40,8 +40,8 @@ impl StringDynList {
                     });
                     let options = serde_wasm_bindgen::to_value(&options)?;
                     node.add_widget(
-                        // &widget.r#type.clone(),
-                        "STRING",
+                        &widget.r#type.clone(),
+                        // "number", // STRING/text/number
                         &format!("string_{}", i + 1),
                         JsValue::from_str(""),
                         None,
@@ -61,13 +61,6 @@ impl StringDynList {
         node_type.prototype()?.on_node_created(|node| {
             let widgets = node.widgets()?;
             console::log_1(&format!("🚀string widgets on_node_created: {:#?}", widgets).into());
-
-            {
-                let widgets = node.widgets()?;
-                let widget = widgets.get(0);
-                let v = Reflect::get(&widget, &"value".into())?;
-                console::log_1(&format!("🚀string widget 0 on_node_created: {:#?}", v).into());
-            }
 
             // string_num 添加回调函数
             Self::add_widget_callback(&node)?;
@@ -94,29 +87,67 @@ impl StringDynList {
                 // string_*, index: 2
                 // 添加组件
                 if value > string_widget_len as i64 {
-                    // for i in string_widget_len..(value as usize) {
-                    //     let mut widget = node_c.get_widget(2)?;
-                    //     widget.name = format!("string_{}", i + 1);
-                    //     widget.label = format!("string_{}", i + 1);
-                    //     widget.value = Some(WidgetValue::String("".to_string()));
-                    //     widgets.push(&widget.to_js()?);
-                    // }
-                    // node_c.set_widgets(&widgets)?;
+                    // {
+                    //     // 添加组件, 无法后端联动
+                    //     for i in string_widget_len..(value as usize) {
+                    //         let mut widget = node_c.get_widget(2)?;
+                    //         widget.name = format!("string_{}", i + 1);
+                    //         widget.label = format!("string_{}", i + 1);
+                    //         widget.value = Some(WidgetValue::String("".to_string()));
 
-                    let widget = node_c.get_widget(2)?;
-                    for i in string_widget_len..(value as usize) {
-                        let options = json!({
-                            "serialize":false,
-                        });
-                        let options = serde_wasm_bindgen::to_value(&options)?;
-                        node_c.add_widget(
-                            &widget.r#type.clone(),
-                            &format!("string_{}", i + 1),
-                            JsValue::from_str(""),
-                            None,
-                            options,
-                        )?;
+                    //         let widget_js = widget.to_js()?;
+                    //         Reflect::set(&widget_js, &"node".into(), &node_c.get_inner())?;
+
+                    //         widgets.push(&widget_js);
+                    //     }
+                    //     node_c.set_widgets(&widgets)?;
+                    // }
+
+                    // {
+                    //     // 添加组件, 无法后端联动
+                    //     let widgets = node_c.widgets()?;
+                    //     for i in string_widget_len..(value as usize) {
+                    //         let widget = widgets.get(2).clone();
+                    //         Reflect::set(
+                    //             &widget,
+                    //             &"name".into(),
+                    //             &format!("string_{}", i + 1).into(),
+                    //         )?;
+                    //         Reflect::set(
+                    //             &widget,
+                    //             &"label".into(),
+                    //             &format!("string_{}", i + 1).into(),
+                    //         )?;
+                    //         Reflect::set(&widget, &"value".into(), &"".into())?;
+
+                    //         widgets.push(&widget);
+                    //     }
+                    //     node_c.set_widgets(&widgets)?;
+                    // }
+
+                    {
+                        // 添加组件, 无法后端联动
+                        let widget = node_c.get_widget(2)?;
+                        for i in string_widget_len..(value as usize) {
+                            let options = json!({
+                                "serialize":false,
+                            });
+                            let options = serde_wasm_bindgen::to_value(&options)?;
+                            node_c.add_widget(
+                                &widget.r#type.clone(),
+                                // "number", // STRING/text/number
+                                &format!("string_{}", i + 1),
+                                JsValue::from_str(""),
+                                None,
+                                options,
+                            )?;
+                        }
                     }
+
+                    let widgets = node_c.widgets()?;
+                    console::log_1(
+                        &format!("🚀string widgets on_node_create111d: {:#?}", widgets).into(),
+                    );
                 } else if value < string_widget_len as i64 && string_widget_len > 2 {
                     // 删除组件
                     for _i in value..(string_widget_len as i64) {
