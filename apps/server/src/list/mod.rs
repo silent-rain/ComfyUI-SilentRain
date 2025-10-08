@@ -1,7 +1,7 @@
 //! 列表节点
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 use crate::core::node::NodeRegister;
@@ -30,6 +30,9 @@ pub use batch_to_list::BatchToList;
 mod merge_multi_list;
 pub use merge_multi_list::MergeMultiList;
 
+mod any_dyn_list;
+pub use any_dyn_list::AnyDynList;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "list")?;
@@ -41,6 +44,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<ListToBatch>()?;
     submodule.add_class::<BatchToList>()?;
     submodule.add_class::<MergeMultiList>()?;
+    submodule.add_class::<AnyDynList>()?;
     Ok(submodule)
 }
 
@@ -79,6 +83,7 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<MergeMultiList>(),
             "Sr Merge Multi List",
         ),
+        NodeRegister("AnyDynList", py.get_type::<AnyDynList>(), "Sr Any Dyn List"),
     ];
     Ok(nodes)
 }

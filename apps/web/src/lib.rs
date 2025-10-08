@@ -9,6 +9,9 @@ use string_dyn_list2::StringDynList2;
 mod string_dyn_list;
 use string_dyn_list::StringDynList;
 
+mod any_dyn_list;
+use any_dyn_list::AnyDynList;
+
 #[wasm_bindgen(start)]
 fn run() -> Result<(), JsValue> {
     let mut extension = Extension::new("ComfyUI-SilentRain");
@@ -34,6 +37,13 @@ fn run() -> Result<(), JsValue> {
         if node_data.name()? == "StringDynList" {
             let _ = StringDynList::on_node_created(&node_type).map_err(|e| {
                 console::log_1(&format!("🔗 更新 StringDynList UI 失败， err: {:#?}", e).into());
+                e
+            });
+        }
+
+        if node_data.name()? == "AnyDynList" {
+            let _ = AnyDynList::on_connections_change(&node_type).map_err(|e| {
+                console::log_1(&format!("🔗 更新 AnyDynList UI 失败， err: {:#?}", e).into());
                 e
             });
         }
