@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use candle_core::{Device, Tensor};
 use log::error;
 use pyo3::{
-    types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyListMethods},
     Bound, Python,
+    types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyListMethods},
 };
-use serde::{ser::SerializeSeq, Serialize};
+use serde::{Serialize, ser::SerializeSeq};
 
 use crate::{
     error::Error,
@@ -113,29 +113,27 @@ pub fn conditioning_set_values(
         let mut n = conditioning.clone();
         for (k, val) in &values {
             let mut t_val = val.clone();
-            if append {
-                if let Some(old_val) = conditioning.1.get(k) {
-                    t_val = match (old_val, val) {
-                        (ConditioningEtx::Tensor(old_val), ConditioningEtx::Tensor(val)) => {
-                            ConditioningEtx::Tensor(old_val.add(val)?)
-                        }
-                        (ConditioningEtx::Tensors(old_val), ConditioningEtx::Tensors(val)) => {
-                            let mut old_val = old_val.clone();
-                            let mut val = val.clone();
-                            old_val.append(&mut val);
-                            ConditioningEtx::Tensors(old_val.to_vec())
-                        }
-                        (ConditioningEtx::Float(old_val), ConditioningEtx::Float(val)) => {
-                            ConditioningEtx::Float(old_val + val)
-                        }
-                        _ => {
-                            error!("unknown type: {old_val:?} {val:?}");
-                            return Err(Error::PyDowncastError(format!(
-                                "unknown type: {old_val:?} {val:?}"
-                            )));
-                        }
-                    };
-                }
+            if append && let Some(old_val) = conditioning.1.get(k) {
+                t_val = match (old_val, val) {
+                    (ConditioningEtx::Tensor(old_val), ConditioningEtx::Tensor(val)) => {
+                        ConditioningEtx::Tensor(old_val.add(val)?)
+                    }
+                    (ConditioningEtx::Tensors(old_val), ConditioningEtx::Tensors(val)) => {
+                        let mut old_val = old_val.clone();
+                        let mut val = val.clone();
+                        old_val.append(&mut val);
+                        ConditioningEtx::Tensors(old_val.to_vec())
+                    }
+                    (ConditioningEtx::Float(old_val), ConditioningEtx::Float(val)) => {
+                        ConditioningEtx::Float(old_val + val)
+                    }
+                    _ => {
+                        error!("unknown type: {old_val:?} {val:?}");
+                        return Err(Error::PyDowncastError(format!(
+                            "unknown type: {old_val:?} {val:?}"
+                        )));
+                    }
+                };
             }
             n.1.insert(k.to_string(), t_val);
         }

@@ -89,8 +89,8 @@ impl ConditioningConsoleDebug {
                required.set_item(
                     "conditioning",
                     (NODE_CONDITIONING, {
-                        let conditioning = PyDict::new(py);
-                        conditioning
+                        
+                        PyDict::new(py)
                     }),
                 )?;
 

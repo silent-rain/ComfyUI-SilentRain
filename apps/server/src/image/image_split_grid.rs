@@ -3,10 +3,10 @@
 use candle_core::{Device, Tensor};
 use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
@@ -14,8 +14,8 @@ use crate::{
     error::Error,
     wrapper::{
         comfyui::{
-            types::{NODE_IMAGE, NODE_INT},
             PromptServer,
+            types::{NODE_IMAGE, NODE_INT},
         },
         torch::tensor::TensorWrapper,
     },
@@ -118,13 +118,7 @@ impl ImageSplitGrid {
             dict.set_item("required", {
                 let required = PyDict::new(py);
 
-                required.set_item(
-                    "image",
-                    (NODE_IMAGE, {
-                        let params = PyDict::new(py);
-                        params
-                    }),
-                )?;
+                required.set_item("image", (NODE_IMAGE, { PyDict::new(py) }))?;
 
                 required.set_item(
                     "row",

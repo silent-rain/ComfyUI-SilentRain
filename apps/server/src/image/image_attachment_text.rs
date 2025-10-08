@@ -1,16 +1,15 @@
 //! 图像附加文字
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_IMAGE,
     wrapper::comfyui::{
-        types::{NODE_IMAGE, NODE_STRING},
         PromptServer,
+        types::{NODE_IMAGE, NODE_STRING},
     },
 };
 
@@ -107,13 +106,7 @@ impl ImageAttachmentText {
             dict.set_item("required", {
                 let required = PyDict::new(py);
 
-                required.set_item(
-                    "image",
-                    (NODE_IMAGE, {
-                        let params = PyDict::new(py);
-                        params
-                    }),
-                )?;
+                required.set_item("image", (NODE_IMAGE, { PyDict::new(py) }))?;
 
                 required.set_item(
                     "string",

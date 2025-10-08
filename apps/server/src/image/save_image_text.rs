@@ -3,15 +3,15 @@
 use std::{collections::HashMap, fs::File, io::BufWriter, path::Path};
 
 use candle_core::Device;
-use encoding::{all::ISO_8859_1, DecoderTrap, EncoderTrap, Encoding};
+use encoding::{DecoderTrap, EncoderTrap, Encoding, all::ISO_8859_1};
 use image::{DynamicImage, ImageFormat};
 use log::error;
 use png::{Compression, Encoder};
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 use serde_json::Value;
 
@@ -21,9 +21,9 @@ use crate::{
     text::{SaveText, SaveTextMode},
     wrapper::{
         comfyui::{
+            PromptServer,
             node_input::InputPrompt,
             types::{NODE_BOOLEAN, NODE_IMAGE, NODE_STRING},
-            PromptServer,
         },
         torch::tensor::TensorWrapper,
     },
@@ -101,13 +101,7 @@ impl SaveImageText {
             let dict = PyDict::new(py);
             dict.set_item("required", {
                 let required = PyDict::new(py);
-                required.set_item(
-                    "image",
-                    (NODE_IMAGE, {
-                        let image = PyDict::new(py);
-                        image
-                    }),
-                )?;
+                required.set_item("image", (NODE_IMAGE, { PyDict::new(py) }))?;
                 required.set_item(
                     "captions",
                     (NODE_STRING, {

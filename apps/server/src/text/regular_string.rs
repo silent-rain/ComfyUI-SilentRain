@@ -2,18 +2,18 @@
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_INT, NODE_STRING},
         PromptServer,
+        types::{NODE_INT, NODE_STRING},
     },
 };
 
@@ -75,13 +75,7 @@ impl RegularString {
             let dict = PyDict::new(py);
             dict.set_item("required", {
                 let required = PyDict::new(py);
-                required.set_item(
-                    "text",
-                    (NODE_STRING, {
-                        let text = PyDict::new(py);
-                        text
-                    }),
-                )?;
+                required.set_item("text", (NODE_STRING, { PyDict::new(py) }))?;
                 required.set_item(
                     "pattern",
                     (NODE_STRING, {

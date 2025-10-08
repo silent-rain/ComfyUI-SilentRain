@@ -31,17 +31,16 @@ pub fn recursive_search(
     for entry in walker.filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             // 获取相对于搜索目录的路径
-            if let Ok(rel_path) = entry.path().strip_prefix(dir_path) {
-                if let Some(rel_str) = rel_path.to_str() {
-                    files.push(rel_str.to_string());
-                }
+            if let Ok(rel_path) = entry.path().strip_prefix(dir_path)
+                && let Some(rel_str) = rel_path.to_str()
+            {
+                files.push(rel_str.to_string());
             }
-        } else if entry.file_type().is_dir() {
-            if let Some(path) = entry.path().to_str() {
-                if let Ok(mtime) = get_mtime(path) {
-                    dirs.insert(path.to_string(), mtime);
-                }
-            }
+        } else if entry.file_type().is_dir()
+            && let Some(path) = entry.path().to_str()
+            && let Ok(mtime) = get_mtime(path)
+        {
+            dirs.insert(path.to_string(), mtime);
         }
     }
 

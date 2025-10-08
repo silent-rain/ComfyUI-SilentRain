@@ -4,8 +4,8 @@
 //!
 
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 use crate::core::node::NodeRegister;
@@ -27,6 +27,9 @@ pub use llama_cpp_vision::LlamaCppVision;
 
 mod llama_cpp_chat;
 pub use llama_cpp_chat::LlamaCppChat;
+
+mod model_manager;
+pub use model_manager::ModelManager;
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {

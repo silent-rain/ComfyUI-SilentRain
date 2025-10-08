@@ -109,13 +109,7 @@ impl ImageResolution {
             let dict = PyDict::new(py);
             dict.set_item("required", {
                 let required = PyDict::new(py);
-                required.set_item(
-                    "image",
-                    (NODE_IMAGE, {
-                        let params = PyDict::new(py);
-                        params
-                    }),
-                )?;
+                required.set_item("image", (NODE_IMAGE, { PyDict::new(py) }))?;
                 required.set_item(
                     "resize_mode",
                     (
