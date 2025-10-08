@@ -4,10 +4,10 @@ use std::sync::RwLock;
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use pythonize::depythonize;
 
@@ -18,11 +18,11 @@ use crate::{
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
+            PromptServer,
             types::{
                 NODE_BOOLEAN, NODE_IMAGE, NODE_INT, NODE_INT_MAX, NODE_LLAMA_CPP_OPTIONS,
                 NODE_SEED_MAX, NODE_STRING,
             },
-            PromptServer,
         },
     },
 };
