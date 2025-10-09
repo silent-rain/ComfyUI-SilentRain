@@ -5,6 +5,8 @@ use std::{
     sync::{Arc, OnceLock, RwLock},
 };
 
+use crate::error::Error;
+
 static GLOBAL_CACHE: OnceLock<RwLock<ModelManager>> = OnceLock::new();
 
 /// 全局单例的模型缓存
@@ -37,26 +39,29 @@ impl ModelManager {
         key: &str,
         model_hash: &str,
         init_model: F,
-    ) -> Option<Arc<T>>
+    ) -> Result<Arc<T>, Error>
     where
-        F: FnOnce() -> Arc<T>,
+        F: FnOnce() -> Result<Arc<T>, Error>,
     {
         // 检查当前 hash 是否存在
         if let Some(current_hash) = self.hashes.get(key)
             && current_hash == model_hash
         {
             // hash 值未变化，直接返回现有模型
-            return self.get::<T>(key);
+            let model = self.get::<T>(key).ok_or_else(|| {
+                Error::ModelNotInitialized(format!("Model for key '{}' is not initialized", key))
+            })?;
+            return Ok(model);
         }
 
         // hash 值不存在或不一致，初始化新模型并更新缓存
-        let model = init_model();
+        let model = init_model()?;
         self.pool.insert(
             key.to_string(),
             Arc::clone(&model) as Arc<dyn Any + Send + Sync>,
         );
         self.hashes.insert(key.to_string(), model_hash.to_string());
-        Some(model)
+        Ok(model)
     }
 
     /// 删除模型
@@ -184,7 +189,7 @@ mod tests {
         {
             let mut cache = cache.write().unwrap();
             let model = cache
-                .get_or_insert("model1", "hash123", || Arc::new(MyModel { value: 42 }))
+                .get_or_insert("model1", "hash123", || Ok(Arc::new(MyModel { value: 42 })))
                 .unwrap();
             assert_eq!(model.value, 42);
         }
@@ -195,7 +200,7 @@ mod tests {
             let model = cache
                 .get_or_insert("model1", "hash123", || {
                     println!("This should not be printed!");
-                    Arc::new(MyModel { value: 80 })
+                    Ok(Arc::new(MyModel { value: 80 }))
                 })
                 .unwrap();
             assert_eq!(model.value, 42);
@@ -205,7 +210,7 @@ mod tests {
         {
             let mut cache = cache.write().unwrap();
             let model = cache
-                .get_or_insert("model1", "hash456", || Arc::new(MyModel { value: 100 }))
+                .get_or_insert("model1", "hash456", || Ok(Arc::new(MyModel { value: 100 })))
                 .unwrap();
             assert_eq!(model.value, 100);
         }

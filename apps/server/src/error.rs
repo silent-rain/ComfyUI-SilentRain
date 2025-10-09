@@ -114,6 +114,11 @@ pub enum Error {
     InvalidPath(String),
     #[error("invalid input, {0}")]
     InvalidInput(String),
+
+    #[error("Model is not initialized, {0}")]
+    ModelNotInitialized(String),
+    #[error("Model mtmd context is not initialized, {0}")]
+    ModelMtmdContextNotInitialized(String),
 }
 
 impl From<std::io::Error> for Error {

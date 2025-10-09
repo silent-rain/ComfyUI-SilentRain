@@ -14,7 +14,7 @@ use pythonize::depythonize;
 use crate::{
     core::{category::CATEGORY_LLAMA_CPP, utils::image::tensor_to_raw_data},
     error::Error,
-    llama_cpp::{LlamaCppOptions, LlamaCppPipeline},
+    llama_cpp::{LlamaCppOptions, LlamaCppPipeline, ModelManager},
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
@@ -392,6 +392,9 @@ impl LlamaCppVision {
         options.n_gpu_layers = n_gpu_layers;
         options.keep_context = keep_context;
         options.cache_model = cache_model;
+        options.model_cache_key = "model_llama_cpp_vision_cache_key".to_string();
+        options.model_mtmd_context_cache_key =
+            "model_mtmd_context_llama_cpp_vision_cache_key".to_string();
 
         Ok(options)
     }
@@ -449,10 +452,12 @@ impl LlamaCppVision {
             None => LlamaCppPipeline::new(params)?,
         };
 
-        // 有缓存时，如果参数更新则重新加载模型
-        if params.cache_model {
-            pipeline.update_model(params)?;
-            pipeline.update_mtmd_context(params)?;
+        if !params.cache_model {
+            let mut model_manager = ModelManager::global()
+                .write()
+                .map_err(|e| Error::LockError(e.to_string()))?;
+            model_manager.remove(&params.model_cache_key);
+            model_manager.remove(&params.model_mtmd_context_cache_key);
         }
 
         let mut captions = Vec::new();

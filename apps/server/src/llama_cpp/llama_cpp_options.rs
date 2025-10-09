@@ -12,10 +12,10 @@ use std::path::PathBuf;
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use pythonize::{depythonize, pythonize};
 use rand::TryRngCore;
@@ -28,8 +28,8 @@ use crate::{
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
-            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_STRING},
             PromptServer,
+            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_INT, NODE_LLAMA_CPP_OPTIONS, NODE_STRING},
         },
     },
 };
@@ -250,6 +250,11 @@ pub struct LlamaCppOptions {
     // #[arg(long, default_value_t = 32)]
     #[serde(default)]
     pub n_len: i32,
+
+    #[serde(default)]
+    pub model_cache_key: String,
+    #[serde(default)]
+    pub model_mtmd_context_cache_key: String,
 }
 
 impl PromptServer for LlamaCppOptions {}
@@ -687,6 +692,9 @@ impl Default for LlamaCppOptions {
             // 检索增强生成（RAG）参数
             documents: Vec::new(), // 默认文档列表（空）
             n_len: 128,            // 默认检索结果长度
+
+            model_cache_key: "default_model_cache_key".to_string(),
+            model_mtmd_context_cache_key: "default_model_mtmd_context_cache_key".to_string(),
         }
     }
 }

@@ -15,8 +15,8 @@ use llama_cpp_2::{
     llama_batch::LlamaBatch,
     model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
     mtmd::{
-        mtmd_default_marker, MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams,
-        MtmdInputText,
+        MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams, MtmdInputText,
+        mtmd_default_marker,
     },
     sampling::LlamaSampler,
     token::LlamaToken,
@@ -44,6 +44,9 @@ pub struct LlamaCppMtmdContext {
     /// Enables verbose logging from llama.cpp.
     verbose: bool,
 }
+
+unsafe impl Send for LlamaCppMtmdContext {}
+unsafe impl Sync for LlamaCppMtmdContext {}
 
 impl LlamaCppMtmdContext {
     /// Creates a new MTMD context
