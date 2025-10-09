@@ -4,7 +4,6 @@
 //! 原项目: https://github.com/fpgaminer/joycaption_comfyui
 //! 引用: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF
 
-use std::sync::RwLock;
 
 use log::{error, };
 use pyo3::{
@@ -21,28 +20,7 @@ use crate::{
         },
     }
 };
-
-static LLAMA_CPP_PIPELINE: RwLock<Option<LlamaCppPipeline>> = RwLock::new(None);
-
-// 设置值
-fn set_pipeline(pipeline: LlamaCppPipeline) -> Result<(), Error> {
-    let mut w = LLAMA_CPP_PIPELINE
-        .write()
-        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
-    *w = Some(pipeline);
-
-    Ok(())
-}
-
-// 读取值
-fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
-    let mut w = LLAMA_CPP_PIPELINE
-        .write()
-        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
-
-    let pipeline = w.take();
-    Ok(pipeline)
-}
+ 
 
 /// JoyCaption Beta One Custom GGUF
 #[pyclass(subclass)]
@@ -478,21 +456,8 @@ impl JoyCaptionBetaOneCustomGGUF {
         params: &LlamaCppOptions,
       
     ) ->  Result<(Bound<'py, PyAny>, Vec<String>), Error> {
-       let pipeline = get_pipeline()?;
-
-        let mut pipeline = match pipeline {
-            Some(pipeline) => pipeline,
-            None => LlamaCppPipeline::new(params)?,
-        };
-
-        if !params.cache_model {
-            let mut model_manager = ModelManager::global()
-                .write()
-                .map_err(|e| Error::LockError(e.to_string()))?;
-            model_manager.remove(&params.model_cache_key);
-            model_manager.remove(&params.model_mtmd_context_cache_key);
-        }
-
+        let mut pipeline =LlamaCppPipeline::new(params)?;
+       
         let image_raw_datas = tensor_to_raw_data(&images)?;
         let mut captions = Vec::new();
 
@@ -502,9 +467,12 @@ impl JoyCaptionBetaOneCustomGGUF {
             captions.push(response);
         }
 
-        // 保存模型
-        if params.cache_model {
-            set_pipeline(pipeline)?;
+        if !params.cache_model {
+            let mut model_manager = ModelManager::global()
+                .write()
+                .map_err(|e| Error::LockError(e.to_string()))?;
+            model_manager.remove(&params.model_cache_key);
+            model_manager.remove(&params.model_mtmd_context_cache_key);
         }
 
         Ok((images, captions))

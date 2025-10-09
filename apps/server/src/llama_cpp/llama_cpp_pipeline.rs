@@ -96,8 +96,6 @@ impl LlamaCppPipeline {
             };
         }
 
-        info!("Model loaded successfully");
-
         Ok(Self {
             context_history: Vec::new(),
             backend,

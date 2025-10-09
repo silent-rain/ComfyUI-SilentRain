@@ -1,7 +1,5 @@
 //! llama.cpp vision
 
-use std::sync::RwLock;
-
 use log::error;
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
@@ -26,28 +24,6 @@ use crate::{
         },
     },
 };
-
-static LLAMA_CPP_PIPELINE: RwLock<Option<LlamaCppPipeline>> = RwLock::new(None);
-
-// 设置值
-fn set_pipeline(pipeline: LlamaCppPipeline) -> Result<(), Error> {
-    let mut w = LLAMA_CPP_PIPELINE
-        .write()
-        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
-    *w = Some(pipeline);
-
-    Ok(())
-}
-
-// 读取值
-fn get_pipeline() -> Result<Option<LlamaCppPipeline>, Error> {
-    let mut w = LLAMA_CPP_PIPELINE
-        .write()
-        .map_err(|_e| Error::LockError("LLAMA_CPP_PIPELINE lock error".to_string()))?;
-
-    let pipeline = w.take();
-    Ok(pipeline)
-}
 
 #[pyclass(subclass)]
 pub struct LlamaCppVision {}
@@ -445,20 +421,7 @@ impl LlamaCppVision {
             .getattr("utils")?
             .call_method1("ProgressBar", (image_raw_datas.len(),))?;
 
-        let pipeline = get_pipeline()?;
-
-        let mut pipeline = match pipeline {
-            Some(pipeline) => pipeline,
-            None => LlamaCppPipeline::new(params)?,
-        };
-
-        if !params.cache_model {
-            let mut model_manager = ModelManager::global()
-                .write()
-                .map_err(|e| Error::LockError(e.to_string()))?;
-            model_manager.remove(&params.model_cache_key);
-            model_manager.remove(&params.model_mtmd_context_cache_key);
-        }
+        let mut pipeline = LlamaCppPipeline::new(params)?;
 
         let mut captions = Vec::new();
 
@@ -468,9 +431,12 @@ impl LlamaCppVision {
             pbar.call_method1("update", (1,))?;
         }
 
-        // 保存模型
-        if params.cache_model {
-            set_pipeline(pipeline)?;
+        if !params.cache_model {
+            let mut model_manager = ModelManager::global()
+                .write()
+                .map_err(|e| Error::LockError(e.to_string()))?;
+            model_manager.remove(&params.model_cache_key);
+            model_manager.remove(&params.model_mtmd_context_cache_key);
         }
 
         Ok((images, captions))
