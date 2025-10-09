@@ -9,7 +9,7 @@ cd apps/web
 
 # Web 端
 echo "build web ..."
-wasm-pack build --release --target web --out-dir ${OUT_DIR}
+wasm-pack build --mode no-install --release --target web --out-dir ${OUT_DIR}
 
 tree -sh ${nodesDir}
 
