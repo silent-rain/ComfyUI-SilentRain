@@ -31,12 +31,16 @@ pub use llama_cpp_chat::LlamaCppChat;
 mod model_manager;
 pub use model_manager::ModelManager;
 
+mod llama_cpp_purge_vram;
+pub use llama_cpp_purge_vram::LlamaCppPurgeVram;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "math")?;
     submodule.add_class::<LlamaCppOptions>()?;
     submodule.add_class::<LlamaCppVision>()?;
     submodule.add_class::<LlamaCppChat>()?;
+    submodule.add_class::<LlamaCppPurgeVram>()?;
     Ok(submodule)
 }
 
@@ -57,6 +61,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "LlamaCppChat",
             py.get_type::<LlamaCppChat>(),
             "Sr Llama Cpp Chat",
+        ),
+        NodeRegister(
+            "LlamaCppPurgeVram",
+            py.get_type::<LlamaCppPurgeVram>(),
+            "Sr Llama Cpp Purge Vram",
         ),
     ];
     Ok(nodes)

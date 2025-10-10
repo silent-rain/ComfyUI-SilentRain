@@ -98,6 +98,11 @@ impl ModelManager {
         self.hashes.get(key).cloned()
     }
 
+    /// 获取所有的缓存 key
+    pub fn get_keys(&self) -> Vec<String> {
+        self.pool.keys().cloned().collect()
+    }
+
     /// 清空所有模型
     pub fn clear(&mut self) {
         self.pool.clear();
