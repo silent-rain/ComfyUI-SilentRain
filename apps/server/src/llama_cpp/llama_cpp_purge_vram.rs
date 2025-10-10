@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use log::error;
 use pyo3::{
-    Bound, Py, PyErr, PyResult, Python,
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
@@ -16,7 +16,10 @@ use crate::{
     core::category::CATEGORY_LLAMA_CPP,
     error::Error,
     llama_cpp::ModelManager,
-    wrapper::comfyui::{PromptServer, types::NODE_BOOLEAN},
+    wrapper::comfyui::{
+        PromptServer,
+        types::{NODE_BOOLEAN, any_type},
+    },
 };
 
 /// Rust 的全局缓存清理
@@ -105,6 +108,15 @@ impl LlamaCppPurgeVram {
                 let required = PyDict::new(py);
 
                 required.set_item(
+                    "any",
+                    (any_type(py)?, {
+                        let list = PyDict::new(py);
+                        list.set_item("tooltip", "Input any type")?;
+                        list
+                    }),
+                )?;
+
+                required.set_item(
                     "model",
                     (NODE_BOOLEAN, {
                         let conditioning_shape = PyDict::new(py);
@@ -124,8 +136,13 @@ impl LlamaCppPurgeVram {
 
     #[allow(clippy::too_many_arguments)]
     #[pyo3(name = "execute")]
-    fn execute<'py>(&mut self, py: Python<'py>, model: bool) -> PyResult<Bound<'py, PyDict>> {
-        let results = self.purge_vram(model);
+    fn execute<'py>(
+        &mut self,
+        py: Python<'py>,
+        any: Bound<'py, PyAny>,
+        model: bool,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let results = self.purge_vram(any, model);
 
         match results {
             Ok(_v) => self.node_result(py),
@@ -153,7 +170,7 @@ impl LlamaCppPurgeVram {
 
 impl LlamaCppPurgeVram {
     /// 清理全局缓存
-    fn purge_vram(&self, _model: bool) -> Result<(), Error> {
+    fn purge_vram<'py>(&self, _any: Bound<'py, PyAny>, _model: bool) -> Result<(), Error> {
         let mut cache = ModelManager::global()
             .write()
             .map_err(|e| Error::LockError(e.to_string()))?;
