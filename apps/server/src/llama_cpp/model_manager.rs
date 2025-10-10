@@ -33,12 +33,18 @@ impl ModelManager {
         self.hashes.insert(key.to_string(), model_hash.to_string());
     }
 
+    /// 强制更新模型（无论 hash 值是否变化）
+    pub fn force_update(&mut self, key: &str, model: Arc<dyn Any + Send + Sync>, model_hash: &str) {
+        self.pool.insert(key.to_string(), model);
+        self.hashes.insert(key.to_string(), model_hash.to_string());
+    }
+
     /// 获取或添加或更新模型（通过闭包初始化）并转换为具体类型
     pub fn get_or_insert<F, T: Send + Sync + 'static>(
         &mut self,
         key: &str,
         model_hash: &str,
-        init_model: F,
+        handler: F,
     ) -> Result<Arc<T>, Error>
     where
         F: FnOnce() -> Result<Arc<T>, Error>,
@@ -55,7 +61,7 @@ impl ModelManager {
         }
 
         // hash 值不存在或不一致，初始化新模型并更新缓存
-        let model = init_model()?;
+        let model = handler()?;
         self.pool.insert(
             key.to_string(),
             Arc::clone(&model) as Arc<dyn Any + Send + Sync>,

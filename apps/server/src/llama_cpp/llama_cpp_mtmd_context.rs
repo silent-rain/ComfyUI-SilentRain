@@ -77,7 +77,6 @@ impl LlamaCppMtmdContext {
 
         let mtmd_context =
             MtmdContext::init_from_file(&params.get_mmproj_path()?, &model, &mtmd_params)?;
-        info!("Loading mtmd projection: {}", params.mmproj_path);
 
         let batch = LlamaBatch::new(params.n_ctx as usize, 1);
 

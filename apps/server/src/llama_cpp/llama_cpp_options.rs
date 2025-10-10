@@ -173,6 +173,7 @@ pub struct LlamaCppOptions {
     // #[serde(default)]
     // pub no_mmproj_offload: bool,
 
+    // TODO 尚未实现
     /// Enables flash attention for faster inference.
     /// Requires compatible hardware and model support.
     #[serde(default)]
@@ -255,6 +256,8 @@ pub struct LlamaCppOptions {
     pub model_cache_key: String,
     #[serde(default)]
     pub model_mtmd_context_cache_key: String,
+    #[serde(default)]
+    pub context_history_cache_key: String,
 }
 
 impl PromptServer for LlamaCppOptions {}
@@ -695,6 +698,7 @@ impl Default for LlamaCppOptions {
 
             model_cache_key: "default_model_cache_key".to_string(),
             model_mtmd_context_cache_key: "default_model_mtmd_context_cache_key".to_string(),
+            context_history_cache_key: "default_context_history_cache_key".to_string(),
         }
     }
 }

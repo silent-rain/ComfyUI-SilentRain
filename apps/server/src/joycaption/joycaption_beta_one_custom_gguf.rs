@@ -14,7 +14,7 @@ use pyo3::{
 };
 
 use crate::{
-    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_raw_data}, error::Error,  llama_cpp::{LlamaCppOptions, LlamaCppPipeline, ModelManager}, wrapper::{
+    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_raw_data}, error::Error,  llama_cpp::{LlamaCppOptions, LlamaCppPipeline,  }, wrapper::{
         comfy::folder_paths::FolderPaths, comfyui::{
             PromptServer, types::{NODE_BOOLEAN, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_SEED_MAX, NODE_STRING}
         },
@@ -412,6 +412,8 @@ impl JoyCaptionBetaOneCustomGGUF {
              model_cache_key: "model_joycaption_beta_one_custom_gguf_cache_key".to_string(),
             model_mtmd_context_cache_key: "model_mtmd_context_joycaption_beta_one_custom_gguf_cache_key"
                 .to_string(),
+            context_history_cache_key: "context_history_joycaption_beta_one_custom_gguf_cache_key"
+                .to_string(),
             ..Default::default()
         };
 
@@ -468,11 +470,7 @@ impl JoyCaptionBetaOneCustomGGUF {
         }
 
         if !params.cache_model {
-            let mut model_manager = ModelManager::global()
-                .write()
-                .map_err(|e| Error::LockError(e.to_string()))?;
-            model_manager.remove(&params.model_cache_key);
-            model_manager.remove(&params.model_mtmd_context_cache_key);
+            pipeline.remove_model_cache(params)?;
         }
 
         Ok((images, captions))

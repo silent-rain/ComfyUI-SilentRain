@@ -12,7 +12,7 @@ use pythonize::depythonize;
 use crate::{
     core::{category::CATEGORY_LLAMA_CPP, utils::image::tensor_to_raw_data},
     error::Error,
-    llama_cpp::{LlamaCppOptions, LlamaCppPipeline, ModelManager},
+    llama_cpp::{LlamaCppOptions, LlamaCppPipeline},
     wrapper::{
         comfy::folder_paths::FolderPaths,
         comfyui::{
@@ -371,6 +371,8 @@ impl LlamaCppVision {
         options.model_cache_key = "model_llama_cpp_vision_cache_key".to_string();
         options.model_mtmd_context_cache_key =
             "model_mtmd_context_llama_cpp_vision_cache_key".to_string();
+        options.context_history_cache_key =
+            "context_history_llama_cpp_vision_cache_key".to_string();
 
         Ok(options)
     }
@@ -432,11 +434,7 @@ impl LlamaCppVision {
         }
 
         if !params.cache_model {
-            let mut model_manager = ModelManager::global()
-                .write()
-                .map_err(|e| Error::LockError(e.to_string()))?;
-            model_manager.remove(&params.model_cache_key);
-            model_manager.remove(&params.model_mtmd_context_cache_key);
+            pipeline.remove_model_cache(params)?;
         }
 
         Ok((images, captions))
