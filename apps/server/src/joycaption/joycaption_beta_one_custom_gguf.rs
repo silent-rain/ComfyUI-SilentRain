@@ -107,7 +107,7 @@ impl JoyCaptionBetaOneCustomGGUF {
                 // 获取模型列表
                 let model_list = Self::get_model_list();
                 let mmproj_model_list = Self::get_mmproj_model_list();
-                
+
                 required.set_item(
                     "gguf_model",
                     (model_list, {

@@ -114,28 +114,24 @@ impl FluxKontextInpaintingConditioning {
                 required.set_item(
                     "conditioning",
                     (NODE_CONDITIONING, {
-                        
                         PyDict::new(py)
                     }),
                 )?;
                 required.set_item(
                     "vae",
                     (NODE_VAE, {
-                        
                         PyDict::new(py)
                     }),
                 )?;
                 required.set_item(
                     "pixels",
                     (NODE_IMAGE, {
-                        
                         PyDict::new(py)
                     }),
                 )?;
                 required.set_item(
                     "mask",
                     (NODE_MASK, {
-                        
                         PyDict::new(py)
                     }),
                 )?;
