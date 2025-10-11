@@ -1,6 +1,8 @@
 //! Nunchaku SDXL UNet Loader
 //!
-//! GitHub: https://github.com/nunchaku-tech/nunchaku/blob/main/examples/v1/sdxl-turbo.py
+//! GitHub:
+//!     - https://github.com/nunchaku-tech/nunchaku/blob/main/examples/v1/sdxl-turbo.py
+//!     - https://github.com/nunchaku-tech/ComfyUI-nunchaku
 //! Nunchaku lib:
 //!     - https://huggingface.co/nunchaku-tech/nunchaku
 //!     - diffusers
@@ -199,15 +201,19 @@ impl NunchakuSdxlUnetLoader {
 impl NunchakuSdxlUnetLoader {
     /// 获取模型列表
     fn get_model_list() -> Vec<String> {
-        let unet_list = FolderPaths::default().get_filename_list("unet");
-        let diffusion_models_list = FolderPaths::default().get_filename_list("diffusion_models");
+        let folder_paths = FolderPaths::default();
+        let unet_list = folder_paths.get_filename_list("unet");
+        let diffusion_models_list = folder_paths.get_filename_list("diffusion_models");
 
-        [unet_list, diffusion_models_list]
+        let mut model_list = [unet_list, diffusion_models_list]
             .concat()
-            .iter()
+            .into_iter()
             .filter(|v| v.ends_with(".safetensors"))
-            .cloned()
-            .collect::<Vec<String>>()
+            .collect::<Vec<String>>();
+
+        model_list.dedup();
+
+        model_list
     }
 
     /// 加载模型
@@ -217,27 +223,37 @@ impl NunchakuSdxlUnetLoader {
         model_path: &str,
         dtype_options: &str,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
+        let g_model_path = FolderPaths::default().model_path();
+        let mut model_full_path = model_path.to_string();
+        for model_parent_name in ["unet", "diffusion_models"] {
+            let model_path = g_model_path.join(model_parent_name).join(model_path);
+            if model_path.exists() {
+                model_full_path = model_path.to_string_lossy().to_string();
+                break;
+            }
+        }
+
+        error!("model_path2: {model_full_path}");
+
         let torch = py.import("torch")?;
-        let nunchaku = py.import("nunchaku")?;
+        // from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
+        let unet_sdxl = py.import("nunchaku.models.unets.unet_sdxl")?;
 
         // 创建模型实例
-        let unet = nunchaku
-            .getattr("models")?
-            .getattr("unets")?
-            .getattr("unet_sdxl")?
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("torch_dtype", torch.getattr(dtype_options)?)?;
+        // kwargs.set_item("device", "cpu")?;
+        // kwargs.set_item("offload", false)?;
+
+        let unet = unet_sdxl
             .getattr("NunchakuSDXLUNet2DConditionModel")?
-            .call_method1(
-                "from_pretrained",
-                (
-                    model_path,
-                    ("torch_dtype", torch.getattr(dtype_options)?),
-                    ("use_safetensors", true),
-                    ("variant", "fp16"),
-                ),
-            )?;
+            .call_method("from_pretrained", (model_full_path,), Some(&kwargs))?;
 
         // 移动到GPU
-        let unet = unet.call_method1("to", ("cuda",))?;
+        // let unet = unet.call_method1("to", ("cuda",))?;
+
+        // 移动到CPU
+        // let unet = unet.call_method1("to", ("cpu",))?;
 
         Ok((unet,))
     }
