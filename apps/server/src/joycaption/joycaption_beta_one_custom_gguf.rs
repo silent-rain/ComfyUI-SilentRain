@@ -4,28 +4,30 @@
 //! 原项目: https://github.com/fpgaminer/joycaption_comfyui
 //! 引用: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF
 
-
-use log::{error, };
+use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
-    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_raw_data}, error::Error,  llama_cpp::{LlamaCppOptions, LlamaCppPipeline,  }, wrapper::{
-        comfy::folder_paths::FolderPaths, comfyui::{
-            PromptServer, types::{NODE_BOOLEAN, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_SEED_MAX, NODE_STRING}
+    core::{category::CATEGORY_JOY_CAPTION, utils::image::tensor_to_raw_data},
+    error::Error,
+    llama_cpp::{LlamaCppOptions, LlamaCppPipeline},
+    wrapper::{
+        comfy::folder_paths::FolderPaths,
+        comfyui::{
+            PromptServer,
+            types::{NODE_BOOLEAN, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_SEED_MAX, NODE_STRING},
         },
-    }
+    },
 };
- 
 
 /// JoyCaption Beta One Custom GGUF
 #[pyclass(subclass)]
-pub struct JoyCaptionBetaOneCustomGGUF {
-}
+pub struct JoyCaptionBetaOneCustomGGUF {}
 
 impl PromptServer for JoyCaptionBetaOneCustomGGUF {}
 
@@ -33,8 +35,7 @@ impl PromptServer for JoyCaptionBetaOneCustomGGUF {}
 impl JoyCaptionBetaOneCustomGGUF {
     #[new]
     fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 
     // #[classattr]
@@ -305,7 +306,7 @@ impl JoyCaptionBetaOneCustomGGUF {
         cache_model: bool,
         extra_options: Option<Vec<String>>,
     ) -> PyResult<(Bound<'py, PyAny>, Vec<String>)> {
-         let params = self
+        let params = self
             .options_parser(
                 &images,
                 gguf_model,
@@ -326,17 +327,15 @@ impl JoyCaptionBetaOneCustomGGUF {
             )
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("parameters error, {e}")))?;
 
-        let results = self.generate(images, &params, );
+        let results = self.generate(images, &params);
 
         match results {
             Ok(v) => Ok(v),
             Err(e) => {
                 error!("JoyCaptionBetaOneCustomGGUF error, {e}");
-                if let Err(e) = self.send_error(
-                    py,
-                    "JoyCaptionBetaOneCustomGGUF".to_string(),
-                    e.to_string(),
-                ) {
+                if let Err(e) =
+                    self.send_error(py, "JoyCaptionBetaOneCustomGGUF".to_string(), e.to_string())
+                {
                     error!("send error failed, {e}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
@@ -345,7 +344,6 @@ impl JoyCaptionBetaOneCustomGGUF {
         }
     }
 }
-
 
 impl JoyCaptionBetaOneCustomGGUF {
     /// Parse the options from the parameters.
@@ -393,7 +391,6 @@ impl JoyCaptionBetaOneCustomGGUF {
             (system_prompt, user_prompt)
         };
 
-
         let options = LlamaCppOptions {
             model_path: gguf_model.to_string(),
             mmproj_path: mmproj_file.to_string(),
@@ -409,9 +406,9 @@ impl JoyCaptionBetaOneCustomGGUF {
             n_gpu_layers,
             keep_context,
             cache_model,
-             model_cache_key: "model_joycaption_beta_one_custom_gguf_cache_key".to_string(),
-            model_mtmd_context_cache_key: "model_mtmd_context_joycaption_beta_one_custom_gguf_cache_key"
-                .to_string(),
+            model_cache_key: "model_joycaption_beta_one_custom_gguf_cache_key".to_string(),
+            model_mtmd_context_cache_key:
+                "model_mtmd_context_joycaption_beta_one_custom_gguf_cache_key".to_string(),
             context_history_cache_key: "context_history_joycaption_beta_one_custom_gguf_cache_key"
                 .to_string(),
             ..Default::default()
@@ -448,18 +445,16 @@ impl JoyCaptionBetaOneCustomGGUF {
     }
 }
 
-
 impl JoyCaptionBetaOneCustomGGUF {
     /// 推理
     #[allow(clippy::too_many_arguments)]
     fn generate<'py>(
         &self,
-         images: Bound<'py, PyAny>,
+        images: Bound<'py, PyAny>,
         params: &LlamaCppOptions,
-      
-    ) ->  Result<(Bound<'py, PyAny>, Vec<String>), Error> {
-        let mut pipeline =LlamaCppPipeline::new(params)?;
-       
+    ) -> Result<(Bound<'py, PyAny>, Vec<String>), Error> {
+        let mut pipeline = LlamaCppPipeline::new(params)?;
+
         let image_raw_datas = tensor_to_raw_data(&images)?;
         let mut captions = Vec::new();
 

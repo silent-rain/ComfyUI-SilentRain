@@ -2,10 +2,10 @@
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 use pythonize::pythonize;
 
@@ -13,9 +13,9 @@ use crate::{
     core::category::CATEGORY_UTILS,
     error::Error,
     wrapper::comfyui::{
-        node_input::InputKwargs,
-        types::{any_type, NODE_STRING},
         PromptServer,
+        node_input::InputKwargs,
+        types::{NODE_STRING, any_type},
     },
 };
 

@@ -2,19 +2,19 @@
 
 use log::{error, info};
 use pyo3::{
+    Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
-    Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
     wrapper::comfyui::{
+        PromptServer,
         node_input::InputKwargs,
         types::{NODE_STRING, NODE_STRING_LIST},
-        PromptServer,
     },
 };
 

@@ -2,18 +2,18 @@
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_LIST,
     error::Error,
     wrapper::comfyui::{
-        types::{any_type, NODE_INT},
         PromptServer,
+        types::{NODE_INT, any_type},
     },
 };
 

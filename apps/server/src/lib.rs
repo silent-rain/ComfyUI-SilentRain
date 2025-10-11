@@ -16,9 +16,9 @@ pub mod text;
 pub mod utils;
 
 use pyo3::{
-    pyfunction, pymodule,
+    Bound, PyResult, Python, pyfunction, pymodule,
     types::{PyDict, PyDictMethods, PyModule, PyModuleMethods},
-    wrap_pyfunction, Bound, PyResult, Python,
+    wrap_pyfunction,
 };
 
 use crate::{core::node::NodeRegister, wrapper::comfy::init_folder_paths::apply_custom_paths};

@@ -2,7 +2,7 @@
 //! TODO 待验证
 //!
 use candle_core::{Device, Tensor};
-use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageBuffer, Rgb};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, imageops::FilterType};
 
 use crate::error::Error;
 

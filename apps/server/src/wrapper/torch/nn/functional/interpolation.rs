@@ -18,7 +18,7 @@
 //!
 
 use candle_core::Tensor;
-use pyo3::{pyclass, types::PyAnyMethods, IntoPyObject, Python};
+use pyo3::{IntoPyObject, Python, pyclass, types::PyAnyMethods};
 use strum_macros::{Display, EnumString};
 
 use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};

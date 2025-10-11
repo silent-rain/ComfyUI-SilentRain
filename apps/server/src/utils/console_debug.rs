@@ -4,15 +4,15 @@ use std::collections::HashMap;
 
 use log::{error, info};
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_UTILS,
-    wrapper::comfyui::{types::any_type, PromptServer},
+    wrapper::comfyui::{PromptServer, types::any_type},
 };
 
 /// 控制台调试

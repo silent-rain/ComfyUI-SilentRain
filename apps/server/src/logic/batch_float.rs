@@ -2,10 +2,10 @@
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use strum_macros::{Display, EnumString};
 
@@ -13,8 +13,8 @@ use crate::{
     core::{category::CATEGORY_LOGIC, utils::easing::Easing},
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_FLOAT, NODE_INT},
         PromptServer,
+        types::{NODE_FLOAT, NODE_INT},
     },
 };
 

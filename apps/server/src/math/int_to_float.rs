@@ -1,16 +1,15 @@
 //! 整数转浮点数
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_MATH,
     wrapper::comfyui::{
-        types::{NODE_FLOAT, NODE_INT},
         PromptServer,
+        types::{NODE_FLOAT, NODE_INT},
     },
 };
 

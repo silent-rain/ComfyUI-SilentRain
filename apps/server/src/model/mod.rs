@@ -1,6 +1,6 @@
 //! 模型
 
-use pyo3::{types::PyModule, Bound, PyResult, Python};
+use pyo3::{Bound, PyResult, Python, types::PyModule};
 
 use crate::core::node::NodeRegister;
 

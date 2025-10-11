@@ -10,10 +10,10 @@ use std::{
 
 use log::{error, info, warn};
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use strum_macros::{Display, EnumString};
 
@@ -21,8 +21,8 @@ use crate::{
     core::category::CATEGORY_UTILS,
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_INT, NODE_INT_MAX, NODE_STRING},
         PromptServer,
+        types::{NODE_INT, NODE_INT_MAX, NODE_STRING},
     },
 };
 

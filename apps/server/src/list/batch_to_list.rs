@@ -5,17 +5,17 @@
 
 use candle_core::{Device, IndexOp};
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyList, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_LIST,
     error::Error,
     wrapper::{
-        comfyui::{types::any_type, PromptServer},
+        comfyui::{PromptServer, types::any_type},
         python::isinstance_by_torch,
         torch::tensor::TensorWrapper,
     },

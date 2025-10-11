@@ -1,7 +1,7 @@
 //! 文本相关的节点
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 use crate::core::node::NodeRegister;

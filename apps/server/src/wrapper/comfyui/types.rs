@@ -1,7 +1,7 @@
 //! 类型定义
 //! 相关节点定义: ComfyUI/comfy/comfy_types/node_typing.py
 
-use pyo3::{ffi::c_str, pyfunction, Bound, PyResult, Python};
+use pyo3::{Bound, PyResult, Python, ffi::c_str, pyfunction};
 
 pub const NODE_INT: &str = "INT";
 pub const NODE_FLOAT: &str = "FLOAT";

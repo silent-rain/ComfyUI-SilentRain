@@ -2,17 +2,16 @@
 
 use log::error;
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_LIST,
     error::Error,
     wrapper::comfyui::{
-        types::{any_type, NODE_INT, NODE_INT_MAX},
         PromptServer,
+        types::{NODE_INT, NODE_INT_MAX, any_type},
     },
 };
 
@@ -158,7 +157,7 @@ mod tests {
     use std::ffi::CString;
 
     use pyo3::types::PyStringMethods;
-    use pyo3::{types::PyString, Python};
+    use pyo3::{Python, types::PyString};
 
     #[test]
     #[ignore]

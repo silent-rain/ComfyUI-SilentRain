@@ -7,13 +7,12 @@ use std::{
 };
 
 use chardet::{charset2encoding, detect};
-use encoding::label::encoding_from_whatwg_label;
 use encoding::DecoderTrap;
+use encoding::label::encoding_from_whatwg_label;
 use log::error;
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyErr, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use walkdir::WalkDir;
 
@@ -21,8 +20,8 @@ use crate::{
     core::category::CATEGORY_UTILS,
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_BOOLEAN, NODE_INT, NODE_STRING},
         PromptServer,
+        types::{NODE_BOOLEAN, NODE_INT, NODE_STRING},
     },
 };
 

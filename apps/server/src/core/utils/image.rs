@@ -2,13 +2,13 @@
 //!
 use std::io::Cursor;
 
-use base64::{engine::general_purpose, Engine};
+use base64::{Engine, engine::general_purpose};
 use candle_core::{DType, Device, Tensor};
 use image::{
     DynamicImage, GenericImageView, GrayImage, ImageBuffer, ImageFormat, Rgb, RgbImage, RgbaImage,
 };
 use log::error;
-use pyo3::{types::PyAnyMethods, Bound, PyAny};
+use pyo3::{Bound, PyAny, types::PyAnyMethods};
 
 use crate::error::Error;
 
@@ -79,7 +79,7 @@ pub fn tensor_to_image2(tensor: &Tensor) -> Result<DynamicImage, Error> {
             return Err(Error::InvalidTensorShape(format!(
                 "Invalid tensor shape: {:#?}",
                 tensor.dims()
-            )))
+            )));
         }
     };
 

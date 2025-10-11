@@ -514,8 +514,10 @@ mod tests {
     fn test_folder_paths_initialization() {
         let folder_paths = FolderPaths::default();
         assert!(folder_paths.base_path().exists());
-        assert!(folder_paths
-            .folder_names_and_paths()
-            .contains_key("checkpoints"));
+        assert!(
+            folder_paths
+                .folder_names_and_paths()
+                .contains_key("checkpoints")
+        );
     }
 }

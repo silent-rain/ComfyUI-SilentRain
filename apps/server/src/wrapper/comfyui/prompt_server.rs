@@ -1,8 +1,8 @@
 //! Prompt Server
 
 use pyo3::{
-    types::{PyAnyMethods, PyDict, PyModule},
     PyResult, PyTypeInfo, Python,
+    types::{PyAnyMethods, PyDict, PyModule},
 };
 
 /// comfyui PromptServer wrapper

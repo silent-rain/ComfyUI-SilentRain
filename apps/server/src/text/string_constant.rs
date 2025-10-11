@@ -1,14 +1,13 @@
 //! 字符串常量
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_TEXT,
-    wrapper::comfyui::{types::NODE_STRING, PromptServer},
+    wrapper::comfyui::{PromptServer, types::NODE_STRING},
 };
 
 /// 字符串常量

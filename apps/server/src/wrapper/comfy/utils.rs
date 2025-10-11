@@ -1,7 +1,7 @@
 //! comfy.utils
 
 use candle_core::Tensor;
-use pyo3::{types::PyAnyMethods, Python};
+use pyo3::{Python, types::PyAnyMethods};
 
 use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};
 

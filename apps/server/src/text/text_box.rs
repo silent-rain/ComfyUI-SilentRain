@@ -4,17 +4,16 @@ use std::io::{self, BufRead};
 
 use log::error;
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyErr, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
+        types::{NODE_BOOLEAN, NODE_STRING},
     },
 };
 

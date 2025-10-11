@@ -5,20 +5,20 @@ use std::{collections::HashMap, fs};
 use candle_core::Device;
 use log::{error, info};
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyList, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_CONDITIONING,
     error::Error,
     wrapper::{
-        comfy::node_helpers::{conditionings_py2rs, Conditioning, ConditioningShape},
+        comfy::node_helpers::{Conditioning, ConditioningShape, conditionings_py2rs},
         comfyui::{
-            types::{NODE_BOOLEAN, NODE_CONDITIONING, NODE_STRING},
             PromptServer,
+            types::{NODE_BOOLEAN, NODE_CONDITIONING, NODE_STRING},
         },
     },
 };

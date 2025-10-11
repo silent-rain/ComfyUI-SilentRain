@@ -5,8 +5,9 @@ pub use py_isinstance::isinstance;
 pub use py_isinstance::isinstance_by_torch;
 
 use pyo3::{
+    Bound, PyResult, Python,
     types::{PyModule, PyModuleMethods},
-    wrap_pyfunction, Bound, PyResult, Python,
+    wrap_pyfunction,
 };
 
 /// 核心模块

@@ -4,17 +4,17 @@
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
-    wrapper::comfyui::{types::NODE_STRING, PromptServer},
+    wrapper::comfyui::{PromptServer, types::NODE_STRING},
 };
 
 const KONTEXT_PRESETS_DATA: &str = include_str!("../../resources/kontext_presets.json");

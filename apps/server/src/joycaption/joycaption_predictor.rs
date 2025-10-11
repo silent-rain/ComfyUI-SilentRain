@@ -9,22 +9,22 @@ use std::{
     time::Duration,
 };
 
-use base64::{engine::general_purpose, Engine};
+use base64::{Engine, engine::general_purpose};
 use image::DynamicImage;
 use lazy_static::lazy_static;
 use llama_cpp_2::{
-    context::{params::LlamaContextParams, LlamaContext},
+    LogOptions,
+    context::{LlamaContext, params::LlamaContextParams},
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{
-        params::{kv_overrides::ParamOverrideValue, LlamaModelParams},
         AddBos, LlamaChatMessage, LlamaModel, Special,
+        params::{LlamaModelParams, kv_overrides::ParamOverrideValue},
     },
     sampling::LlamaSampler,
     send_logs_to_tracing,
     token::LlamaToken,
-    LogOptions,
 };
 use log::{error, info};
 use serde_json::json;

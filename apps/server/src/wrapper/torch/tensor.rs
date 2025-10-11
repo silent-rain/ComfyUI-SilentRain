@@ -7,12 +7,12 @@ use std::marker::PhantomData;
 use candle_core::{DType, Device, Shape, Tensor, WithDType};
 use log::info;
 use numpy::{
-    ndarray::{Dim, IxDynImpl},
     Element, PyArray, PyArrayDyn, PyArrayMethods, PyReadonlyArray, PyUntypedArrayMethods,
+    ndarray::{Dim, IxDynImpl},
 };
 use pyo3::{
-    exceptions::PyRuntimeError, types::PyAnyMethods, Bound, IntoPyObject, PyAny, PyErr, PyResult,
-    Python,
+    Bound, IntoPyObject, PyAny, PyErr, PyResult, Python, exceptions::PyRuntimeError,
+    types::PyAnyMethods,
 };
 
 use crate::error::Error;

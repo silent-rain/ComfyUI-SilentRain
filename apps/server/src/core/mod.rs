@@ -3,8 +3,8 @@
 //! 相关节点定义: ComfyUI/comfy/comfy_types/node_typing.py
 
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 mod always_equal_proxy;

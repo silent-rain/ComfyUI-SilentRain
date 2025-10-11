@@ -1,7 +1,7 @@
 //! 工具
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 use crate::core::node::NodeRegister;

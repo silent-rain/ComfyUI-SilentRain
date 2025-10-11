@@ -1,7 +1,7 @@
 //! Pads tensor.
 
 use candle_core::Tensor;
-use pyo3::{pyclass, types::PyAnyMethods, Python};
+use pyo3::{Python, pyclass, types::PyAnyMethods};
 use strum_macros::{Display, EnumString};
 
 use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};

@@ -1,11 +1,11 @@
 //! comfy.utils.bislerp rust 实现
 //! TODO 待验证
-use candle_core::{DType, Device, Tensor, D};
+use candle_core::{D, DType, Device, Tensor};
 use pyo3::Python;
 
 use crate::{
     error::Error,
-    wrapper::torch::nn::functional::{interpolate, InterpolationMode},
+    wrapper::torch::nn::functional::{InterpolationMode, interpolate},
 };
 
 /// Spherical linear interpolation (slerp) between two batches of vectors

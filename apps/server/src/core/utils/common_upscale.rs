@@ -1,11 +1,11 @@
 //! comfy.utils.common_upscale rust 实现
 
-use candle_core::{Tensor, D};
+use candle_core::{D, Tensor};
 use pyo3::Python;
 
 use crate::{
     error::Error,
-    wrapper::torch::nn::functional::{interpolate, InterpolationMode},
+    wrapper::torch::nn::functional::{InterpolationMode, interpolate},
 };
 
 use super::{bislerp::bislerp, lanczos::lanczos};

@@ -10,10 +10,10 @@ use std::collections::HashMap;
 use candle_core::{Device, IndexOp, Tensor};
 use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyDict, PyDictMethods, PyList, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 
 use crate::{
@@ -22,19 +22,19 @@ use crate::{
     wrapper::{
         comfy::{
             node_helpers::{
-                conditioning_set_values, conditionings_py2rs, conditionings_rs2py, latent_rs2py,
-                Conditioning, ConditioningEtx,
+                Conditioning, ConditioningEtx, conditioning_set_values, conditionings_py2rs,
+                conditionings_rs2py, latent_rs2py,
             },
             vae::Vae,
         },
         comfyui::{
+            PromptServer,
             types::{
                 NODE_BOOLEAN, NODE_CONDITIONING, NODE_IMAGE, NODE_LATENT, NODE_MASK, NODE_VAE,
             },
-            PromptServer,
         },
         torch::{
-            nn::functional::{interpolate, InterpolationMode},
+            nn::functional::{InterpolationMode, interpolate},
             tensor::TensorWrapper,
         },
     },

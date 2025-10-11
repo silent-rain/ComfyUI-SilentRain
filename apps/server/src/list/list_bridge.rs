@@ -1,14 +1,13 @@
 //! 列表桥接
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_LIST,
-    wrapper::comfyui::{types::any_type, PromptServer},
+    wrapper::comfyui::{PromptServer, types::any_type},
 };
 
 /// 列表桥接

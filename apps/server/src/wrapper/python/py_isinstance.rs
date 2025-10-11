@@ -3,9 +3,8 @@
 use std::ffi::CString;
 
 use pyo3::{
-    pyfunction,
+    Bound, PyAny, PyResult, Python, pyfunction,
     types::{PyAnyMethods, PyModule},
-    Bound, PyAny, PyResult, Python,
 };
 
 /// Instance judgment of torch

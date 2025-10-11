@@ -8,16 +8,15 @@ use std::{
 
 use log::error;
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyErr, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 use strum_macros::{Display, EnumString};
 
 use crate::{
     core::category::CATEGORY_TEXT,
     error::Error,
-    wrapper::comfyui::{types::NODE_STRING, PromptServer},
+    wrapper::comfyui::{PromptServer, types::NODE_STRING},
 };
 
 /// 保存文本的模式

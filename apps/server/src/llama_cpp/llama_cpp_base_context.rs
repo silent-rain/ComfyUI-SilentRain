@@ -10,8 +10,8 @@ use std::{io::Write, num::NonZero, sync::Arc, time::Duration};
 
 use llama_cpp_2::{
     context::{
-        params::{LlamaContextParams, LlamaPoolingType},
         LlamaContext,
+        params::{LlamaContextParams, LlamaPoolingType},
     },
     ggml_time_us,
     llama_backend::LlamaBackend,

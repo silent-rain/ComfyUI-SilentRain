@@ -19,9 +19,8 @@ use std::{
 };
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyString},
-    Bound, Py, PyAny, PyResult, Python,
 };
 use serde::Serialize;
 

@@ -1,17 +1,16 @@
 //! 从任意列表随机一个元素
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyResult, Python,
 };
 use rand::{Rng, SeedableRng};
 
 use crate::{
     core::category::CATEGORY_LIST,
     wrapper::comfyui::{
-        types::{any_type, NODE_INT, NODE_SEED_MAX},
         PromptServer,
+        types::{NODE_INT, NODE_SEED_MAX, any_type},
     },
 };
 

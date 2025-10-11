@@ -9,9 +9,8 @@ use candle_core::Device;
 use image::DynamicImage;
 use log::error;
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 use walkdir::WalkDir;
 
@@ -23,8 +22,8 @@ use crate::{
     error::Error,
     wrapper::{
         comfyui::{
-            types::{NODE_BOOLEAN, NODE_IMAGE, NODE_INT, NODE_MASK, NODE_STRING},
             PromptServer,
+            types::{NODE_BOOLEAN, NODE_IMAGE, NODE_INT, NODE_MASK, NODE_STRING},
         },
         torch::tensor::TensorWrapper,
     },

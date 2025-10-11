@@ -1,9 +1,8 @@
 //! 工作流输入参数 extra_pnginfo 解析
 
 use pyo3::{
-    pyclass,
+    Bound, pyclass,
     types::{PyDict, PyDictMethods},
-    Bound,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

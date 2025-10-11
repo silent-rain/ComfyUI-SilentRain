@@ -1,14 +1,13 @@
 //! 浮点数常量
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_MATH,
-    wrapper::comfyui::{types::NODE_FLOAT, PromptServer},
+    wrapper::comfyui::{PromptServer, types::NODE_FLOAT},
 };
 
 /// 浮点数常量

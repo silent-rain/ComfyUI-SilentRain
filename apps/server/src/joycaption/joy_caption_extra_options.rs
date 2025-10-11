@@ -7,18 +7,18 @@ use std::collections::HashMap;
 
 use log::error;
 use pyo3::{
+    Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyErr, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_JOY_CAPTION,
     error::Error,
     wrapper::comfyui::{
-        types::{NODE_BOOLEAN, NODE_STRING},
         PromptServer,
+        types::{NODE_BOOLEAN, NODE_STRING},
     },
 };
 
@@ -56,33 +56,111 @@ const INPUT_NAMES: [&str; 27] = [
 /// 额外选项
 fn build_extra_options() -> HashMap<&'static str, &'static str> {
     HashMap::from([
-        ("refer_character_name", "If there is a person/character in the image you must refer to them as {name}."),
-        ("exclude_people_info", "Do NOT include information about people/characters that cannot be changed (like ethnicity, gender, etc), but do still include changeable attributes (like hair style)."),
+        (
+            "refer_character_name",
+            "If there is a person/character in the image you must refer to them as {name}.",
+        ),
+        (
+            "exclude_people_info",
+            "Do NOT include information about people/characters that cannot be changed (like ethnicity, gender, etc), but do still include changeable attributes (like hair style).",
+        ),
         ("include_lighting", "Include information about lighting."),
-        ("include_camera_angle", "Include information about camera angle."),
-        ("include_watermark_info", "Include information about whether there is a watermark or not."),
-        ("include_JPEG_artifacts", "Include information about whether there are JPEG artifacts or not."),
-        ("include_exif", "If it is a photo you MUST include information about what camera was likely used and details such as aperture, shutter speed, ISO, etc."),
-        ("exclude_sexual", "Do NOT include anything sexual; keep it PG."),
-        ("exclude_image_resolution", "Do NOT mention the image's resolution."),
-        ("include_aesthetic_quality", "You MUST include information about the subjective aesthetic quality of the image from low to very high."),
-        ("include_composition_style", "Include information on the image's composition style, such as leading lines, rule of thirds, or symmetry."),
-        ("exclude_text", "Do NOT mention any text that is in the image."),
-        ("specify_depth_field", "Specify the depth of field and whether the background is in focus or blurred."),
-        ("specify_lighting_sources", "If applicable, mention the likely use of artificial or natural lighting sources."),
-        ("do_not_use_ambiguous_language", "Do NOT use any ambiguous language."),
-        ("include_nsfw_rating", "Include whether the image is sfw, suggestive, or nsfw."),
-        ("only_describe_most_important_elements", "ONLY describe the most important elements of the image."),
-        ("do_not_include_artist_name_or_title", "If it is a work of art, do not include the artist's name or the title of the work."),
-        ("identify_image_orientation", "Identify the image orientation (portrait, landscape, or square) and aspect ratio if obvious."),
-        ("use_vulgar_slang_and_profanity", r#"Use vulgar slang and profanity, such as (but not limited to) "fucking," "slut," "cock," etc."#),
-        ("do_not_use_polite_euphemisms", "Do NOT use polite euphemisms—lean into blunt, casual phrasing."),
-        ("include_character_age", "Include information about the ages of any people/characters when applicable."),
-        ("include_camera_shot_type", "Mention whether the image depicts an extreme close-up, close-up, medium close-up, medium shot, cowboy shot, medium wide shot, wide shot, or extreme wide shot."),
-        ("exclude_mood_feeling", "Do not mention the mood/feeling/etc of the image."),
-        ("include_camera_vantage_height", "Explicitly specify the vantage height (eye-level, low-angle worm’s-eye, bird’s-eye, drone, rooftop, etc.)."),
-        ("mention_watermark_explicitly", "If there is a watermark, you must mention it."),
-        ("avoid_meta_descriptive_phrases", r#"Your response will be used by a text-to-image model, so avoid useless meta phrases like “This image shows…”, "You are looking at..."), etc."#),
+        (
+            "include_camera_angle",
+            "Include information about camera angle.",
+        ),
+        (
+            "include_watermark_info",
+            "Include information about whether there is a watermark or not.",
+        ),
+        (
+            "include_JPEG_artifacts",
+            "Include information about whether there are JPEG artifacts or not.",
+        ),
+        (
+            "include_exif",
+            "If it is a photo you MUST include information about what camera was likely used and details such as aperture, shutter speed, ISO, etc.",
+        ),
+        (
+            "exclude_sexual",
+            "Do NOT include anything sexual; keep it PG.",
+        ),
+        (
+            "exclude_image_resolution",
+            "Do NOT mention the image's resolution.",
+        ),
+        (
+            "include_aesthetic_quality",
+            "You MUST include information about the subjective aesthetic quality of the image from low to very high.",
+        ),
+        (
+            "include_composition_style",
+            "Include information on the image's composition style, such as leading lines, rule of thirds, or symmetry.",
+        ),
+        (
+            "exclude_text",
+            "Do NOT mention any text that is in the image.",
+        ),
+        (
+            "specify_depth_field",
+            "Specify the depth of field and whether the background is in focus or blurred.",
+        ),
+        (
+            "specify_lighting_sources",
+            "If applicable, mention the likely use of artificial or natural lighting sources.",
+        ),
+        (
+            "do_not_use_ambiguous_language",
+            "Do NOT use any ambiguous language.",
+        ),
+        (
+            "include_nsfw_rating",
+            "Include whether the image is sfw, suggestive, or nsfw.",
+        ),
+        (
+            "only_describe_most_important_elements",
+            "ONLY describe the most important elements of the image.",
+        ),
+        (
+            "do_not_include_artist_name_or_title",
+            "If it is a work of art, do not include the artist's name or the title of the work.",
+        ),
+        (
+            "identify_image_orientation",
+            "Identify the image orientation (portrait, landscape, or square) and aspect ratio if obvious.",
+        ),
+        (
+            "use_vulgar_slang_and_profanity",
+            r#"Use vulgar slang and profanity, such as (but not limited to) "fucking," "slut," "cock," etc."#,
+        ),
+        (
+            "do_not_use_polite_euphemisms",
+            "Do NOT use polite euphemisms—lean into blunt, casual phrasing.",
+        ),
+        (
+            "include_character_age",
+            "Include information about the ages of any people/characters when applicable.",
+        ),
+        (
+            "include_camera_shot_type",
+            "Mention whether the image depicts an extreme close-up, close-up, medium close-up, medium shot, cowboy shot, medium wide shot, wide shot, or extreme wide shot.",
+        ),
+        (
+            "exclude_mood_feeling",
+            "Do not mention the mood/feeling/etc of the image.",
+        ),
+        (
+            "include_camera_vantage_height",
+            "Explicitly specify the vantage height (eye-level, low-angle worm’s-eye, bird’s-eye, drone, rooftop, etc.).",
+        ),
+        (
+            "mention_watermark_explicitly",
+            "If there is a watermark, you must mention it.",
+        ),
+        (
+            "avoid_meta_descriptive_phrases",
+            r#"Your response will be used by a text-to-image model, so avoid useless meta phrases like “This image shows…”, "You are looking at..."), etc."#,
+        ),
     ])
 }
 

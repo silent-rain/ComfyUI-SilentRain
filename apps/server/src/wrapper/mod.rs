@@ -5,8 +5,8 @@ pub mod python;
 pub mod torch;
 
 use pyo3::{
-    types::{PyModule, PyModuleMethods},
     Bound, PyResult, Python,
+    types::{PyModule, PyModuleMethods},
 };
 
 /// 核心模块

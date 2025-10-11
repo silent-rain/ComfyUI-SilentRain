@@ -1,16 +1,15 @@
 //! 列表计数
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyAny, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_LIST,
     wrapper::comfyui::{
-        types::{any_type, NODE_INT},
         PromptServer,
+        types::{NODE_INT, any_type},
     },
 };
 

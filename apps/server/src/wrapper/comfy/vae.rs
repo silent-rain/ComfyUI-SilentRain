@@ -2,7 +2,7 @@
 //!
 
 use candle_core::Tensor;
-use pyo3::{types::PyAnyMethods, Bound, PyAny, Python};
+use pyo3::{Bound, PyAny, Python, types::PyAnyMethods};
 
 use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};
 

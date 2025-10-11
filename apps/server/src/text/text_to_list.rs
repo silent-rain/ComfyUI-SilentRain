@@ -1,16 +1,15 @@
 //! 文本转列表
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, Py, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
-    Bound, Py, PyResult, Python,
 };
 
 use crate::{
     core::category::CATEGORY_TEXT,
     wrapper::comfyui::{
-        types::{NODE_INT, NODE_STRING},
         PromptServer,
+        types::{NODE_INT, NODE_STRING},
     },
 };
 
