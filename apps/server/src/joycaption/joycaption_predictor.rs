@@ -61,7 +61,7 @@ impl JoyCaptionPredictorGGUF {
         send_logs_to_tracing(LogOptions::default().with_logs_enabled(true));
 
         let base_models_dir = FolderPaths::default().model_path();
-        let subfolder = subfolder.map_or_else(|| "llava_gguf", |v| v);
+        let subfolder = subfolder.unwrap_or("llava_gguf");
 
         let model_path_full = base_models_dir.join(subfolder).join(model_name);
         let mmproj_path_full = base_models_dir.join(subfolder).join(mmproj_name);
