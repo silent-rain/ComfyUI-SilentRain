@@ -154,7 +154,7 @@ pub fn conditionings_py2rs<'py>(
 
         let dict_any = conditioning_item.get_item(1)?;
         let dict_py = dict_any
-            .downcast::<PyDict>()
+            .cast::<PyDict>()
             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
 
         // py dict to rust map

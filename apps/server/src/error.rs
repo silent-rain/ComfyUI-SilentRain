@@ -86,6 +86,8 @@ pub enum Error {
     PyMissingKwargs(String),
     #[error("py downcast error, {0}")]
     PyDowncastError(String),
+    #[error("py cast error, {0}")]
+    Pyo3CastError(String),
 
     #[error("tensor error, {0}")]
     TensorErr(#[from] candle_core::Error),

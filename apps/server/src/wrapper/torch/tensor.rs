@@ -68,7 +68,7 @@ where
         // 用 .numpy() 得到 numpy array
         let numpy_any = py_any.call_method0("numpy")?;
         let array_view = numpy_any
-            .downcast::<PyArrayDyn<T>>()? // 直接获取numpy数组
+            .cast::<PyArrayDyn<T>>()? // 直接获取numpy数组
             .readonly(); // 获取只读视图
 
         Ok(array_view)
@@ -84,9 +84,9 @@ where
         // 获取 numpy 数组
         let mut np = torch_tensor.call_method0("numpy")?;
 
-        // 使用 downcast 而不是 extract
+        // 使用 cast 而不是 extract
         let mut arr = np
-            .downcast::<PyArrayDyn<T>>()
+            .cast::<PyArrayDyn<T>>()
             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
 
         // 确保数组连续
@@ -98,7 +98,7 @@ where
             info!("create a torch tensor copy");
 
             arr = np
-                .downcast::<PyArrayDyn<T>>()
+                .cast::<PyArrayDyn<T>>()
                 .map_err(|e| Error::PyDowncastError(e.to_string()))?;
         }
 
@@ -124,9 +124,9 @@ where
         // 1. 获取 numpy 数组
         let np = torch_tensor.call_method0("numpy")?;
 
-        // 2. 使用 downcast 而不是 extract
+        // 2. 使用 cast 而不是 extract
         let arr = np
-            .downcast::<PyArrayDyn<T>>()
+            .cast::<PyArrayDyn<T>>()
             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
 
         // 3. 获取形状
@@ -152,9 +152,9 @@ where
         // 1. 获取 numpy 数组
         let np = torch_tensor.call_method0("numpy")?;
 
-        // 2. 使用 downcast 而不是 extract
+        // 2. 使用 cast 而不是 extract
         let arr = np
-            .downcast::<PyArrayDyn<T>>()
+            .cast::<PyArrayDyn<T>>()
             .map_err(|e| Error::PyDowncastError(e.to_string()))?;
 
         // 3. 获取形状
