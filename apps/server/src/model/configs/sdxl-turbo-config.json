@@ -1,0 +1,18 @@
+{
+    "image_size": 128,
+    "in_channels": 4,
+    "model_channels": 320,
+    "out_channels": 4,
+    "num_res_blocks": 2,
+    "use_spatial_transformer": true,
+    "transformer_depth": [
+        0,
+        0,
+        2,
+        2,
+        10,
+        10
+    ],
+    "context_dim": 2048,
+    "use_linear_in_transformer": true
+}

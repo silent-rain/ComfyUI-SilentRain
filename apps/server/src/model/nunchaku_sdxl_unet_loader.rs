@@ -7,6 +7,9 @@
 //!     - https://huggingface.co/nunchaku-tech/nunchaku
 //!     - diffusers
 //! Model: https://huggingface.co/nunchaku-tech/nunchaku-sdxl
+//!
+//! deep: pytorch/nunchaku
+//!
 
 use log::{error, info};
 use pyo3::{
@@ -15,6 +18,7 @@ use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyType},
 };
+use serde_json::Value;
 use strum_macros::{Display, EnumString};
 
 use crate::{
@@ -278,14 +282,7 @@ impl NunchakuSdxlUnetLoader {
         info!("device: {device}");
 
         // 获取设备对象
-        let device_obj = if device.starts_with("cuda") {
-            torch
-                .getattr("cuda")?
-                .getattr("device")?
-                .call1((device_id,))?
-        } else {
-            torch.getattr("device")?.call1(("cpu",))?
-        };
+        let device_obj = torch.getattr("device")?.call1((device,))?;
 
         // 确定数据类型
         let torch_dtype = if dtype_options == "bfloat16" {
@@ -308,14 +305,21 @@ impl NunchakuSdxlUnetLoader {
 
         info!("load unet model success");
 
-        // 创建SDXL模型配置
-        let unet_config = PyDict::new(py);
-        unet_config.set_item("model_channels", 320)?;
-        unet_config.set_item("use_linear_in_transformer", true)?;
-        unet_config.set_item("transformer_depth", vec![0, 0, 2, 2, 10, 10])?;
-        unet_config.set_item("context_dim", 2048)?;
-        unet_config.set_item("adm_in_channels", 2816)?;
-        unet_config.set_item("use_temporal_attention", false)?;
+        // 从JSON文件读取SDXL模型配置
+        let config_json: Value =
+            serde_json::from_str(include_str!("configs/sdxl-turbo-config.json")).map_err(|e| {
+                error!("load sdxl config failed, {e}");
+                PyErr::new::<PyRuntimeError, _>(e.to_string())
+            })?;
+
+        // 将JSON配置转换为PyDict
+        let unet_config = pythonize::pythonize(py, &config_json)?
+            .extract::<Bound<'py, PyDict>>()
+            .map_err(|e| {
+                error!("pythonize error, {e}");
+                Error::Pyo3CastError(e.to_string())
+            })?;
+
         let sdxl_class = comfy_supported_models.getattr("SDXL")?;
         let model_config = sdxl_class.call1((unet_config,))?;
 

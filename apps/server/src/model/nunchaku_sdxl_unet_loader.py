@@ -23,7 +23,10 @@ from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Configure logging
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO), format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -83,10 +86,12 @@ class NunchakuSDXLUNetLoader:
             # Check if all GPUs support bfloat16
             all_support_bfloat16 = True
             for i in range(torch.cuda.device_count()):
-                if torch.cuda.get_device_capability(i)[0] < 8:  # Ampere or newer required for bfloat16
+                if (
+                    torch.cuda.get_device_capability(i)[0] < 8
+                ):  # Ampere or newer required for bfloat16
                     all_support_bfloat16 = False
                     break
-            
+
             if all_support_bfloat16:
                 dtype_options = ["bfloat16", "float16"]
             else:
@@ -177,7 +182,9 @@ class NunchakuSDXLUNetLoader:
 
         # Check if CPU offload is requested (not supported for SDXL UNet)
         if cpu_offload == "enable":
-            logger.warning("CPU offload is not supported for Nunchaku SDXL UNet. Disabling offload.")
+            logger.warning(
+                "CPU offload is not supported for Nunchaku SDXL UNet. Disabling offload."
+            )
 
         # Check if the device_id is valid
         # if device_id >= torch.cuda.device_count() and torch.cuda.is_available():
@@ -217,7 +224,7 @@ class NunchakuSDXLUNetLoader:
 
             # Load the Nunchaku SDXL UNet model
             logger.info(f"Loading Nunchaku SDXL UNet from: {model_path}")
-            
+
             try:
                 self.unet = NunchakuSDXLUNet2DConditionModel.from_pretrained(
                     model_path,
@@ -225,35 +232,38 @@ class NunchakuSDXLUNetLoader:
                     torch_dtype=torch_dtype,
                     offload=cpu_offload,
                 )
-                
+
                 self.model_path = model_path
                 self.device = device
                 self.data_type = data_type
-                
+
                 logger.info("Nunchaku SDXL UNet loaded successfully")
-                
+
             except Exception as e:
                 logger.error(f"Failed to load Nunchaku SDXL UNet: {e}")
                 raise
 
         # Create SDXL model configuration using ComfyUI's built-in config
         unet_config = {
+            "image_size": 128,
+            "in_channels": 4,
             "model_channels": 320,
-            "use_linear_in_transformer": True,
+            "out_channels": 4,
+            "num_res_blocks": 2,
+            "use_spatial_transformer": True,
             "transformer_depth": [0, 0, 2, 2, 10, 10],
             "context_dim": 2048,
-            "adm_in_channels": 2816,
-            "use_temporal_attention": False,
+            "use_linear_in_transformer": True
         }
         model_config = SDXL(unet_config)
         model_config.set_inference_dtype(torch_dtype, None)
         model_config.custom_operations = None
-        
+
         # Create the model and directly use the UNet
         model = model_config.get_model({})
         model.diffusion_model = self.unet
-        
+
         # Create model patcher
         model = comfy.model_patcher.ModelPatcher(model, device, device_id)
-        
+
         return (model,)
