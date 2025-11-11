@@ -253,7 +253,7 @@ class NunchakuSDXLUNetLoader:
             "use_spatial_transformer": True,
             "transformer_depth": [0, 0, 2, 2, 10, 10],
             "context_dim": 2048,
-            "use_linear_in_transformer": True
+            "use_linear_in_transformer": True,
         }
         model_config = SDXL(unet_config)
         model_config.set_inference_dtype(torch_dtype, None)
