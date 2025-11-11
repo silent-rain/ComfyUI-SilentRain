@@ -1,3 +1,6 @@
+"""
+Qwen-Image扩散模型 Block Swap Patch（适配纯Transformer架构）
+"""
 import torch
 
 class QwenImageBlockSwapPatch:
@@ -112,14 +115,16 @@ class QwenImageBlockSwapPatch:
         return transformer_forward_hook
 
 
-# ComfyUI节点实现
-class QwenImageBlockSwap:
+# ComfyUI节点实现 - 这个类名与上面的类冲突，需要重命名或删除
+# 由于Rust代码会直接调用上面的QwenImageBlockSwapPatch类，这个ComfyUI节点实现可以删除
+# 或者重命名为QwenImageBlockSwapPatchNode
+class QwenImageBlockSwapPatchNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model_name": (folder_paths.get_filename_list("diffusion_models"),),
-                "transformer_blocks_cuda_size": ("INT", {"min": 1, "max": 60, "default": 6, "tooltip": "QwenImage transformer_blocks 60"}),
+                "model": ("MODEL", ),
+                "blocks_cuda_size": ("INT", {"min": 1, "max": 60, "default": 6, "tooltip": "QwenImage transformer_blocks 60"}),
             }
         }
     
@@ -127,15 +132,11 @@ class QwenImageBlockSwap:
     FUNCTION = "load_unet"
     CATEGORY = "advanced/model"
     
-    def load_unet(self, model_name, transformer_blocks_cuda_size=6):
-        # 加载原始扩散模型
-        model_path = folder_paths.get_full_path("diffusion_models", model_name)
-        model = comfy.utils.load_unet_model(model_path)
-        
+    def load_unet(self, model, blocks_cuda_size=6):
         # 应用block swap patch
         patched_model = QwenImageBlockSwapPatch(
             model,
-            transformer_blocks_cuda_size=transformer_blocks_cuda_size
+            transformer_blocks_cuda_size=blocks_cuda_size
         )
         
         return (patched_model.model,)
