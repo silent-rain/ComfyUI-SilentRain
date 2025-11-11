@@ -573,7 +573,12 @@ impl LlamaCppOptions {
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
         let options: LlamaCppOptions = depythonize(&kwargs)?;
 
-        let py_options = pythonize(py, &options)?.extract::<Bound<'py, PyDict>>()?;
+        let py_options = pythonize(py, &options)?
+            .extract::<Bound<'py, PyDict>>()
+            .map_err(|e| {
+                error!("pythonize error, {e}");
+                Error::Pyo3CastError(e.to_string())
+            })?;
         Ok((py_options,))
     }
 }

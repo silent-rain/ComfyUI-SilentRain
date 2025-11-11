@@ -8,7 +8,7 @@
 //!     - diffusers
 //! Model: https://huggingface.co/nunchaku-tech/nunchaku-sdxl
 
-use log::error;
+use log::{error, info};
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
@@ -146,24 +146,40 @@ impl NunchakuSdxlUnetLoader {
                 )?;
 
                 required.set_item(
+                    "device_id",
+                    (
+                        "INT",
+                        {
+                            let params = PyDict::new(py);
+                            params.set_item("default", 0)?;
+                            params.set_item("min", 0)?;
+                            params.set_item("step", 1)?;
+                            params.set_item("display", "number")?;
+                            params.set_item("lazy", true)?;
+                            params.set_item("tooltip", "The GPU device ID to use for the model.")?;
+                            params
+                        },
+                    ),
+                )?;
+
+                required.set_item(
                     "dtype_options",
                     (
                         vec![
-                            DTypeOption::Float16.to_string(),
                             DTypeOption::BFloat16.to_string(),
+                            DTypeOption::Float16.to_string(),
                         ],
                         {
                             let mode = PyDict::new(py);
                             mode.set_item("default", DTypeOption::Float16.to_string())?;
                             mode.set_item(
                                 "tooltip",
-                                "Specifies the model's data type. Default is `bfloat16`. For 20-series GPUs, which do not support `bfloat16`, use `float16` instead.",
+                                "Specifies the model's data type. Default is `bfloat16` for compatible GPUs, otherwise `float16`.",
                             )?;
                             mode
                         },
                     ),
                 )?;
-
                 required
             })?;
 
@@ -178,9 +194,10 @@ impl NunchakuSdxlUnetLoader {
         &mut self,
         py: Python<'py>,
         model_path: &str,
+        device_id: i32,
         dtype_options: &str,
     ) -> PyResult<(Bound<'py, PyAny>,)> {
-        let results = self.load_model(py, model_path, dtype_options);
+        let results = self.load_model(py, model_path, device_id, dtype_options);
 
         match results {
             Ok(v) => Ok(v),
@@ -218,9 +235,10 @@ impl NunchakuSdxlUnetLoader {
 
     /// 加载模型
     fn load_model<'py>(
-        &self,
+        &mut self,
         py: Python<'py>,
         model_path: &str,
+        device_id: i32,
         dtype_options: &str,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
         let g_model_path = FolderPaths::default().model_path();
@@ -233,28 +251,92 @@ impl NunchakuSdxlUnetLoader {
             }
         }
 
-        error!("model_path2: {model_full_path}");
-
+        // 导入必要的Python模块
         let torch = py.import("torch")?;
-        // from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
-        let unet_sdxl = py.import("nunchaku.models.unets.unet_sdxl")?;
+        let nunchaku = py.import("nunchaku.models.unets.unet_sdxl")?;
+        let comfy_model_patcher = py.import("comfy.model_patcher")?;
+        let comfy_supported_models = py.import("comfy.supported_models")?;
 
-        // 创建模型实例
+        // 设置设备
+        let device = if torch
+            .getattr("cuda")?
+            .getattr("is_available")?
+            .call0()?
+            .extract::<bool>()?
+            && device_id
+                < torch
+                    .getattr("cuda")?
+                    .getattr("device_count")?
+                    .call0()?
+                    .extract::<i32>()?
+        {
+            format!("cuda:{}", device_id)
+        } else {
+            "cpu".to_string()
+        };
+
+        info!("device: {device}");
+
+        // 获取设备对象
+        let device_obj = if device.starts_with("cuda") {
+            torch
+                .getattr("cuda")?
+                .getattr("device")?
+                .call1((device_id,))?
+        } else {
+            torch.getattr("device")?.call1(("cpu",))?
+        };
+
+        // 确定数据类型
+        let torch_dtype = if dtype_options == "bfloat16" {
+            torch.getattr("bfloat16")?
+        } else {
+            torch.getattr("float16")?
+        };
+
+        info!("torch_dtype: {torch_dtype}");
+
+        // 加载Nunchaku SDXL UNet模型
         let kwargs = PyDict::new(py);
-        kwargs.set_item("torch_dtype", torch.getattr(dtype_options)?)?;
-        // kwargs.set_item("device", "cpu")?;
-        // kwargs.set_item("offload", false)?;
-
-        let unet = unet_sdxl
+        kwargs.set_item("device", device_obj.clone())?;
+        kwargs.set_item("torch_dtype", torch_dtype.clone())?;
+        // kwargs.set_item("offload", cpu_offload)?; // Offload is not supported for NunchakuSDXLUNet2DConditionModel
+        let unet = nunchaku
             .getattr("NunchakuSDXLUNet2DConditionModel")?
-            .call_method("from_pretrained", (model_full_path,), Some(&kwargs))?;
+            .getattr("from_pretrained")?
+            .call((model_full_path.to_string(),), Some(&kwargs))?;
 
-        // 移动到GPU
-        // let unet = unet.call_method1("to", ("cuda",))?;
+        info!("load unet model success");
 
-        // 移动到CPU
-        // let unet = unet.call_method1("to", ("cpu",))?;
+        // 创建SDXL模型配置
+        let unet_config = PyDict::new(py);
+        unet_config.set_item("model_channels", 320)?;
+        unet_config.set_item("use_linear_in_transformer", true)?;
+        unet_config.set_item("transformer_depth", vec![0, 0, 2, 2, 10, 10])?;
+        unet_config.set_item("context_dim", 2048)?;
+        unet_config.set_item("adm_in_channels", 2816)?;
+        unet_config.set_item("use_temporal_attention", false)?;
+        let sdxl_class = comfy_supported_models.getattr("SDXL")?;
+        let model_config = sdxl_class.call1((unet_config,))?;
 
-        Ok((unet,))
+        // 设置推理数据类型
+        model_config
+            .getattr("set_inference_dtype")?
+            .call1((torch_dtype, py.None()))?;
+        model_config.setattr("custom_operations", py.None())?;
+
+        // 获取模型并设置UNet
+        let model = model_config
+            .getattr("get_model")?
+            .call1((PyDict::new(py),))?;
+        model.setattr("diffusion_model", unet)?;
+
+        // 创建模型补丁器
+        let model_patcher = comfy_model_patcher.getattr("ModelPatcher")?;
+        let patched_model = model_patcher.call1((model, device_obj, device_id))?;
+
+        info!("create patched model success");
+
+        Ok((patched_model,))
     }
 }

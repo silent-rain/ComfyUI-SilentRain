@@ -9,13 +9,13 @@ debug = false # 关闭调试日志, 加快构建速度
 
 [workspace.dependencies]
 # python
-pyo3 = "0.26.0"
+pyo3 = "0.27.1"
 # pyo3-async-runtimes = "0.26.0"
 # pyo3-log = "0.12"    # 从 Rust 到 Python 日志记录的桥梁
 # pyo3-arrow = "0.12" # pyo3 的轻量级Apache Arrow集成。
 # pyo3-bytes = "0.4"   # bytes 转换
-pythonize = "0.26.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象
-numpy = "0.26.0"     # rust-numpy
+pythonize = "0.27.0" # Serde 序列化器，用于将 Rust 对象转换为 JSON 兼容的 Python 对象
+numpy = "0.27.0"     # rust-numpy
 # dict_derive = "0.6"  # Derive FromPyObject 自动将 Python 字典转换为 Rust 结构体
 
 
@@ -33,7 +33,7 @@ serde_json = "1.0"    # 用于序列化和反序列化
 serde_repr = "0.1"    # 自动将枚举的变体序列化为对应的数字
 strum = "0.27"        # 用于枚举的宏
 strum_macros = "0.27" # 用于枚举的宏
-rust_decimal = "1.38" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
+rust_decimal = "1.39" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
 raw-string = "0.3"
 walkdir = "2.5"       # 用于遍历目录树
 chardet = "0.2"       # 用于检测文本编码的库
@@ -62,10 +62,10 @@ candle-flash-attn = "0.9"   # 用于 Flash Attention
 candle-kernels = "0.9"
 hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.22"         # 标记文本
-parquet = "56.0"            # 列式存储数据文件格式
+parquet = "57.0"            # 列式存储数据文件格式
 image = "0.25"
 png = "0.18"                # 用于读取和写入 PNG 图像
-ndarray = "0.16"            # 用于多维数组
+ndarray = "0.17"            # 用于多维数组
 # llama-cpp-2 = "0.1"         # llama.cpp 的封装，实现自 Hugging Face 的 Transformers
 llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main" }
 ort = "=2.0.0-rc.10"                                                                 # ONNX Runtime

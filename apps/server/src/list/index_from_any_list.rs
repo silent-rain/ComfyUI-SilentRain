@@ -172,11 +172,11 @@ mod tests {
 
             // 测试第一个元素
             let result = index_any.get_list_index(anys.clone(), 0)?;
-            assert_eq!(result.downcast::<PyString>().unwrap().to_str()?, "1");
+            assert_eq!(result.cast::<PyString>().unwrap().to_str()?, "1");
 
             // 测试第二个元素
             let result = index_any.get_list_index(anys, 1)?;
-            assert_eq!(result.downcast::<PyString>().unwrap().to_str()?, "2");
+            assert_eq!(result.cast::<PyString>().unwrap().to_str()?, "2");
 
             Ok(())
         })
@@ -230,7 +230,7 @@ mod tests {
 
             // 测试字符串类型
             let result = index_any.get_list_index(elements.clone(), 0)?;
-            assert!(result.downcast::<PyString>().is_ok());
+            assert!(result.cast::<PyString>().is_ok());
 
             // 测试整数类型
             let result = index_any.get_list_index(elements.clone(), 1)?;

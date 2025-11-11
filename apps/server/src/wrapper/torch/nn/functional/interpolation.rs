@@ -16,7 +16,7 @@
 //! The modes available for resizing are: `nearest`, `linear` (3D-only),
 //! `bilinear`, `bicubic` (4D-only), `trilinear` (5D-only), `area`, `nearest-exact`
 //!
-
+#![allow(unused)]
 use candle_core::Tensor;
 use pyo3::{IntoPyObject, Python, pyclass, types::PyAnyMethods};
 use strum_macros::{Display, EnumString};
