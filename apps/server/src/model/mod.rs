@@ -27,11 +27,11 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
 /// model node register
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     let nodes: Vec<NodeRegister> = vec![
-        // NodeRegister(
-        //     "NunchakuSdxlUnetLoader",
-        //     py.get_type::<NunchakuSdxlUnetLoader>(),
-        //     "Nunchaku SDXL UNet Loader",
-        // ),
+        NodeRegister(
+            "NunchakuSdxlUnetLoader",
+            py.get_type::<NunchakuSdxlUnetLoader>(),
+            "Nunchaku SDXL UNet Loader",
+        ),
         NodeRegister(
             "QwenImageBlockSwapPatch",
             py.get_type::<QwenImageBlockSwapPatch>(),
