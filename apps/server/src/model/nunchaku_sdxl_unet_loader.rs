@@ -8,14 +8,12 @@
 //!     - diffusers
 //! Model: https://huggingface.co/nunchaku-tech/nunchaku-sdxl
 
-use std::collections::HashMap;
-
 use log::error;
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyString, PyType},
+    types::{PyAnyMethods, PyDict, PyType},
 };
 use strum_macros::{Display, EnumString};
 
@@ -182,23 +180,6 @@ impl NunchakuSdxlUnetLoader {
                         },
                     ),
                 )?;
-
-                required.set_item(
-                    "cpu_offload",
-                    (
-                        vec!["enable", "disable"],
-                        {
-                            let params = PyDict::new(py);
-                            params.set_item("default", "disable")?;
-                            params.set_item(
-                                "tooltip",
-                                "Whether to enable CPU offload for the UNet model. Note: SDXL UNet does not support offload.",
-                            )?;
-                            params
-                        },
-                    ),
-                )?;
-
                 required
             })?;
 
@@ -215,9 +196,8 @@ impl NunchakuSdxlUnetLoader {
         model_path: &str,
         device_id: i32,
         dtype_options: &str,
-        cpu_offload: &str,
     ) -> PyResult<(Bound<'py, PyAny>,)> {
-        let results = self.load_model(py, model_path, device_id, dtype_options, cpu_offload);
+        let results = self.load_model(py, model_path, device_id, dtype_options);
 
         match results {
             Ok(v) => Ok(v),
@@ -260,7 +240,6 @@ impl NunchakuSdxlUnetLoader {
         model_path: &str,
         device_id: i32,
         dtype_options: &str,
-        cpu_offload: &str,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
         let g_model_path = FolderPaths::default().model_path();
         let mut model_full_path = model_path.to_string();
@@ -314,17 +293,14 @@ impl NunchakuSdxlUnetLoader {
         };
 
         // 加载Nunchaku SDXL UNet模型
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("device", device_obj.clone())?;
+        kwargs.set_item("torch_dtype", torch_dtype.clone())?;
+        // kwargs.set_item("offload", cpu_offload)?; // Offload is not supported for NunchakuSDXLUNet2DConditionModel
         let unet = nunchaku
             .getattr("NunchakuSDXLUNet2DConditionModel")?
             .getattr("from_pretrained")?
-            .call1((
-                model_full_path.to_string(),
-                HashMap::from([
-                    ("device", device_obj.clone()),
-                    ("torch_dtype", torch_dtype.clone()),
-                    ("offload", PyString::new(py, cpu_offload).into_any()),
-                ]),
-            ))?;
+            .call((model_full_path.to_string(),), Some(&kwargs))?;
 
         // 创建SDXL模型配置
         let unet_config = PyDict::new(py);
