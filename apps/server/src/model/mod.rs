@@ -13,6 +13,9 @@ pub use nunchaku_sdxl_unet_loader::NunchakuSdxlUnetLoader;
 mod qwen_image_block_swap_path;
 pub use qwen_image_block_swap_path::QwenImageBlockSwapPatch;
 
+mod flux_block_swap_path;
+pub use flux_block_swap_path::FluxBlockSwapPatch;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "model")?;
@@ -33,6 +36,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "QwenImageBlockSwapPatch",
             py.get_type::<QwenImageBlockSwapPatch>(),
             "Qwen Image Block Swap Patch",
+        ),
+        NodeRegister(
+            "FluxBlockSwapPatch",
+            py.get_type::<FluxBlockSwapPatch>(),
+            "Flux Block Swap Patch",
         ),
     ];
     Ok(nodes)
