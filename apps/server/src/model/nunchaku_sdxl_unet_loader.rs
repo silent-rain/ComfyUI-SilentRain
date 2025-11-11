@@ -8,7 +8,7 @@
 //!     - diffusers
 //! Model: https://huggingface.co/nunchaku-tech/nunchaku-sdxl
 
-use log::error;
+use log::{error, info};
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
@@ -275,6 +275,8 @@ impl NunchakuSdxlUnetLoader {
             "cpu".to_string()
         };
 
+        info!("device: {device}");
+
         // 获取设备对象
         let device_obj = if device.starts_with("cuda") {
             torch
@@ -292,6 +294,8 @@ impl NunchakuSdxlUnetLoader {
             torch.getattr("float16")?
         };
 
+        info!("torch_dtype: {torch_dtype}");
+
         // 加载Nunchaku SDXL UNet模型
         let kwargs = PyDict::new(py);
         kwargs.set_item("device", device_obj.clone())?;
@@ -301,6 +305,8 @@ impl NunchakuSdxlUnetLoader {
             .getattr("NunchakuSDXLUNet2DConditionModel")?
             .getattr("from_pretrained")?
             .call((model_full_path.to_string(),), Some(&kwargs))?;
+
+        info!("load unet model success");
 
         // 创建SDXL模型配置
         let unet_config = PyDict::new(py);
@@ -328,6 +334,8 @@ impl NunchakuSdxlUnetLoader {
         // 创建模型补丁器
         let model_patcher = comfy_model_patcher.getattr("ModelPatcher")?;
         let patched_model = model_patcher.call1((model, device_obj, device_id))?;
+
+        info!("create patched model success");
 
         Ok((patched_model,))
     }
