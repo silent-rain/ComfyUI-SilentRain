@@ -17,6 +17,10 @@ import torch.nn.functional as F
 from comfy.supported_models import SDXL
 from folder_paths import get_filename_list
 
+# Set the latent_format for SDXL models
+# This is required for ComfyUI to properly handle latent images
+from comfy import latent_formats
+
 from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
 
 # 使用绝对导入导入ComfySDXLUNetWrapper
@@ -25,7 +29,9 @@ try:
     from comfy_sdxl_unet_wrapper import ComfySDXLUNetWrapper
 except ImportError as e:
     # 如果导入失败，抛出更详细的错误信息
-    raise ImportError(f"无法导入ComfySDXLUNetWrapper: {e}. 请确保comfy_sdxl_unet_wrapper模块已在Rust代码中正确加载并添加到sys.modules中。")
+    raise ImportError(
+        f"无法导入ComfySDXLUNetWrapper: {e}. 请确保comfy_sdxl_unet_wrapper模块已在Rust代码中正确加载并添加到sys.modules中。"
+    )
 
 
 # Get log level from environment variable (default to INFO)
@@ -327,16 +333,27 @@ class NunchakuSDXLUNetLoader:
         # Replace the diffusion_model with our wrapped Nunchaku model
         # This ensures that the model has the correct interface for ComfyUI
         model.diffusion_model = ComfySDXLUNetWrapper(self.unet)
+        logger.info(
+            f"Set model.diffusion_model to ComfySDXLUNetWrapper, type: {type(model.diffusion_model)}"
+        )
 
         # Reset any existing LoRA state
-        model.diffusion_model.reset_lora()
+        if not (
+            hasattr(model.diffusion_model, "reset_lora")
+            and hasattr(model.diffusion_model, "model")
+            and hasattr(model.diffusion_model, "loras")
+        ):
+            logger.error("model.diffusion_model is missing required attributes")
+            raise RuntimeError("ComfySDXLUNetWrapper initialization failed")
+        else:
+            model.diffusion_model.reset_lora()
+            logger.info("Reset LoRA state")
 
         # Ensure the model has the correct dtype
         model.diffusion_model = model.diffusion_model.to(dtype=torch_dtype)
-
-        # Set the latent_format for SDXL models
-        # This is required for ComfyUI to properly handle latent images
-        from comfy import latent_formats
+        logger.info(
+            f"After dtype conversion, model.diffusion_model type: {type(model.diffusion_model)}"
+        )
 
         model.latent_format = latent_formats.SDXL()
 
