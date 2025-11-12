@@ -18,6 +18,7 @@ from comfy.supported_models import SDXL
 from folder_paths import get_filename_list, get_full_path_or_raise
 
 from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
+from nunchaku.utils import load_state_dict_in_safetensors
 
 
 # Get log level from environment variable (default to INFO)
@@ -320,6 +321,9 @@ class NunchakuSDXLUNetLoader:
         # This ensures that the model has the correct interface for ComfyUI
         model.diffusion_model = ComfySDXLUNetWrapper(self.unet)
 
+        # Reset any existing LoRA state
+        model.diffusion_model.reset_lora()
+
         # Ensure the model has the correct dtype
         model.diffusion_model = model.diffusion_model.to(dtype=torch_dtype)
 
@@ -351,6 +355,7 @@ class ComfySDXLUNetWrapper(nn.Module):
         super(ComfySDXLUNetWrapper, self).__init__()
         self.model = model
         self.dtype = next(model.parameters()).dtype
+        self.loras = []  # List of (lora_path, lora_strength) tuples
 
     def forward(
         self,
@@ -449,6 +454,67 @@ class ComfySDXLUNetWrapper(nn.Module):
                     ),
                 }
 
+        # Apply LoRAs if any are loaded
+        if self.loras:
+            try:
+                # Store original weights if not already stored
+                if not hasattr(self, "_original_weights"):
+                    self._original_weights = {}
+
+                # Apply each LoRA
+                for lora_path, lora_strength in self.loras:
+                    if abs(lora_strength) < 1e-5:
+                        continue  # Skip LoRAs with negligible strength
+
+                    # Load LoRA state dict
+                    lora_sd = load_state_dict_in_safetensors(lora_path)
+
+                    # Apply LoRA weights to the model
+                    for key, value in lora_sd.items():
+                        # Skip non-weight keys
+                        if not any(suffix in key for suffix in [".weight", ".bias"]):
+                            continue
+
+                        # Apply strength to LoRA weights
+                        if lora_strength != 1.0:
+                            value = value * lora_strength
+
+                        # Get the target module and parameter
+                        if "." in key:
+                            module_name, param_name = key.rsplit(".", 1)
+
+                            # Skip if we've already processed this LoRA for this module
+                            cache_key = f"{lora_path}:{module_name}:{param_name}"
+                            if cache_key in self._original_weights:
+                                continue
+
+                            try:
+                                module = self.model
+                                for part in module_name.split("."):
+                                    module = getattr(module, part)
+
+                                # Store original weight if not already stored
+                                if hasattr(module, param_name):
+                                    orig_weight = getattr(module, param_name).clone()
+                                    self._original_weights[cache_key] = orig_weight
+
+                                    # Apply LoRA weight
+                                    if "lora_down" in key or "lora_A" in key:
+                                        # Down projection LoRA
+                                        setattr(module, param_name, orig_weight + value)
+                                    elif "lora_up" in key or "lora_B" in key:
+                                        # Up projection LoRA
+                                        setattr(module, param_name, orig_weight + value)
+                                    else:
+                                        # Other types of LoRA
+                                        setattr(module, param_name, orig_weight + value)
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to apply LoRA weight for {key}: {e}"
+                                )
+            except Exception as e:
+                logger.warning(f"Failed to apply LoRAs: {e}")
+
         # Call the underlying Nunchaku model
         # The NunchakuSDXLUNet2DConditionModel follows the diffusers interface
         # Note: We don't pass pooled_projections as it's not supported by this model
@@ -462,3 +528,23 @@ class ComfySDXLUNetWrapper(nn.Module):
 
         # Return the sample from the output
         return output.sample
+
+    def reset_lora(self):
+        """
+        Reset all LoRA modifications to restore original model weights.
+        """
+        if hasattr(self, "_original_weights"):
+            for cache_key, orig_weight in self._original_weights.items():
+                try:
+                    _, module_name, param_name = cache_key.split(":", 2)
+                    module = self.model
+                    for part in module_name.split("."):
+                        module = getattr(module, part)
+
+                    if hasattr(module, param_name):
+                        setattr(module, param_name, orig_weight)
+                except Exception as e:
+                    logger.warning(f"Failed to reset LoRA weight for {cache_key}: {e}")
+
+            # Clear the stored weights
+            self._original_weights = {}

@@ -182,7 +182,7 @@ impl FluxBlockSwapPatch {
         single_blocks: usize,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
         // 使用include_str!宏在编译时包含Python文件
-        let python_code = c_str!(include_str!("flux_block_swap_path.py"));
+        let python_code = c_str!(include_str!("py/flux_block_swap_path.py"));
 
         // 使用PyModule::from_code创建Python模块
         let module = PyModule::from_code(

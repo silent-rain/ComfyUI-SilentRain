@@ -168,7 +168,7 @@ impl QwenImageBlockSwapPatch {
         blocks_cuda_size: usize,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
         // 使用include_str!宏在编译时包含Python文件
-        let python_code = c_str!(include_str!("qwen_image_block_swap_path.py"));
+        let python_code = c_str!(include_str!("py/qwen_image_block_swap_path.py"));
 
         // 使用PyModule::from_code创建Python模块
         let module = PyModule::from_code(

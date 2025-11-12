@@ -279,7 +279,7 @@ impl NunchakuSdxlUnetLoaderV2 {
         }
 
         // 使用include_str!宏在编译时包含Python文件
-        let python_code = c_str!(include_str!("nunchaku_sdxl_unet_loader.py"));
+        let python_code = c_str!(include_str!("py/nunchaku_sdxl_unet_loader.py"));
 
         // 使用PyModule::from_code创建Python模块
         let module = PyModule::from_code(
