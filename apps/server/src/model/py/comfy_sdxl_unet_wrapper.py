@@ -147,13 +147,29 @@ class ComfySDXLUNetWrapper(nn.Module):
                 if not hasattr(self, "_original_weights"):
                     self._original_weights = {}
 
-                # Apply each LoRA
+                # Apply each LoRA (only once per LoRA)
                 for lora_path, lora_strength in self.loras:
                     if abs(lora_strength) < 1e-5:
                         continue  # Skip LoRAs with negligible strength
 
-                    # Load LoRA state dict
+                    # Check if this LoRA has already been applied
+                    lora_cache_key = f"{lora_path}:{lora_strength}"
+                    if not hasattr(self, "_applied_loras"):
+                        self._applied_loras = set()
+                    if lora_cache_key in self._applied_loras:
+                        continue  # Skip already applied LoRA
+
+                    # Load LoRA state dict and convert keys to Nunchaku SDXL format
                     lora_sd = load_state_dict_in_safetensors(lora_path)
+                    
+                    # Import the key converter function
+                    try:
+                        from nunchaku_sdxl_lora_loader import convert_comfyui_to_nunchaku_sdxl_keys
+                        lora_sd = convert_comfyui_to_nunchaku_sdxl_keys(lora_sd)
+                    except ImportError as e:
+                        logger.warning(f"Failed to import key converter: {e}")
+                    except Exception as e:
+                        logger.warning(f"Failed to convert LoRA keys: {e}")
 
                     # Apply LoRA weights to the model
                     for key, value in lora_sd.items():
@@ -176,28 +192,53 @@ class ComfySDXLUNetWrapper(nn.Module):
 
                             try:
                                 module = self.model
-                                for part in module_name.split("."):
-                                    module = getattr(module, part)
+                                parts = module_name.split(".")
+                                
+                                # Traverse the module hierarchy
+                                for part in parts:
+                                    if hasattr(module, part):
+                                        module = getattr(module, part)
+                                    else:
+                                        # Try to handle nested modules with getattr recursion
+                                        found = False
+                                        for attr_name in dir(module):
+                                            if not attr_name.startswith('_'):
+                                                attr = getattr(module, attr_name)
+                                                if isinstance(attr, torch.nn.Module) and hasattr(attr, part):
+                                                    module = getattr(attr, part)
+                                                    found = True
+                                                    break
+                                        if not found:
+                                            # Try one more level of recursion for deeply nested modules
+                                            found = False
+                                            for attr_name in dir(module):
+                                                if not attr_name.startswith('_'):
+                                                    attr = getattr(module, attr_name)
+                                                    if isinstance(attr, torch.nn.Module):
+                                                        for sub_attr_name in dir(attr):
+                                                            if not sub_attr_name.startswith('_') and sub_attr_name == part:
+                                                                module = getattr(attr, sub_attr_name)
+                                                                found = True
+                                                                break
+                                                    if found:
+                                                        break
+                                            if not found:
+                                                raise AttributeError(f"Module {part} not found in {module}")
 
                                 # Store original weight if not already stored
                                 if hasattr(module, param_name):
                                     orig_weight = getattr(module, param_name).clone()
                                     self._original_weights[cache_key] = orig_weight
 
-                                    # Apply LoRA weight
-                                    if "lora_down" in key or "lora_A" in key:
-                                        # Down projection LoRA
-                                        setattr(module, param_name, orig_weight + value)
-                                    elif "lora_up" in key or "lora_B" in key:
-                                        # Up projection LoRA
-                                        setattr(module, param_name, orig_weight + value)
-                                    else:
-                                        # Other types of LoRA
-                                        setattr(module, param_name, orig_weight + value)
+                                    # Apply LoRA weight (all LoRA types use the same additive approach)
+                                    setattr(module, param_name, orig_weight + value)
                             except Exception as e:
                                 logger.warning(
                                     f"Failed to apply LoRA weight for {key}: {e}"
                                 )
+                    
+                    # Mark this LoRA as applied
+                    self._applied_loras.add(lora_cache_key)
             except Exception as e:
                 logger.warning(f"Failed to apply LoRAs: {e}")
 
@@ -234,3 +275,15 @@ class ComfySDXLUNetWrapper(nn.Module):
 
             # Clear the stored weights
             self._original_weights = {}
+        
+        # Clear applied LoRA cache
+        if hasattr(self, "_applied_loras"):
+            self._applied_loras.clear()
+        
+        # Clear applied LoRA cache
+        if hasattr(self, "_applied_loras"):
+            self._applied_loras.clear()
+        
+        # Clear applied LoRA cache
+        if hasattr(self, "_applied_loras"):
+            self._applied_loras.clear()

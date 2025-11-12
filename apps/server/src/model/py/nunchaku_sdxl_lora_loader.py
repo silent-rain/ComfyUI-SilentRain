@@ -6,6 +6,7 @@ for applying LoRA weights to Nunchaku SDXL models within ComfyUI.
 import copy
 import logging
 import os
+import re
 
 import torch
 from nunchaku.utils import load_state_dict_in_safetensors
@@ -21,6 +22,67 @@ except ImportError as e:
     raise ImportError(
         f"无法导入ComfySDXLUNetWrapper: {e}. 请确保comfy_sdxl_unet_wrapper模块已在Rust代码中正确加载并添加到sys.modules中。"
     )
+
+
+def convert_comfyui_to_nunchaku_sdxl_keys(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    """
+    Convert ComfyUI format LoRA keys to Nunchaku SDXL model format.
+    
+    ComfyUI格式: lora_unet_up_blocks_2_resnets_2_conv1.lora_down.weight
+    Nunchaku SDXL格式: up_blocks.2.resnets.2.conv1.lora_A.weight
+    
+    Parameters
+    ----------
+    state_dict : dict[str, torch.Tensor]
+        LoRA weights in ComfyUI format
+
+    Returns
+    -------
+    dict[str, torch.Tensor]
+        LoRA weights in Nunchaku SDXL format
+    """
+    converted_dict = {}
+    
+    for key, value in state_dict.items():
+        new_key = key
+        
+        # Remove lora_unet_ prefix
+        if new_key.startswith("lora_unet_"):
+            new_key = new_key.replace("lora_unet_", "")
+        
+        # Convert underscores to dots for block structure
+        # Handle down_blocks_X -> down_blocks.X
+        new_key = re.sub(r'down_blocks_(\d+)', r'down_blocks.\1', new_key)
+        # Handle up_blocks_X -> up_blocks.X
+        new_key = re.sub(r'up_blocks_(\d+)', r'up_blocks.\1', new_key)
+        # Handle mid_block -> mid_block
+        new_key = new_key.replace("mid_block_", "mid_block.")
+        
+        # Handle specific block components
+        # resnets_X -> resnets.X
+        new_key = re.sub(r'resnets_(\d+)', r'resnets.\1', new_key)
+        # attentions_X -> attentions.X
+        new_key = re.sub(r'attentions_(\d+)', r'attentions.\1', new_key)
+        # transformer_blocks_X -> transformer_blocks.X
+        new_key = re.sub(r'transformer_blocks_(\d+)', r'transformer_blocks.\1', new_key)
+        
+        # Convert lora_down/lora_up to lora_A/lora_B (Diffusers format)
+        new_key = new_key.replace("lora_down.weight", "lora_A.weight")
+        new_key = new_key.replace("lora_up.weight", "lora_B.weight")
+        
+        # Handle attention components
+        new_key = new_key.replace("to_out_0", "to_out.0")
+        
+        # Handle FFN components
+        new_key = new_key.replace("ff_net_0_proj", "ff.net.0.proj")
+        new_key = new_key.replace("ff_net_2", "ff.net.2")
+        
+        converted_dict[new_key] = value
+        
+        if key != new_key:
+            logger.debug(f"Converted LoRA key: {key} → {new_key}")
+    
+    return converted_dict
 
 
 # Get log level from environment variable (default to INFO)
@@ -124,34 +186,54 @@ class NunchakuSDXLLoraLoader:
             return (model,)  # If the strength is too small, return the original model
 
         model_wrapper = model.model.diffusion_model
-        assert isinstance(model_wrapper, ComfySDXLUNetWrapper)
+
+        # 安全地检查类型，使用类名比较而不是isinstance
+        expected_class_name = "ComfySDXLUNetWrapper"
+        actual_class_name = model_wrapper.__class__.__name__
+        
+        if actual_class_name != expected_class_name:
+            logger.error(f"Expected {expected_class_name} but got {actual_class_name}")
+            return (model,)  # 返回原始模型而不是抛出错误
 
         unet = model_wrapper.model
         model_wrapper.model = None
         ret_model = copy.deepcopy(model)  # copy everything except the model
         ret_model_wrapper = ret_model.model.diffusion_model
-        assert isinstance(ret_model_wrapper, ComfySDXLUNetWrapper)
+
+        # 安全地检查返回模型的包装器类型
+        ret_actual_class_name = ret_model_wrapper.__class__.__name__
+        if ret_actual_class_name != expected_class_name:
+            logger.error(
+                f"Expected {expected_class_name} for ret_model but got {ret_actual_class_name}"
+            )
+            # 恢复原始模型并返回
+            model_wrapper.model = unet
+            return (model,)
 
         model_wrapper.model = unet
         ret_model_wrapper.model = unet
 
         lora_path = get_full_path_or_raise("loras", lora_name)
 
-        # Reset any existing LoRAs before applying new ones
-        ret_model_wrapper.reset_lora()
-        ret_model_wrapper.loras = [(lora_path, lora_strength)]
+        # Add the LoRA to the existing list (append instead of replace)
+        ret_model_wrapper.loras.append((lora_path, lora_strength))
 
-        # Load the LoRA state dict to check for any special handling
+        # Load the LoRA state dict and convert keys to Nunchaku SDXL format
         try:
             sd = load_state_dict_in_safetensors(lora_path)
-
+            
+            # Convert ComfyUI format keys to Nunchaku SDXL format
+            converted_sd = convert_comfyui_to_nunchaku_sdxl_keys(sd)
+            
             # Check if the LoRA modifies the input channels
-            # SDXL LoRA keys might have different naming conventions
-            input_keys = [k for k in sd.keys() if "input_blocks" in k and "lora_A" in k]
+            # SDXL LoRA keys should be more specific
+            input_keys = [
+                k for k in converted_sd.keys() if "input_blocks.0.0" in k and "lora_A" in k
+            ]
             if input_keys:
                 # Find the first input block LoRA key
                 first_key = input_keys[0]
-                new_in_channels = sd[first_key].shape[1]
+                new_in_channels = converted_sd[first_key].shape[1]
                 old_in_channels = ret_model.model.model_config.unet_config.get(
                     "in_channels", 4
                 )
@@ -288,13 +370,29 @@ class NunchakuSDXLLoraStack:
             return (model,)
 
         model_wrapper = model.model.diffusion_model
-        assert isinstance(model_wrapper, ComfySDXLUNetWrapper)
+
+        # 安全地检查类型，使用类名比较而不是isinstance
+        expected_class_name = "ComfySDXLUNetWrapper"
+        actual_class_name = model_wrapper.__class__.__name__
+        
+        if actual_class_name != expected_class_name:
+            logger.error(f"Expected {expected_class_name} but got {actual_class_name}")
+            return (model,)  # 返回原始模型而不是抛出错误
 
         unet = model_wrapper.model
         model_wrapper.model = None
         ret_model = copy.deepcopy(model)  # copy everything except the model
         ret_model_wrapper = ret_model.model.diffusion_model
-        assert isinstance(ret_model_wrapper, ComfySDXLUNetWrapper)
+
+        # 安全地检查返回模型的包装器类型
+        ret_actual_class_name = ret_model_wrapper.__class__.__name__
+        if ret_actual_class_name != expected_class_name:
+            logger.error(
+                f"Expected {expected_class_name} for ret_model but got {ret_actual_class_name}"
+            )
+            # 恢复原始模型并返回
+            model_wrapper.model = unet
+            return (model,)
 
         model_wrapper.model = unet
         ret_model_wrapper.model = unet
@@ -314,9 +412,9 @@ class NunchakuSDXLLoraStack:
             # Check if input channels need to be updated
             try:
                 sd = load_state_dict_in_safetensors(lora_path)
-                # SDXL LoRA keys might have different naming conventions
+                # SDXL LoRA keys should be more specific
                 input_keys = [
-                    k for k in sd.keys() if "input_blocks" in k and "lora_A" in k
+                    k for k in sd.keys() if "input_blocks.0.0" in k and "lora_A" in k
                 ]
                 if input_keys:
                     # Find the first input block LoRA key
