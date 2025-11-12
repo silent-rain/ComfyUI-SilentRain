@@ -6,13 +6,13 @@ It supports quantized inference with SVDQ quantization and integrates with Comfy
 """
 
 import gc
-import json
 import logging
 import os
 
 import comfy.model_management
 import comfy.model_patcher
 import torch
+from torch import nn
 from comfy.supported_models import SDXL
 from folder_paths import get_filename_list, get_full_path_or_raise
 
@@ -68,7 +68,7 @@ class NunchakuSDXLUNetLoader:
         self.device = comfy.model_management.get_torch_device()
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         """
         Define the input types and tooltips for the node.
 
@@ -181,7 +181,8 @@ class NunchakuSDXLUNetLoader:
         model_path = get_full_path_or_raise("diffusion_models", model_path)
 
         # Check if CPU offload is requested (not supported for SDXL UNet)
-        if cpu_offload == "enable":
+        cpu_offload_bool = cpu_offload == "enable"
+        if cpu_offload_bool:
             logger.warning(
                 "CPU offload is not supported for Nunchaku SDXL UNet. Disabling offload."
             )
@@ -230,7 +231,7 @@ class NunchakuSDXLUNetLoader:
                     model_path,
                     device=device,
                     torch_dtype=torch_dtype,
-                    offload=cpu_offload,
+                    offload=cpu_offload_bool,
                 )
 
                 self.model_path = model_path
@@ -244,26 +245,216 @@ class NunchakuSDXLUNetLoader:
                 raise
 
         # Create SDXL model configuration using ComfyUI's built-in config
+        # Use the same configuration as ComfyUI's SDXL class
         unet_config = {
-            "image_size": 128,
+            "image_size": 32,
             "in_channels": 4,
             "model_channels": 320,
             "out_channels": 4,
-            "num_res_blocks": 2,
+            "num_res_blocks": [2, 2, 2],
+            "dropout": 0,
+            "channel_mult": [1, 2, 4],
+            "conv_resample": True,
+            "dims": 2,
+            "num_classes": "sequential",
+            "use_checkpoint": False,
+            "dtype": "torch.float16",
+            "num_heads": -1,
+            "num_head_channels": 64,
+            "num_heads_upsample": -1,
+            "use_scale_shift_norm": False,
+            "resblock_updown": False,
+            "use_new_attention_order": False,
             "use_spatial_transformer": True,
             "transformer_depth": [0, 0, 2, 2, 10, 10],
             "context_dim": 2048,
+            "n_embed": None,
+            "legacy": False,
+            "disable_self_attentions": None,
+            "num_attention_blocks": None,
+            "disable_middle_self_attn": False,
             "use_linear_in_transformer": True,
+            "adm_in_channels": 2816,
+            "transformer_depth_middle": 10,
+            "transformer_depth_output": [0, 0, 0, 2, 2, 2, 10, 10, 10],
+            "use_temporal_resblock": False,
+            "use_temporal_attention": False,
+            "time_context_dim": None,
+            "extra_ff_mix_layer": False,
+            "use_spatial_context": False,
+            "merge_strategy": None,
+            "merge_factor": 0.0,
+            "video_kernel_size": None,
+            "disable_temporal_crossattention": False,
+            "max_ddpm_temb_period": 10000,
+            "attn_precision": None,
         }
+
+        # Create SDXL model configuration
         model_config = SDXL(unet_config)
         model_config.set_inference_dtype(torch_dtype, None)
         model_config.custom_operations = None
 
-        # Create the model and directly use the UNet
+        # Create the model and wrap the UNet with ComfySDXLUNetWrapper
         model = model_config.get_model({})
-        model.diffusion_model = self.unet
 
-        # Create model patcher
+        # Replace the diffusion_model with our wrapped Nunchaku model
+        # This ensures that the model has the correct interface for ComfyUI
+        model.diffusion_model = ComfySDXLUNetWrapper(self.unet)
+
+        # Ensure the model has the correct dtype
+        model.diffusion_model = model.diffusion_model.to(dtype=torch_dtype)
+
+        # Create model patcher with proper device management
         model = comfy.model_patcher.ModelPatcher(model, device, device_id)
-
         return (model,)
+
+
+class ComfySDXLUNetWrapper(nn.Module):
+    """
+    Wrapper for NunchakuSDXLUNet2DConditionModel to support ComfyUI workflows.
+
+    This wrapper adapts the diffusers UNet2DConditionModel interface to ComfyUI's UNetModel interface
+    by mapping the parameter names and handling the different calling conventions.
+
+    Parameters
+    ----------
+    model : NunchakuSDXLUNet2DConditionModel
+        The underlying Nunchaku SDXL UNet model to wrap.
+    """
+
+    def __init__(self, model):
+        super(ComfySDXLUNetWrapper, self).__init__()
+        self.model = model
+        self.dtype = next(model.parameters()).dtype
+
+        # Initialize ControlNet related attributes
+        self.controlnet_cond = None
+        self.controlnet_scale = 1.0
+
+    def set_controlnet_cond(self, cond, scale=1.0):
+        """Set ControlNet conditioning.
+
+        Parameters
+        ----------
+        cond : torch.Tensor
+            ControlNet conditioning tensor.
+        scale : float
+            ControlNet scale factor.
+        """
+        self.controlnet_cond = cond
+        self.controlnet_scale = scale
+
+    def forward(
+        self,
+        x,
+        timesteps=None,
+        context=None,
+        y=None,
+        control=None,
+        transformer_options={},
+        **kwargs,
+    ):
+        """
+        Forward pass for the wrapped SDXL UNet model.
+
+        This method adapts ComfyUI's UNetModel interface to diffusers' UNet2DConditionModel interface.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input latent tensor of shape (batch, channels, height, width).
+        timesteps : torch.Tensor or None
+            Diffusion timestep tensor.
+        context : torch.Tensor or None
+            Text embeddings for conditioning.
+        y : torch.Tensor or None
+            Additional conditioning (for SDXL, this contains pooled text embeddings).
+        control : dict or None
+            ControlNet inputs.
+        transformer_options : dict
+            Additional transformer options.
+        **kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        torch.Tensor
+            Output tensor of the same spatial size as the input.
+        """
+
+        # Convert timesteps format if needed
+        if timesteps is not None:
+            if timesteps.dim() == 0:
+                timesteps = timesteps.unsqueeze(0)
+            elif timesteps.dim() == 1 and timesteps.size(0) == 1:
+                timesteps = timesteps.unsqueeze(0)
+
+        # Prepare additional conditioning for SDXL
+        # SDXL uses y parameter for pooled text embeddings and time_ids
+        added_cond_kwargs = {}
+        if y is not None:
+            # SDXL expects text_embeds and time_ids in added_cond_kwargs
+            # y should contain both text_embeds (1280) and time_ids (1536) for a total of 2816 features
+            if y.dim() == 2:
+                if y.size(1) == 2816:
+                    # Split y into text_embeds and time_ids
+                    text_embeds = y[:, :1280]
+                    time_ids = y[:, 1280:]
+                    added_cond_kwargs["text_embeds"] = text_embeds
+                    added_cond_kwargs["time_ids"] = time_ids
+                elif y.size(1) == 1280:
+                    # If y only has text_embeds, create default time_ids
+                    added_cond_kwargs["text_embeds"] = y
+                    batch_size = y.size(0)
+                    # Default time_ids for SDXL: [height, width, crop_h, crop_w, target_height, target_width]
+                    # Using default values of 1024x1024 resolution
+                    # These values should be embedded using the same embedder as the original SDXL model
+                    # For now, we'll use zeros as placeholders
+                    default_time_ids = torch.zeros(
+                        (batch_size, 6), dtype=x.dtype, device=x.device
+                    )
+                    added_cond_kwargs["time_ids"] = default_time_ids
+                else:
+                    # Handle unexpected size
+                    logger.warning(
+                        f"Unexpected y tensor size: {y.size(1)}. Expected 1280 or 2816."
+                    )
+                    # Use only the first 1280 features as text_embeds
+                    added_cond_kwargs["text_embeds"] = y[:, :1280]
+                    batch_size = y.size(0)
+                    default_time_ids = torch.zeros(
+                        (batch_size, 6), dtype=x.dtype, device=x.device
+                    )
+                    added_cond_kwargs["time_ids"] = default_time_ids
+
+        # Handle ControlNet inputs
+        if control is not None:
+            # Extract ControlNet conditioning from control dict
+            # ControlNet typically provides hint tensors
+            controlnet_cond = control.get("hint", None)
+            if controlnet_cond is not None:
+                self.set_controlnet_cond(controlnet_cond)
+
+        # Prepare arguments for diffusers UNet
+        # Use the correct parameter names expected by NunchakuSDXLUNet2DConditionModel
+        unet_kwargs = {
+            "sample": x,
+            "timestep": timesteps,  # Nunchaku model expects 'timestep' parameter
+            "encoder_hidden_states": context,
+            "return_dict": False,
+        }
+
+        # Add additional conditioning if available
+        if added_cond_kwargs:
+            unet_kwargs["added_cond_kwargs"] = added_cond_kwargs
+
+        # Handle cross_attention_kwargs if present in transformer_options
+        cross_attention_kwargs = transformer_options.get("cross_attention_kwargs", {})
+        if cross_attention_kwargs:
+            unet_kwargs["cross_attention_kwargs"] = cross_attention_kwargs
+
+        # Call the underlying Nunchaku SDXL UNet model
+        output = self.model(**unet_kwargs)[0]
+
+        return output

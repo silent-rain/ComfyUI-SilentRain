@@ -10,6 +10,9 @@ use crate::core::node::NodeRegister;
 mod nunchaku_sdxl_unet_loader;
 pub use nunchaku_sdxl_unet_loader::NunchakuSdxlUnetLoader;
 
+mod nunchaku_sdxl_unet_loader_v2;
+pub use nunchaku_sdxl_unet_loader_v2::NunchakuSdxlUnetLoaderV2;
+
 mod qwen_image_block_swap_path;
 pub use qwen_image_block_swap_path::QwenImageBlockSwapPatch;
 
@@ -31,6 +34,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "NunchakuSdxlUnetLoader",
             py.get_type::<NunchakuSdxlUnetLoader>(),
             "Nunchaku SDXL UNet Loader",
+        ),
+        NodeRegister(
+            "NunchakuSdxlUnetLoaderV2",
+            py.get_type::<NunchakuSdxlUnetLoaderV2>(),
+            "Nunchaku SDXL UNet Loader V2",
         ),
         NodeRegister(
             "QwenImageBlockSwapPatch",
