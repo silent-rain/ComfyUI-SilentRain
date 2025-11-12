@@ -9,15 +9,28 @@ import os
 
 import torch
 from nunchaku.utils import load_state_dict_in_safetensors
+from folder_paths import get_filename_list, get_full_path_or_raise
 
-from ..models.nunchaku_sdxl_unet_loader import ComfySDXLUNetWrapper
-from ..utils import get_filename_list, get_full_path_or_raise
+
+# 使用绝对导入导入ComfySDXLUNetWrapper
+# 注意：这个模块应该已经在Rust代码中被添加到sys.modules中
+try:
+    from comfy_sdxl_unet_wrapper import ComfySDXLUNetWrapper
+except ImportError as e:
+    # 如果导入失败，抛出更详细的错误信息
+    raise ImportError(
+        f"无法导入ComfySDXLUNetWrapper: {e}. 请确保comfy_sdxl_unet_wrapper模块已在Rust代码中正确加载并添加到sys.modules中。"
+    )
+
 
 # Get log level from environment variable (default to INFO)
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Configure logging
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO), format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -139,12 +152,18 @@ class NunchakuSDXLLoraLoader:
                 # Find the first input block LoRA key
                 first_key = input_keys[0]
                 new_in_channels = sd[first_key].shape[1]
-                old_in_channels = ret_model.model.model_config.unet_config.get("in_channels", 4)
+                old_in_channels = ret_model.model.model_config.unet_config.get(
+                    "in_channels", 4
+                )
 
                 # Update input channels if needed
                 if new_in_channels > old_in_channels:
-                    ret_model.model.model_config.unet_config["in_channels"] = new_in_channels
-                    logger.info(f"Updated input channels from {old_in_channels} to {new_in_channels}")
+                    ret_model.model.model_config.unet_config["in_channels"] = (
+                        new_in_channels
+                    )
+                    logger.info(
+                        f"Updated input channels from {old_in_channels} to {new_in_channels}"
+                    )
         except Exception as e:
             logger.warning(f"Failed to process LoRA state dict: {e}")
 
@@ -202,7 +221,9 @@ class NunchakuSDXLLoraStack:
         for i in range(1, 11):  # Support up to 10 LoRAs
             inputs["optional"][f"lora_name_{i}"] = (
                 ["None"] + get_filename_list("loras"),
-                {"tooltip": f"The file name of LoRA {i}. Select 'None' to skip this slot."},
+                {
+                    "tooltip": f"The file name of LoRA {i}. Select 'None' to skip this slot."
+                },
             )
             inputs["optional"][f"lora_strength_{i}"] = (
                 "FLOAT",
@@ -294,17 +315,23 @@ class NunchakuSDXLLoraStack:
             try:
                 sd = load_state_dict_in_safetensors(lora_path)
                 # SDXL LoRA keys might have different naming conventions
-                input_keys = [k for k in sd.keys() if "input_blocks" in k and "lora_A" in k]
+                input_keys = [
+                    k for k in sd.keys() if "input_blocks" in k and "lora_A" in k
+                ]
                 if input_keys:
                     # Find the first input block LoRA key
                     first_key = input_keys[0]
                     new_in_channels = sd[first_key].shape[1]
                     max_in_channels = max(max_in_channels, new_in_channels)
             except Exception as e:
-                logger.warning(f"Failed to process LoRA state dict for {lora_name}: {e}")
+                logger.warning(
+                    f"Failed to process LoRA state dict for {lora_name}: {e}"
+                )
 
         # Update the model's input channels
-        if max_in_channels > ret_model.model.model_config.unet_config.get("in_channels", 4):
+        if max_in_channels > ret_model.model.model_config.unet_config.get(
+            "in_channels", 4
+        ):
             ret_model.model.model_config.unet_config["in_channels"] = max_in_channels
             logger.info(f"Updated input channels to {max_in_channels}")
 

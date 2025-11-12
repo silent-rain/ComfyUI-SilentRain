@@ -278,7 +278,33 @@ impl NunchakuSdxlUnetLoaderV2 {
             }
         }
 
-        // 使用include_str!宏在编译时包含Python文件
+        // 方案2: 创建临时模块结构
+        // 首先加载comfy_sdxl_unet_wrapper.py并创建一个模块
+        let wrapper_code = c_str!(include_str!("py/comfy_sdxl_unet_wrapper.py"));
+        let wrapper_module = PyModule::from_code(
+            py,
+            wrapper_code,
+            c"comfy_sdxl_unet_wrapper.py",
+            c"comfy_sdxl_unet_wrapper",
+        )
+        .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("创建wrapper模块失败: {}", e)))?;
+
+        // 将wrapper模块添加到sys.modules中，使其可以被导入
+        let sys = py
+            .import("sys")
+            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("导入sys模块失败: {}", e)))?;
+        let sys_modules = sys
+            .getattr("modules")
+            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("获取sys.modules失败: {}", e)))?;
+
+        // 将wrapper模块添加到sys.modules
+        sys_modules
+            .set_item("comfy_sdxl_unet_wrapper", &wrapper_module)
+            .map_err(|e| {
+                PyErr::new::<PyRuntimeError, _>(format!("添加wrapper模块到sys.modules失败: {}", e))
+            })?;
+
+        // 现在加载nunchaku_sdxl_unet_loader.py，它应该能够导入comfy_sdxl_unet_wrapper模块
         let python_code = c_str!(include_str!("py/nunchaku_sdxl_unet_loader.py"));
 
         // 使用PyModule::from_code创建Python模块
