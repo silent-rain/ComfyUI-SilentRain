@@ -7,9 +7,6 @@ use pyo3::{
 
 use crate::core::node::NodeRegister;
 
-mod nunchaku_sdxl_unet_loader;
-pub use nunchaku_sdxl_unet_loader::NunchakuSdxlUnetLoader;
-
 mod nunchaku_sdxl_unet_loader_v2;
 pub use nunchaku_sdxl_unet_loader_v2::NunchakuSdxlUnetLoaderV2;
 
@@ -22,7 +19,7 @@ pub use flux_block_swap_path::FluxBlockSwapPatch;
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "model")?;
-    submodule.add_class::<NunchakuSdxlUnetLoader>()?;
+    submodule.add_class::<NunchakuSdxlUnetLoaderV2>()?;
     submodule.add_class::<QwenImageBlockSwapPatch>()?;
     Ok(submodule)
 }
@@ -30,11 +27,11 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
 /// model node register
 pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
     let nodes: Vec<NodeRegister> = vec![
-        NodeRegister(
-            "NunchakuSdxlUnetLoader",
-            py.get_type::<NunchakuSdxlUnetLoader>(),
-            "Nunchaku SDXL UNet Loader",
-        ),
+        // NodeRegister(
+        //     "NunchakuSdxlUnetLoader",
+        //     py.get_type::<NunchakuSdxlUnetLoader>(),
+        //     "Nunchaku SDXL UNet Loader",
+        // ),
         NodeRegister(
             "NunchakuSdxlUnetLoaderV2",
             py.get_type::<NunchakuSdxlUnetLoaderV2>(),
