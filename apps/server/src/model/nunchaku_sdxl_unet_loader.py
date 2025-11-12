@@ -243,7 +243,7 @@ class NunchakuSDXLUNetLoader:
                 self.data_type = data_type
 
                 logger.info("Nunchaku SDXL UNet loaded successfully")
-                
+
                 # 添加模型参数信息
                 logger.info(f"Model dtype: {next(self.unet.parameters()).dtype}")
                 logger.info(f"Model device: {next(self.unet.parameters()).device}")
@@ -255,7 +255,7 @@ class NunchakuSDXLUNetLoader:
 
         # Create SDXL model configuration optimized for Nunchaku SDXL UNet
         unet_config = {
-            "image_size": 32,  # 恢复为原始配置
+            "image_size": 128,
             "in_channels": 4,
             "model_channels": 320,
             "out_channels": 4,
@@ -274,7 +274,7 @@ class NunchakuSDXLUNetLoader:
             "resblock_updown": False,
             "use_new_attention_order": False,
             "use_spatial_transformer": True,
-            "transformer_depth": [0, 0, 2, 2, 10, 10],  # 恢复为原始配置
+            "transformer_depth": [0, 0, 2, 2, 10, 10],
             "context_dim": 2048,
             "n_embed": None,
             "legacy": False,
@@ -284,7 +284,17 @@ class NunchakuSDXLUNetLoader:
             "use_linear_in_transformer": True,
             "adm_in_channels": 2816,
             "transformer_depth_middle": 10,
-            "transformer_depth_output": [0, 0, 0, 2, 2, 2, 10, 10, 10],  # 恢复为原始配置
+            "transformer_depth_output": [
+                0,
+                0,
+                0,
+                2,
+                2,
+                2,
+                10,
+                10,
+                10,
+            ],
             "use_temporal_resblock": False,
             "use_temporal_attention": False,
             "time_context_dim": None,
@@ -313,6 +323,12 @@ class NunchakuSDXLUNetLoader:
         # Ensure the model has the correct dtype
         model.diffusion_model = model.diffusion_model.to(dtype=torch_dtype)
 
+        # Set the latent_format for SDXL models
+        # This is required for ComfyUI to properly handle latent images
+        from comfy import latent_formats
+
+        model.latent_format = latent_formats.SDXL()
+
         # Create model patcher with proper device management
         model = comfy.model_patcher.ModelPatcher(model, device, device_id)
         return (model,)
@@ -335,26 +351,6 @@ class ComfySDXLUNetWrapper(nn.Module):
         super(ComfySDXLUNetWrapper, self).__init__()
         self.model = model
         self.dtype = next(model.parameters()).dtype
-
-        # Initialize ControlNet related attributes
-        self.controlnet_cond = None
-        self.controlnet_scale = 1.0
-        
-        # 添加调试信息
-        logger.info(f"ComfySDXLUNetWrapper initialized with dtype: {self.dtype}")
-
-    def set_controlnet_cond(self, cond, scale=1.0):
-        """Set ControlNet conditioning.
-
-        Parameters
-        ----------
-        cond : torch.Tensor
-            ControlNet conditioning tensor.
-        scale : float
-            ControlNet scale factor.
-        """
-        self.controlnet_cond = cond
-        self.controlnet_scale = scale
 
     def forward(
         self,
@@ -393,329 +389,76 @@ class ComfySDXLUNetWrapper(nn.Module):
         torch.Tensor
             Output tensor of the same spatial size as the input.
         """
-        logger.info(f"x tensor shape: {x.shape}")
-        logger.info(f"timesteps tensor shape: {timesteps}")
-        logger.info(f"context tensor shape: {context.shape}")
-        logger.info(f"y tensor shape: {y.shape}")
-        logger.info(f"control tensor shape: {control}")
-        logger.info(f"transformer_options tensor shape: {transformer_options}")
-        logger.info(f"kwargs tensor shape: {kwargs}")
+        # Ensure inputs are on the same device as the model
+        device = next(self.model.parameters()).device
 
-        # Convert timesteps format if needed
-        if timesteps is not None:
-            logger.debug(f"Original timesteps shape: {timesteps.shape}")
-            if timesteps.dim() == 0:
-                timesteps = timesteps.unsqueeze(0)
-            elif timesteps.dim() == 1 and timesteps.size(0) == 1:
-                timesteps = timesteps.unsqueeze(0)
-            logger.debug(f"Processed timesteps shape: {timesteps.shape}")
-
-        # Prepare additional conditioning for SDXL
-        # SDXL uses y parameter for pooled text embeddings and time_ids
-        added_cond_kwargs = {}
-        if y is not None:
-            logger.debug(f"y tensor shape: {y.shape}")
-            # SDXL expects text_embeds and time_ids in added_cond_kwargs
-            # y should contain both text_embeds (1280) and time_ids (1536) for a total of 2816 features
-            if y.dim() == 2:
-                if y.size(1) == 2816:
-                    # Split y into text_embeds and time_ids
-                    text_embeds = y[:, :1280]
-                    time_ids = y[:, 1280:]
-                    # 确保text_embeds的维度正确
-                    logger.debug(f"Split y into text_embeds: {text_embeds.shape}, time_ids: {time_ids.shape}")
-                    logger.debug(f"text_embeds dtype: {text_embeds.dtype}, time_ids dtype: {time_ids.dtype}")
-                    added_cond_kwargs["text_embeds"] = text_embeds
-                    added_cond_kwargs["time_ids"] = time_ids
-                elif y.size(1) == 1280:
-                    # If y only has text_embeds, create default time_ids
-                    added_cond_kwargs["text_embeds"] = y
-                    batch_size = y.size(0)
-                    # Default time_ids for SDXL: [height, width, crop_h, crop_w, target_height, target_width]
-                    # Using default values of 1024x1024 resolution
-                    # These values should be embedded using the same embedder as the original SDXL model
-                    # For now, we'll use zeros as placeholders
-                    default_time_ids = torch.zeros(
-                        (batch_size, 6), dtype=y.dtype, device=y.device
-                    )
-                    added_cond_kwargs["time_ids"] = default_time_ids
-                    logger.debug(f"Created default time_ids: {default_time_ids.shape}")
-                else:
-                    # Handle unexpected size
-                    logger.warning(
-                        f"Unexpected y tensor size: {y.size(1)}. Expected 1280 or 2816."
-                    )
-                    # Use only the first 1280 features as text_embeds
-                    if y.size(1) >= 1280:
-                        added_cond_kwargs["text_embeds"] = y[:, :1280]
-                    else:
-                        # If y is smaller than expected, pad with zeros
-                        padded_text_embeds = torch.zeros(
-                            (y.size(0), 1280), dtype=y.dtype, device=y.device
-                        )
-                        padded_text_embeds[:, :y.size(1)] = y
-                        added_cond_kwargs["text_embeds"] = padded_text_embeds
-                    
-                    batch_size = y.size(0)
-                    default_time_ids = torch.zeros(
-                        (batch_size, 6), dtype=y.dtype, device=y.device  # 修复：使用y的dtype而不是x的dtype
-                    )
-                    added_cond_kwargs["time_ids"] = default_time_ids
-            elif y.dim() == 3:
-                # Handle case where y might be 3D (batch, seq_len, features)
-                logger.warning(f"y tensor is 3D with shape {y.shape}, attempting to reshape")
-                # Flatten the sequence dimension
-                y_reshaped = y.view(y.size(0), -1)
-                if y_reshaped.size(1) >= 1280:
-                    added_cond_kwargs["text_embeds"] = y_reshaped[:, :1280]
-                else:
-                    # If y is smaller than expected, pad with zeros
-                    padded_text_embeds = torch.zeros(
-                        (y_reshaped.size(0), 1280), dtype=y_reshaped.dtype, device=y_reshaped.device
-                    )
-                    padded_text_embeds[:, :y_reshaped.size(1)] = y_reshaped
-                    added_cond_kwargs["text_embeds"] = padded_text_embeds
-                
-                batch_size = y_reshaped.size(0)
-                default_time_ids = torch.zeros(
-                    (batch_size, 6), dtype=y.dtype, device=y.device  # 修复：使用y的dtype而不是x的dtype
-                )
-                added_cond_kwargs["time_ids"] = default_time_ids
-
-        # Handle ControlNet inputs
-        if control is not None:
-            # Extract ControlNet conditioning from control dict
-            # ControlNet typically provides hint tensors
-            controlnet_cond = control.get("hint", None)
-            if controlnet_cond is not None:
-                self.set_controlnet_cond(controlnet_cond)
-
-        # Prepare arguments for diffusers UNet
-        # Use the correct parameter names expected by NunchakuSDXLUNet2DConditionModel
-        logger.info(f"Input tensor x shape: {x.shape}")
-        logger.info(f"Context tensor shape: {context.shape if context is not None else None}")
-        
-        # CRITICAL FIX: Based on metadata analysis, the model expects 64x64 input despite the error suggesting 128x128
-        # The error 394496 = 2 * 4 * 128 * 128 suggests the model is incorrectly processing the input
-        # The real issue is that the model's add_embedding layer expects a different input format
-        
-        # Keep input at 64x64 as specified in metadata
-        original_shape = x.shape
-        if x.shape[-2:] == (64, 64):
-            logger.info("Input tensor has correct 64x64 spatial dimensions as specified in metadata")
-        elif x.shape[-2:] == (128, 128):
-            logger.warning(f"Input tensor is 128x128, but metadata specifies 64x64. Downsampling to 64x64")
-            x = F.interpolate(x, size=(64, 64), mode='bilinear', align_corners=False)
-            logger.info(f"Resized input tensor from {original_shape} to {x.shape}")
-        else:
-            logger.warning(f"Unexpected input spatial dimensions: {x.shape[-2:]}. Expected 64x64")
-            # Try to resize to 64x64 as specified in metadata
-            x = F.interpolate(x, size=(64, 64), mode='bilinear', align_corners=False)
-            logger.info(f"Resized input tensor from {original_shape} to {x.shape}")
-        
-        # CRITICAL FIX: The real issue is with how add_embeds are processed
-        # We need to ensure the add_embedding layer receives the correct input format
-        self.original_input_shape = original_shape
-        
-        # CRITICAL FIX: 确保输入张量的数据类型与模型一致
-        # 这是导致矩阵乘法维度不匹配的根本原因
-        logger.info(f"Input tensor x dtype: {x.dtype}")
-        logger.info(f"Model dtype: {self.dtype}")
-        
-        # 确保输入张量的数据类型与模型一致
+        # Convert inputs to the correct dtype if needed
         if x.dtype != self.dtype:
-            logger.info(f"Converting input tensor from {x.dtype} to {self.dtype}")
-            x = x.to(dtype=self.dtype)
-        
-        unet_kwargs = {
-            "sample": x,
-            "timestep": timesteps,  # Nunchaku model expects 'timestep' parameter
-            "encoder_hidden_states": context,
-            "return_dict": False,
-        }
+            x = x.to(self.dtype)
 
-        # Add additional conditioning if available
-        if added_cond_kwargs:
-            # 添加更详细的调试信息
-            if 'text_embeds' in added_cond_kwargs:
-                logger.debug(f"Added conditioning: text_embeds shape: {added_cond_kwargs['text_embeds'].shape}, dtype: {added_cond_kwargs['text_embeds'].dtype}")
-            if 'time_ids' in added_cond_kwargs:
-                logger.debug(f"Added conditioning: time_ids shape: {added_cond_kwargs['time_ids'].shape}, dtype: {added_cond_kwargs['time_ids'].dtype}")
-            
-            # CRITICAL FIX: 确保text_embeds和time_ids的数据类型与模型输入一致
-            # 这是导致矩阵乘法维度不匹配的根本原因
-            if 'text_embeds' in added_cond_kwargs and 'time_ids' in added_cond_kwargs:
-                # 确保text_embeds和time_ids的数据类型与x一致
-                text_embeds = added_cond_kwargs['text_embeds']
-                time_ids = added_cond_kwargs['time_ids']
-                
-                # 修复数据类型不匹配问题
-                if text_embeds.dtype != x.dtype:
-                    logger.info(f"Converting text_embeds from {text_embeds.dtype} to {x.dtype}")
-                    added_cond_kwargs['text_embeds'] = text_embeds.to(dtype=x.dtype)
-                
-                if time_ids.dtype != x.dtype:
-                    logger.info(f"Converting time_ids from {time_ids.dtype} to {x.dtype}")
-                    added_cond_kwargs['time_ids'] = time_ids.to(dtype=x.dtype)
-                    
-                # 添加额外的调试信息
-                logger.info(f"Final text_embeds shape: {added_cond_kwargs['text_embeds'].shape}, dtype: {added_cond_kwargs['text_embeds'].dtype}")
-                logger.info(f"Final time_ids shape: {added_cond_kwargs['time_ids'].shape}, dtype: {added_cond_kwargs['time_ids'].dtype}")
-            
-            unet_kwargs["added_cond_kwargs"] = added_cond_kwargs
+        # Handle timesteps - ComfyUI may pass a tensor or a float
+        if timesteps is not None:
+            if isinstance(timesteps, torch.Tensor):
+                # If it's a tensor, use it directly
+                pass
+            else:
+                # If it's a scalar, convert to tensor
+                timesteps = torch.tensor(
+                    [timesteps], dtype=torch.float32, device=device
+                )
 
-        # Handle cross_attention_kwargs if present in transformer_options
-        cross_attention_kwargs = transformer_options.get("cross_attention_kwargs", {})
-        if cross_attention_kwargs:
-            unet_kwargs["cross_attention_kwargs"] = cross_attention_kwargs
+        # Handle context (text embeddings)
+        if context is not None:
+            if context.dtype != self.dtype:
+                context = context.to(self.dtype)
 
-        # Call the underlying Nunchaku SDXL UNet model
-        try:
-            # Debug: Log all input shapes for detailed analysis
-            logger.debug(f"UNet forward call with kwargs:")
-            for key, value in unet_kwargs.items():
-                if hasattr(value, 'shape'):
-                    logger.debug(f"  {key}: {value.shape}, dtype: {value.dtype}")
-                else:
-                    logger.debug(f"  {key}: {type(value)}")
-            
-            # 特别检查added_cond_kwargs的内容
-            if "added_cond_kwargs" in unet_kwargs:
-                added_cond_kwargs = unet_kwargs["added_cond_kwargs"]
-                logger.debug("Added conditioning details:")
-                for key, value in added_cond_kwargs.items():
-                    if hasattr(value, 'shape'):
-                        logger.debug(f"  {key}: shape={value.shape}, dtype={value.dtype}")
-            
-            # CRITICAL FIX: 确保所有输入张量的数据类型一致
-            # 这是导致矩阵乘法维度不匹配的根本原因
-            logger.info(f"Input tensor x dtype: {x.dtype}")
-            logger.info(f"Context tensor dtype: {context.dtype}")
-            
-            # 确保context的数据类型与x一致
-            if context.dtype != x.dtype:
-                logger.info(f"Converting context from {context.dtype} to {x.dtype}")
-                context = context.to(dtype=x.dtype)
-                unet_kwargs["encoder_hidden_states"] = context
-            
-            # 确保timesteps的数据类型与x一致
-            if timesteps is not None and timesteps.dtype != x.dtype:
-                logger.info(f"Converting timesteps from {timesteps.dtype} to {x.dtype}")
-                timesteps = timesteps.to(dtype=x.dtype)
-                unet_kwargs["timestep"] = timesteps
-                
-            # 添加最终的调试信息
-            logger.info("Final input tensor details:")
-            logger.info(f"  x: shape={x.shape}, dtype={x.dtype}")
-            logger.info(f"  context: shape={context.shape}, dtype={context.dtype}")
-            if timesteps is not None:
-                logger.info(f"  timesteps: shape={timesteps.shape}, dtype={timesteps.dtype}")
-            
-            if "added_cond_kwargs" in unet_kwargs:
-                added_cond_kwargs = unet_kwargs["added_cond_kwargs"]
-                for key, value in added_cond_kwargs.items():
-                    if hasattr(value, 'shape'):
-                        logger.info(f"  {key}: shape={value.shape}, dtype={value.dtype}")
-            
-            # Ensure the model is in the correct mode
-            self.model.eval()
-            
-            # CRITICAL FIX: 尝试使用不同的参数组合调用模型
-            # 这可能是由于模型期望的参数格式与我们的不匹配
-            try:
-                # 首先尝试使用标准参数调用
-                logger.info("Attempting to call model with standard parameters")
-                output = self.model(**unet_kwargs)[0]
-            except Exception as e1:
-                logger.warning(f"Standard call failed: {e1}")
-                logger.info("Attempting to call model with alternative parameters")
-                
-                # 尝试不使用added_cond_kwargs
-                alt_kwargs = {
-                    "sample": x,
-                    "timestep": timesteps,
-                    "encoder_hidden_states": context,
-                    "return_dict": False,
+        # Handle y (pooled embeddings for SDXL)
+        if y is not None:
+            if y.dtype != self.dtype:
+                y = y.to(self.dtype)
+
+        # Prepare encoder_hidden_states for the model
+        # In SDXL, we concatenate the text embeddings and pooled embeddings
+        if context is not None and y is not None:
+            # For SDXL, the model expects concatenated context and y
+            encoder_hidden_states = context
+            # The pooled embeddings are passed separately in the model call
+        elif context is not None:
+            encoder_hidden_states = context
+        else:
+            encoder_hidden_states = None
+
+        # Prepare added_cond_kwargs for SDXL model
+        # SDXL models expect text_embeds and time_ids in added_cond_kwargs
+        added_cond_kwargs = None
+        if y is not None:
+            # y contains pooled embeddings and time_ids for SDXL
+            # Split y into text_embeds and time_ids
+            # In SDXL, y is typically a concatenation of pooled embeddings and time_ids
+            # The first part is pooled embeddings (1280 dims), the rest is time_ids (6 dims)
+            if y.shape[-1] >= 1286:  # 1280 (pooled) + 6 (time_ids)
+                text_embeds = y[:, :1280]
+                time_ids = y[:, 1280:1286]
+                added_cond_kwargs = {"text_embeds": text_embeds, "time_ids": time_ids}
+            else:
+                # Fallback if y doesn't have the expected dimensions
+                added_cond_kwargs = {
+                    "text_embeds": y,
+                    "time_ids": torch.zeros(
+                        (y.shape[0], 6), dtype=y.dtype, device=y.device
+                    ),
                 }
-                
-                try:
-                    output = self.model(**alt_kwargs)[0]
-                    logger.info("Alternative call succeeded without added_cond_kwargs")
-                except Exception as e2:
-                    logger.warning(f"Alternative call without added_cond_kwargs failed: {e2}")
-                    
-                    # 尝试使用不同的参数名称
-                    alt_kwargs2 = {
-                        "x": x,
-                        "t": timesteps,
-                        "c": context,
-                        "return_dict": False,
-                    }
-                    
-                    try:
-                        output = self.model(**alt_kwargs2)[0]
-                        logger.info("Alternative call with different parameter names succeeded")
-                    except Exception as e3:
-                        logger.error(f"All alternative calls failed")
-                        logger.error(f"Standard call error: {e1}")
-                        logger.error(f"Alternative call 1 error: {e2}")
-                        logger.error(f"Alternative call 2 error: {e3}")
-                        raise e1  # 抛出原始错误
-            
-            logger.debug(f"UNet output shape: {output.shape}")
-            
-            # CRITICAL FIX: Ensure output matches original input dimensions
-            if hasattr(self, 'original_input_shape') and output.shape[-2:] != self.original_input_shape[-2:]:
-                logger.info(f"Resizing output from {output.shape} to match original input dimensions {self.original_input_shape[-2:]}")
-                output = F.interpolate(output, size=self.original_input_shape[-2:], mode='bilinear', align_corners=False)
-                logger.debug(f"Resized output tensor to {output.shape}")
-            
-        except Exception as e:
-            logger.error(f"Error during model forward pass: {e}")
-            logger.error(f"Model input shapes: sample={x.shape}, timestep={timesteps.shape if timesteps is not None else None}, encoder_hidden_states={context.shape if context is not None else None}")
-            if added_cond_kwargs:
-                logger.error(f"Added conditioning shapes: text_embeds={added_cond_kwargs.get('text_embeds', 'None').shape if 'text_embeds' in added_cond_kwargs else 'None'}, time_ids={added_cond_kwargs.get('time_ids', 'None').shape if 'time_ids' in added_cond_kwargs else 'None'}")
-            
-            # Provide more detailed error analysis
-            logger.error("Detailed error analysis:")
-            logger.error(f"- Input x shape: {x.shape}, dtype: {x.dtype}")
-            logger.error(f"- Expected input channels: 4")
-            logger.error(f"- Expected spatial dimensions: 64x64 or multiples")
-            logger.error(f"- Context shape: {context.shape}, dtype: {context.dtype}")
-            logger.error(f"- Expected context dimensions: [batch, seq_len, 2048]")
-            
-            # 添加关于text_embeds和time_ids的详细信息
-            if added_cond_kwargs:
-                logger.error("- Added conditioning details:")
-                for key, value in added_cond_kwargs.items():
-                    if hasattr(value, 'shape'):
-                        logger.error(f"  {key}: shape={value.shape}, dtype={value.dtype}")
-            
-            # Check if the issue is with the model's internal architecture
-            if "394496" in str(e):
-                logger.error("Issue detected: Input tensor is being incorrectly flattened/reshaped internally")
-                logger.error("This suggests a mismatch between ComfyUI's UNet wrapper and Nunchaku's UNet architecture")
-                logger.error("The number 394496 suggests the input tensor is being flattened to an incorrect dimension")
-                logger.error("This is likely due to a mismatch in the model's internal architecture expectations")
-                logger.error("394496 = 2 * 4 * 281 * 176 (approx), which doesn't match expected dimensions")
-                logger.error("The error indicates a matrix multiplication issue between tensors of shape (2x394496) and (2816x1280)")
-                logger.error("This suggests the model's add_embedding layer is expecting a different input format")
-            
-            # Provide specific fix suggestions
-            if "394496" in str(e) and "2816x1280" in str(e):
-                logger.error("\n=== SPECIFIC FIX SUGGESTIONS ===")
-                logger.error("1. The Nunchaku SDXL UNet model expects a different input format than standard SDXL")
-                logger.error("2. The model may require specific preprocessing or architecture adjustments")
-                logger.error("3. Check if the Nunchaku model was trained with different input dimensions")
-                logger.error("4. Verify the model configuration matches the expected SDXL architecture")
-                logger.error("5. Ensure text_embeds and time_ids have the correct data types matching the input tensor")
-                logger.error("6. Check if the model's add_embedding layer expects a different input format")
-                logger.error("7. Verify that all input tensors have consistent data types")
-                logger.error("8. Try using the fixed version of the loader with enhanced error handling")
-                logger.error("9. Check if the model requires specific parameter names or formats")
-                logger.error("10. The error suggests the model's add_embedding layer expects a different input shape")
-                logger.error("11. Consider modifying the model's add_embedding layer or preprocessing the input differently")
-            
-            raise
 
-        return output
+        # Call the underlying Nunchaku model
+        # The NunchakuSDXLUNet2DConditionModel follows the diffusers interface
+        # Note: We don't pass pooled_projections as it's not supported by this model
+        # Instead, pooled embeddings are handled through added_cond_kwargs
+        output = self.model(
+            sample=x,
+            timestep=timesteps,
+            encoder_hidden_states=encoder_hidden_states,
+            added_cond_kwargs=added_cond_kwargs,
+        )
+
+        # Return the sample from the output
+        return output.sample

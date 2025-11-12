@@ -301,24 +301,12 @@ impl NunchakuSdxlUnetLoaderV2 {
         })?;
 
         // 调用load_model方法并获取返回的模型
-        let load_model_result = loader_model
+        let model = loader_model
             .getattr("load_model")
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("获取load_model方法失败: {}", e)))?
             .call1((model_full_path, device_id, data_type, cpu_offload))
-            .map_err(|e| {
-                PyErr::new::<PyRuntimeError, _>(format!("调用load_model方法失败: {}", e))
-            })?;
-
-        // 从返回的元组中提取模型（第一个元素）
-        let model = if load_model_result.is_empty() {
-            return Err(Error::PythonError(
-                format!("load_model返回了空结果，可能是模型加载失败").into(),
-            ));
-        } else {
-            load_model_result
-                .get_item(0)
-                .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("提取模型失败: {}", e)))?
-        };
+            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("调用load_model方法失败: {}", e)))?
+            .get_item(0)?;
 
         Ok((model,))
     }
