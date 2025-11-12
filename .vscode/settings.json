@@ -10,4 +10,5 @@
         "PYO3_PYTHON": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3",
         "LD_LIBRARY_PATH": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
     },
+    "codingcopilot.autoRun": true,
 }

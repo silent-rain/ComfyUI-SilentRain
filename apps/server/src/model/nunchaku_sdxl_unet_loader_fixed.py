@@ -1,5 +1,5 @@
 """
-Nunchaku SDXL UNet Loader for ComfyUI
+Nunchaku SDXL UNet Loader for ComfyUI - Fixed Version
 
 This module provides a ComfyUI node for loading Nunchaku-optimized SDXL UNet models.
 It supports quantized inference with SVDQ quantization and integrates with ComfyUI workflows.

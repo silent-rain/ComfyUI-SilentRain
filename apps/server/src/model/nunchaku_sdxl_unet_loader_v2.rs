@@ -279,7 +279,8 @@ impl NunchakuSdxlUnetLoaderV2 {
         }
 
         // 使用include_str!宏在编译时包含Python文件
-        let python_code = c_str!(include_str!("nunchaku_sdxl_unet_loader.py"));
+        // 使用修复版本的Python文件
+        let python_code = c_str!(include_str!("nunchaku_sdxl_unet_loader_fixed.py"));
 
         // 使用PyModule::from_code创建Python模块
         let module = PyModule::from_code(
@@ -310,9 +311,13 @@ impl NunchakuSdxlUnetLoaderV2 {
             })?;
 
         // 从返回的元组中提取模型（第一个元素）
-        let model = load_model_result
-            .get_item(0)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("提取模型失败: {}", e)))?;
+        let model = if load_model_result.is_empty() {
+            return Err(Error::PythonError(format!(
+                "load_model返回了空结果，可能是模型加载失败"
+            ).into()));
+        } else {
+            load_model_result.get_item(0).map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("提取模型失败: {}", e)))?
+        };
 
         Ok((model,))
     }
