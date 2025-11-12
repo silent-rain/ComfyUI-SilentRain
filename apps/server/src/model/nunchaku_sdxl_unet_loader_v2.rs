@@ -278,7 +278,7 @@ impl NunchakuSdxlUnetLoaderV2 {
             }
         }
 
-        // 方案2: 创建临时模块结构
+        // 创建临时模块结构
         // 首先加载comfy_sdxl_unet_wrapper.py并创建一个模块
         let wrapper_code = c_str!(include_str!("py/comfy_sdxl_unet_wrapper.py"));
         let wrapper_module = PyModule::from_code(
