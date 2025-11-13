@@ -60,7 +60,7 @@ class FluxBlockSwapPatch:
 
     def _pre_diffusion_forward_hook(self, module, inp):
         """扩散模型前向传播前的hook"""
-        # 将所有blocks移到CPU
+        # 将所有blocks移到CPU（只在参数大于0时执行）
         if self.double_blocks_cuda_size > 0:
             self._double_blocks_to_cpu()
 
