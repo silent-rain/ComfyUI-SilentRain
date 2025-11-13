@@ -27,18 +27,17 @@ class QwenImageBlockSwapPatch:
         )
 
         # 为Transformer块注册hooks transformer_blocks
-        if self.transformer_blocks_cuda_size > 0:
-            if hasattr(self.model.model.diffusion_model, "transformer_blocks"):
-                transformer_blocks = self.model.model.diffusion_model.transformer_blocks
-                for i in range(
-                    0, len(transformer_blocks), self.transformer_blocks_cuda_size
-                ):
-                    block_size = min(
-                        self.transformer_blocks_cuda_size, len(transformer_blocks) - i
-                    )
-                    transformer_blocks[i].register_forward_pre_hook(
-                        self._generate_transformer_forward_hook(i, block_size)
-                    )
+        if self.transformer_blocks_cuda_size > 0 and hasattr(self.model.model.diffusion_model, "transformer_blocks"):
+            transformer_blocks = self.model.model.diffusion_model.transformer_blocks
+            double_blocks_depth = len(transformer_blocks)
+            steps = self.transformer_blocks_cuda_size
+            for i in range(0, double_blocks_depth, steps):
+                block_size = steps
+                if i + block_size > double_blocks_depth:
+                    block_size = double_blocks_depth - i
+                transformer_blocks[i].register_forward_pre_hook(
+                    self._generate_transformer_forward_hook(i, block_size)
+                )
 
     def _pre_diffusion_forward_hook(self, module, inp):
         """扩散模型前向传播前的hook"""

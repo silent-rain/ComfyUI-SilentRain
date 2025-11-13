@@ -29,30 +29,32 @@ class FluxBlockSwapPatch:
         )
 
         # 为double_blocks注册hooks
-        if self.double_blocks_cuda_size > 0:
-            double_blocks_depth = len(self.model.model.diffusion_model.double_blocks)
+        if self.double_blocks_cuda_size > 0 and hasattr(
+            self.model.model.diffusion_model, "double_blocks"
+        ):
+            double_blocks = self.model.model.diffusion_model.double_blocks
+            double_blocks_depth = len(double_blocks)
             steps = self.double_blocks_cuda_size
             for i in range(0, double_blocks_depth, steps):
                 block_size = steps
                 if i + block_size > double_blocks_depth:
                     block_size = double_blocks_depth - i
-                self.model.model.diffusion_model.double_blocks[
-                    i
-                ].register_forward_pre_hook(
+                double_blocks[i].register_forward_pre_hook(
                     self._generate_double_blocks_forward_hook(i, block_size)
                 )
 
         # 为single_blocks注册hooks
-        if self.single_blocks_cuda_size > 0:
-            single_blocks_depth = len(self.model.model.diffusion_model.single_blocks)
-            steps = self.double_blocks_cuda_size
+        if self.single_blocks_cuda_size > 0 and hasattr(
+            self.model.model.diffusion_model, "single_blocks"
+        ):
+            single_blocks = self.model.model.diffusion_model.single_blocks
+            single_blocks_depth = len(single_blocks)
+            steps = self.single_blocks_cuda_size
             for i in range(0, single_blocks_depth, steps):
                 block_size = steps
                 if i + block_size > single_blocks_depth:
                     block_size = single_blocks_depth - i
-                self.model.model.diffusion_model.single_blocks[
-                    i
-                ].register_forward_pre_hook(
+                single_blocks[i].register_forward_pre_hook(
                     self._generate_single_blocks_forward_hook(i, block_size)
                 )
 
