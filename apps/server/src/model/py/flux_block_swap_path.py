@@ -31,8 +31,11 @@ class FluxBlockSwapPatch:
         # 为double_blocks注册hooks
         if self.double_blocks_cuda_size > 0:
             double_blocks_depth = len(self.model.model.diffusion_model.double_blocks)
-            for i in range(0, double_blocks_depth, self.double_blocks_cuda_size):
-                block_size = min(self.double_blocks_cuda_size, double_blocks_depth - i)
+            steps = self.double_blocks_cuda_size
+            for i in range(0, double_blocks_depth, steps):
+                block_size = steps
+                if i + block_size > double_blocks_depth:
+                    block_size = double_blocks_depth - i
                 self.model.model.diffusion_model.double_blocks[
                     i
                 ].register_forward_pre_hook(
@@ -42,8 +45,11 @@ class FluxBlockSwapPatch:
         # 为single_blocks注册hooks
         if self.single_blocks_cuda_size > 0:
             single_blocks_depth = len(self.model.model.diffusion_model.single_blocks)
-            for i in range(0, single_blocks_depth, self.single_blocks_cuda_size):
-                block_size = min(self.single_blocks_cuda_size, single_blocks_depth - i)
+            steps = self.double_blocks_cuda_size
+            for i in range(0, single_blocks_depth, steps):
+                block_size = steps
+                if i + block_size > single_blocks_depth:
+                    block_size = single_blocks_depth - i
                 self.model.model.diffusion_model.single_blocks[
                     i
                 ].register_forward_pre_hook(
