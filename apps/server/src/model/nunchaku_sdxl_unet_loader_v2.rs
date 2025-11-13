@@ -280,12 +280,12 @@ impl NunchakuSdxlUnetLoaderV2 {
 
         // 创建临时模块结构
         // 首先加载comfy_sdxl_unet_wrapper.py并创建一个模块
-        let wrapper_code = c_str!(include_str!("py/comfy_sdxl_unet_wrapper.py"));
+        let wrapper_code = c_str!(include_str!("py/comfy_sdxl_wrapper.py"));
         let wrapper_module = PyModule::from_code(
             py,
             wrapper_code,
-            c"comfy_sdxl_unet_wrapper.py",
-            c"comfy_sdxl_unet_wrapper",
+            c"comfy_sdxl_wrapper.py",
+            c"comfy_sdxl_wrapper",
         )
         .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("创建wrapper模块失败: {}", e)))?;
 
@@ -299,7 +299,7 @@ impl NunchakuSdxlUnetLoaderV2 {
 
         // 将wrapper模块添加到sys.modules
         sys_modules
-            .set_item("comfy_sdxl_unet_wrapper", &wrapper_module)
+            .set_item("comfy_sdxl_wrapper", &wrapper_module)
             .map_err(|e| {
                 PyErr::new::<PyRuntimeError, _>(format!("添加wrapper模块到sys.modules失败: {}", e))
             })?;

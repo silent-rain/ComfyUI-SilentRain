@@ -217,13 +217,21 @@ impl NunchakuSdxlLoraLoader {
         lora_strength: f64,
     ) -> Result<(Bound<'py, PyAny>,), Error> {
         // 创建临时模块结构
-        // 首先加载comfy_sdxl_unet_wrapper.py并创建一个模块
-        let wrapper_code = c_str!(include_str!("py/comfy_sdxl_unet_wrapper.py"));
+        let converter_code = c_str!(include_str!("py/nunchaku_sdxl_lora_converter.py"));
+        let converter_module = PyModule::from_code(
+            py,
+            converter_code,
+            c"nunchaku_sdxl_lora_converter.py",
+            c"nunchaku_sdxl_lora_converter",
+        )
+        .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("创建converter模块失败: {}", e)))?;
+
+        let wrapper_code = c_str!(include_str!("py/comfy_sdxl_wrapper.py"));
         let wrapper_module = PyModule::from_code(
             py,
             wrapper_code,
-            c"comfy_sdxl_unet_wrapper.py",
-            c"comfy_sdxl_unet_wrapper",
+            c"comfy_sdxl_wrapper.py",
+            c"comfy_sdxl_wrapper",
         )
         .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("创建wrapper模块失败: {}", e)))?;
 
@@ -235,9 +243,17 @@ impl NunchakuSdxlLoraLoader {
             .getattr("modules")
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("获取sys.modules失败: {}", e)))?;
 
-        // 将wrapper模块添加到sys.modules
+        // 将模块添加到sys.modules
         sys_modules
-            .set_item("comfy_sdxl_unet_wrapper", &wrapper_module)
+            .set_item("nunchaku_sdxl_lora_converter", &converter_module)
+            .map_err(|e| {
+                PyErr::new::<PyRuntimeError, _>(format!(
+                    "添加converter模块到sys.modules失败: {}",
+                    e
+                ))
+            })?;
+        sys_modules
+            .set_item("comfy_sdxl_wrapper", &wrapper_module)
             .map_err(|e| {
                 PyErr::new::<PyRuntimeError, _>(format!("添加wrapper模块到sys.modules失败: {}", e))
             })?;

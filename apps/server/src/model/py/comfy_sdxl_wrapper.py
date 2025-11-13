@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class ComfySDXLUNetWrapper(nn.Module):
+class ComfySDXLWrapper(nn.Module):
     """
     Wrapper for NunchakuSDXLUNet2DConditionModel to support ComfyUI workflows.
 
@@ -38,10 +38,12 @@ class ComfySDXLUNetWrapper(nn.Module):
     """
 
     def __init__(self, model):
-        super(ComfySDXLUNetWrapper, self).__init__()
+        super(ComfySDXLWrapper, self).__init__()
         self.model = model
         self.dtype = next(model.parameters()).dtype
         self.loras = []  # List of (lora_path, lora_strength) tuples
+        self.lora_state_dict = None  # Store the converted LoRA state dict
+        self.lora_strength = 0.0  # Store the LoRA strength
 
     def forward(
         self,
@@ -140,107 +142,88 @@ class ComfySDXLUNetWrapper(nn.Module):
                     ),
                 }
 
-        # Apply LoRAs if any are loaded
-        if self.loras:
+        # Apply LoRA if available
+        if hasattr(self, 'lora_state_dict') and self.lora_state_dict is not None and abs(self.lora_strength) > 1e-5:
+            # Apply LoRA weights to the model
+            # This implementation follows the standard LoRA application pattern
             try:
                 # Store original weights if not already stored
-                if not hasattr(self, "_original_weights"):
+                if not hasattr(self, '_original_weights'):
                     self._original_weights = {}
-
-                # Apply each LoRA (only once per LoRA)
-                for lora_path, lora_strength in self.loras:
-                    if abs(lora_strength) < 1e-5:
-                        continue  # Skip LoRAs with negligible strength
-
-                    # Check if this LoRA has already been applied
-                    lora_cache_key = f"{lora_path}:{lora_strength}"
-                    if not hasattr(self, "_applied_loras"):
-                        self._applied_loras = set()
-                    if lora_cache_key in self._applied_loras:
-                        continue  # Skip already applied LoRA
-
-                    # Load LoRA state dict and convert keys to Nunchaku SDXL format
-                    lora_sd = load_state_dict_in_safetensors(lora_path)
+                
+                # Group LoRA weights by module
+                lora_groups = {}
+                for key, value in self.lora_state_dict.items():
+                    # Extract the module path and parameter name from the key
+                    # For SDXL PEFT format, keys are in format like "base_model.model.unet.down_blocks.0.resnets.0.conv1.lora_A.weight"
+                    if key.startswith("base_model.model.unet."):
+                        # Remove "base_model.model.unet." prefix
+                        module_path = key[22:]
+                        
+                        # Split into module path and parameter name
+                        parts = module_path.split(".")
+                        param_name = parts[-1]  # Last part is the parameter name
+                        module_path = ".".join(parts[:-1])  # Everything else is the module path
+                        
+                        # Group by module path
+                        if module_path not in lora_groups:
+                            lora_groups[module_path] = {}
+                        lora_groups[module_path][param_name] = value
+                
+                # Apply LoRA weights to each module
+                for module_path, lora_weights in lora_groups.items():
+                    # Get the module
+                    module = self.model
+                    for part in module_path.split("."):
+                        module = getattr(module, part)
                     
-                    # Import the key converter function
-                    try:
-                        from nunchaku_sdxl_lora_loader import convert_comfyui_to_nunchaku_sdxl_keys
-                        lora_sd = convert_comfyui_to_nunchaku_sdxl_keys(lora_sd)
-                    except ImportError as e:
-                        logger.warning(f"Failed to import key converter: {e}")
-                    except Exception as e:
-                        logger.warning(f"Failed to convert LoRA keys: {e}")
-
-                    # Apply LoRA weights to the model
-                    for key, value in lora_sd.items():
-                        # Skip non-weight keys
-                        if not any(suffix in key for suffix in [".weight", ".bias"]):
-                            continue
-
-                        # Apply strength to LoRA weights
-                        if lora_strength != 1.0:
-                            value = value * lora_strength
-
-                        # Get the target module and parameter
-                        if "." in key:
-                            module_name, param_name = key.rsplit(".", 1)
-
-                            # Skip if we've already processed this LoRA for this module
-                            cache_key = f"{lora_path}:{module_name}:{param_name}"
-                            if cache_key in self._original_weights:
-                                continue
-
-                            try:
-                                module = self.model
-                                parts = module_name.split(".")
-                                
-                                # Traverse the module hierarchy
-                                for part in parts:
-                                    if hasattr(module, part):
-                                        module = getattr(module, part)
-                                    else:
-                                        # Try to handle nested modules with getattr recursion
-                                        found = False
-                                        for attr_name in dir(module):
-                                            if not attr_name.startswith('_'):
-                                                attr = getattr(module, attr_name)
-                                                if isinstance(attr, torch.nn.Module) and hasattr(attr, part):
-                                                    module = getattr(attr, part)
-                                                    found = True
-                                                    break
-                                        if not found:
-                                            # Try one more level of recursion for deeply nested modules
-                                            found = False
-                                            for attr_name in dir(module):
-                                                if not attr_name.startswith('_'):
-                                                    attr = getattr(module, attr_name)
-                                                    if isinstance(attr, torch.nn.Module):
-                                                        for sub_attr_name in dir(attr):
-                                                            if not sub_attr_name.startswith('_') and sub_attr_name == part:
-                                                                module = getattr(attr, sub_attr_name)
-                                                                found = True
-                                                                break
-                                                    if found:
-                                                        break
-                                            if not found:
-                                                raise AttributeError(f"Module {part} not found in {module}")
-
-                                # Store original weight if not already stored
-                                if hasattr(module, param_name):
-                                    orig_weight = getattr(module, param_name).clone()
-                                    self._original_weights[cache_key] = orig_weight
-
-                                    # Apply LoRA weight (all LoRA types use the same additive approach)
-                                    setattr(module, param_name, orig_weight + value)
-                            except Exception as e:
-                                logger.warning(
-                                    f"Failed to apply LoRA weight for {key}: {e}"
-                                )
+                    # Store original weight if not already stored
+                    cache_key = f"unet:{module_path}:weight"
+                    if cache_key not in self._original_weights:
+                        self._original_weights[cache_key] = module.weight.clone()
                     
-                    # Mark this LoRA as applied
-                    self._applied_loras.add(lora_cache_key)
+                    # Apply LoRA if both lora_A and lora_B are present
+                    if "lora_A.weight" in lora_weights and "lora_B.weight" in lora_weights:
+                        lora_A = lora_weights["lora_A.weight"]
+                        lora_B = lora_weights["lora_B.weight"]
+                        
+                        # Get original weight
+                        original_weight = self._original_weights[cache_key]
+                        
+                        # Apply LoRA: W' = W + (B @ A) * strength
+                        # For Conv2D: reshape A and B appropriately
+                        if len(original_weight.shape) == 4:  # Conv2D
+                            # For Conv2D, A is [rank, in_channels * kernel_h * kernel_w]
+                            # and B is [out_channels, rank]
+                            # We need to reshape A to [rank, in_channels, kernel_h, kernel_w]
+                            in_channels = original_weight.shape[1]
+                            kernel_h, kernel_w = original_weight.shape[2], original_weight.shape[3]
+                            rank = lora_A.shape[0]
+                            
+                            # Reshape A
+                            lora_A_reshaped = lora_A.view(rank, in_channels, kernel_h, kernel_w)
+                            
+                            # Compute LoRA update: B @ A
+                            # For Conv2D, this is a bit more complex
+                            lora_update = torch.zeros_like(original_weight)
+                            for i in range(original_weight.shape[0]):  # out_channels
+                                for j in range(in_channels):
+                                    for kh in range(kernel_h):
+                                        for kw in range(kernel_w):
+                                            # Index into A: [rank, j, kh, kw]
+                                            # Index into B: [i, rank]
+                                            lora_update[i, j, kh, kw] = torch.sum(
+                                                lora_B[i, :] * lora_A_reshaped[:, j, kh, kw]
+                                            )
+                        else:  # Linear
+                            # For Linear, A is [rank, in_features] and B is [out_features, rank]
+                            lora_update = torch.matmul(lora_B, lora_A)
+                        
+                        # Apply LoRA with strength
+                        modified_weight = original_weight + lora_update * self.lora_strength
+                        module.weight.data = modified_weight
             except Exception as e:
-                logger.warning(f"Failed to apply LoRAs: {e}")
+                logger.warning(f"Failed to apply LoRA: {e}")
 
         # Call the underlying Nunchaku model
         # The NunchakuSDXLUNet2DConditionModel follows the diffusers interface
@@ -276,13 +259,9 @@ class ComfySDXLUNetWrapper(nn.Module):
             # Clear the stored weights
             self._original_weights = {}
         
-        # Clear applied LoRA cache
-        if hasattr(self, "_applied_loras"):
-            self._applied_loras.clear()
-        
-        # Clear applied LoRA cache
-        if hasattr(self, "_applied_loras"):
-            self._applied_loras.clear()
+        # Clear LoRA state dict and strength
+        self.lora_state_dict = None
+        self.lora_strength = 0.0
         
         # Clear applied LoRA cache
         if hasattr(self, "_applied_loras"):

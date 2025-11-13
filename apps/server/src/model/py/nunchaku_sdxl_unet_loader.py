@@ -26,7 +26,7 @@ from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
 # 使用绝对导入导入ComfySDXLUNetWrapper
 # 注意：这个模块应该已经在Rust代码中被添加到sys.modules中
 try:
-    from comfy_sdxl_unet_wrapper import ComfySDXLUNetWrapper
+    from comfy_sdxl_wrapper import ComfySDXLWrapper
 except ImportError as e:
     # 如果导入失败，抛出更详细的错误信息
     raise ImportError(
@@ -322,14 +322,14 @@ class NunchakuSDXLUNetLoader:
         model_config.set_inference_dtype(torch_dtype, None)
         model_config.custom_operations = None
 
-        # Create the model and wrap the UNet with ComfySDXLUNetWrapper
+        # Create the model and wrap the UNet with ComfySDXLWrapper
         model = model_config.get_model({})
 
         # Replace the diffusion_model with our wrapped Nunchaku model
         # This ensures that the model has the correct interface for ComfyUI
-        model.diffusion_model = ComfySDXLUNetWrapper(self.unet)
+        model.diffusion_model = ComfySDXLWrapper(self.unet)
         logger.info(
-            f"Set model.diffusion_model to ComfySDXLUNetWrapper, type: {type(model.diffusion_model)}"
+            f"Set model.diffusion_model to ComfySDXLWrapper, type: {type(model.diffusion_model)}"
         )
 
         # Reset any existing LoRA state
@@ -339,7 +339,7 @@ class NunchakuSDXLUNetLoader:
             and hasattr(model.diffusion_model, "loras")
         ):
             logger.error("model.diffusion_model is missing required attributes")
-            raise RuntimeError("ComfySDXLUNetWrapper initialization failed")
+            raise RuntimeError("ComfySDXLWrapper initialization failed")
         else:
             model.diffusion_model.reset_lora()
             logger.info("Reset LoRA state")

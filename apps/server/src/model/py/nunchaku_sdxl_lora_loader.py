@@ -6,17 +6,19 @@ for applying LoRA weights to Nunchaku SDXL models within ComfyUI.
 import copy
 import logging
 import os
-import re
 
 import torch
 from nunchaku.utils import load_state_dict_in_safetensors
 from folder_paths import get_filename_list, get_full_path_or_raise
 
+# Import the new converter
+from nunchaku_sdxl_lora_converter import to_diffusers, convert_comfyui_to_nunchaku_sdxl_keys
+
 
 # 使用绝对导入导入ComfySDXLUNetWrapper
 # 注意：这个模块应该已经在Rust代码中被添加到sys.modules中
 try:
-    from comfy_sdxl_unet_wrapper import ComfySDXLUNetWrapper
+    from comfy_sdxl_wrapper import ComfySDXLWrapper
 except ImportError as e:
     # 如果导入失败，抛出更详细的错误信息
     raise ImportError(
@@ -24,65 +26,7 @@ except ImportError as e:
     )
 
 
-def convert_comfyui_to_nunchaku_sdxl_keys(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-    """
-    Convert ComfyUI format LoRA keys to Nunchaku SDXL model format.
-    
-    ComfyUI格式: lora_unet_up_blocks_2_resnets_2_conv1.lora_down.weight
-    Nunchaku SDXL格式: up_blocks.2.resnets.2.conv1.lora_A.weight
-    
-    Parameters
-    ----------
-    state_dict : dict[str, torch.Tensor]
-        LoRA weights in ComfyUI format
-
-    Returns
-    -------
-    dict[str, torch.Tensor]
-        LoRA weights in Nunchaku SDXL format
-    """
-    converted_dict = {}
-    
-    for key, value in state_dict.items():
-        new_key = key
-        
-        # Remove lora_unet_ prefix
-        if new_key.startswith("lora_unet_"):
-            new_key = new_key.replace("lora_unet_", "")
-        
-        # Convert underscores to dots for block structure
-        # Handle down_blocks_X -> down_blocks.X
-        new_key = re.sub(r'down_blocks_(\d+)', r'down_blocks.\1', new_key)
-        # Handle up_blocks_X -> up_blocks.X
-        new_key = re.sub(r'up_blocks_(\d+)', r'up_blocks.\1', new_key)
-        # Handle mid_block -> mid_block
-        new_key = new_key.replace("mid_block_", "mid_block.")
-        
-        # Handle specific block components
-        # resnets_X -> resnets.X
-        new_key = re.sub(r'resnets_(\d+)', r'resnets.\1', new_key)
-        # attentions_X -> attentions.X
-        new_key = re.sub(r'attentions_(\d+)', r'attentions.\1', new_key)
-        # transformer_blocks_X -> transformer_blocks.X
-        new_key = re.sub(r'transformer_blocks_(\d+)', r'transformer_blocks.\1', new_key)
-        
-        # Convert lora_down/lora_up to lora_A/lora_B (Diffusers format)
-        new_key = new_key.replace("lora_down.weight", "lora_A.weight")
-        new_key = new_key.replace("lora_up.weight", "lora_B.weight")
-        
-        # Handle attention components
-        new_key = new_key.replace("to_out_0", "to_out.0")
-        
-        # Handle FFN components
-        new_key = new_key.replace("ff_net_0_proj", "ff.net.0.proj")
-        new_key = new_key.replace("ff_net_2", "ff.net.2")
-        
-        converted_dict[new_key] = value
-        
-        if key != new_key:
-            logger.debug(f"Converted LoRA key: {key} → {new_key}")
-    
-    return converted_dict
+# The convert_comfyui_to_nunchaku_sdxl_keys function is now imported from nunchaku_sdxl_lora_converter
 
 
 # Get log level from environment variable (default to INFO)
@@ -117,7 +61,7 @@ class NunchakuSDXLLoraLoader:
     """
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         """
         Defines the input types and tooltips for the node.
 
@@ -188,7 +132,7 @@ class NunchakuSDXLLoraLoader:
         model_wrapper = model.model.diffusion_model
 
         # 安全地检查类型，使用类名比较而不是isinstance
-        expected_class_name = "ComfySDXLUNetWrapper"
+        expected_class_name = "ComfySDXLWrapper"
         actual_class_name = model_wrapper.__class__.__name__
         
         if actual_class_name != expected_class_name:
@@ -219,218 +163,17 @@ class NunchakuSDXLLoraLoader:
         ret_model_wrapper.loras.append((lora_path, lora_strength))
 
         # Load the LoRA state dict and convert keys to Nunchaku SDXL format
-        try:
-            sd = load_state_dict_in_safetensors(lora_path)
-            
-            # Convert ComfyUI format keys to Nunchaku SDXL format
-            converted_sd = convert_comfyui_to_nunchaku_sdxl_keys(sd)
-            
-            # Check if the LoRA modifies the input channels
-            # SDXL LoRA keys should be more specific
-            input_keys = [
-                k for k in converted_sd.keys() if "input_blocks.0.0" in k and "lora_A" in k
-            ]
-            if input_keys:
-                # Find the first input block LoRA key
-                first_key = input_keys[0]
-                new_in_channels = converted_sd[first_key].shape[1]
-                old_in_channels = ret_model.model.model_config.unet_config.get(
-                    "in_channels", 4
-                )
-
-                # Update input channels if needed
-                if new_in_channels > old_in_channels:
-                    ret_model.model.model_config.unet_config["in_channels"] = (
-                        new_in_channels
-                    )
-                    logger.info(
-                        f"Updated input channels from {old_in_channels} to {new_in_channels}"
-                    )
-        except Exception as e:
-            logger.warning(f"Failed to process LoRA state dict: {e}")
-
-        return (ret_model,)
-
-
-class NunchakuSDXLLoraStack:
-    """
-    Node for loading and applying multiple LoRAs to a Nunchaku SDXL model with dynamic input.
-
-    This node allows you to configure multiple LoRAs with their respective strengths
-    in a single node, providing the same effect as chaining multiple LoRA nodes.
-
-    Attributes
-    ----------
-    RETURN_TYPES : tuple
-        The return type of the node ("MODEL",).
-    OUTPUT_TOOLTIPS : tuple
-        Tooltip for the output.
-    FUNCTION : str
-        The function to call ("load_lora_stack").
-    TITLE : str
-        Node title.
-    CATEGORY : str
-        Node category.
-    DESCRIPTION : str
-        Node description.
-    """
-
-    @classmethod
-    def INPUT_TYPES(s):
-        """
-        Defines the input types for the LoRA stack node.
-
-        Returns
-        -------
-        dict
-            A dictionary specifying the required inputs and optional LoRA inputs.
-        """
-        # Base inputs
-        inputs = {
-            "required": {
-                "model": (
-                    "MODEL",
-                    {
-                        "tooltip": "The diffusion model LoRAs will be applied to. "
-                        "Make sure model is loaded by `Nunchaku SDXL UNet Loader`."
-                    },
-                ),
-            },
-            "optional": {},
-        }
-
-        # Add fixed number of LoRA inputs (10 slots)
-        for i in range(1, 11):  # Support up to 10 LoRAs
-            inputs["optional"][f"lora_name_{i}"] = (
-                ["None"] + get_filename_list("loras"),
-                {
-                    "tooltip": f"The file name of LoRA {i}. Select 'None' to skip this slot."
-                },
-            )
-            inputs["optional"][f"lora_strength_{i}"] = (
-                "FLOAT",
-                {
-                    "default": 1.0,
-                    "min": -100.0,
-                    "max": 100.0,
-                    "step": 0.01,
-                    "tooltip": f"Strength for LoRA {i}. This value can be negative.",
-                },
-            )
-
-        return inputs
-
-    RETURN_TYPES = ("MODEL",)
-    OUTPUT_TOOLTIPS = ("The modified diffusion model with all LoRAs applied.",)
-    FUNCTION = "load_lora_stack"
-    TITLE = "Nunchaku SDXL LoRA Stack"
-
-    CATEGORY = "Nunchaku"
-    DESCRIPTION = (
-        "Apply multiple LoRAs to a diffusion model in a single node. "
-        "Equivalent to chaining multiple LoRA nodes but more convenient for managing many LoRAs. "
-        "Supports up to 10 LoRAs simultaneously. Set unused slots to 'None' to skip them."
-    )
-
-    def load_lora_stack(self, model, **kwargs):
-        """
-        Apply multiple LoRAs to a Nunchaku SDXL diffusion model.
-
-        Parameters
-        ----------
-        model : object
-            The diffusion model to modify.
-        **kwargs
-            Dynamic LoRA name and strength parameters.
-
-        Returns
-        -------
-        tuple
-            A tuple containing the modified diffusion model.
-        """
-        # Collect LoRA information to apply
-        loras_to_apply = []
-
-        for i in range(1, 11):  # Check all 10 LoRA slots
-            lora_name = kwargs.get(f"lora_name_{i}")
-            lora_strength = kwargs.get(f"lora_strength_{i}", 1.0)
-
-            # Skip unset or None LoRAs
-            if lora_name is None or lora_name == "None" or lora_name == "":
-                continue
-
-            # Skip LoRAs with zero strength
-            if abs(lora_strength) < 1e-5:
-                continue
-
-            loras_to_apply.append((lora_name, lora_strength))
-
-        # If no LoRAs need to be applied, return the original model
-        if not loras_to_apply:
-            return (model,)
-
-        model_wrapper = model.model.diffusion_model
-
-        # 安全地检查类型，使用类名比较而不是isinstance
-        expected_class_name = "ComfySDXLUNetWrapper"
-        actual_class_name = model_wrapper.__class__.__name__
+        lora_state_dict = load_state_dict_in_safetensors(lora_path, device="cpu")
         
-        if actual_class_name != expected_class_name:
-            logger.error(f"Expected {expected_class_name} but got {actual_class_name}")
-            return (model,)  # 返回原始模型而不是抛出错误
-
-        unet = model_wrapper.model
-        model_wrapper.model = None
-        ret_model = copy.deepcopy(model)  # copy everything except the model
-        ret_model_wrapper = ret_model.model.diffusion_model
-
-        # 安全地检查返回模型的包装器类型
-        ret_actual_class_name = ret_model_wrapper.__class__.__name__
-        if ret_actual_class_name != expected_class_name:
-            logger.error(
-                f"Expected {expected_class_name} for ret_model but got {ret_actual_class_name}"
-            )
-            # 恢复原始模型并返回
-            model_wrapper.model = unet
-            return (model,)
-
-        model_wrapper.model = unet
-        ret_model_wrapper.model = unet
-
-        # Reset any existing LoRAs and clear the list
-        ret_model_wrapper.reset_lora()
-        ret_model_wrapper.loras = []
-
-        # Track the maximum input channels needed
-        max_in_channels = ret_model.model.model_config.unet_config.get("in_channels", 4)
-
-        # Add all LoRAs
-        for lora_name, lora_strength in loras_to_apply:
-            lora_path = get_full_path_or_raise("loras", lora_name)
-            ret_model_wrapper.loras.append((lora_path, lora_strength))
-
-            # Check if input channels need to be updated
-            try:
-                sd = load_state_dict_in_safetensors(lora_path)
-                # SDXL LoRA keys should be more specific
-                input_keys = [
-                    k for k in sd.keys() if "input_blocks.0.0" in k and "lora_A" in k
-                ]
-                if input_keys:
-                    # Find the first input block LoRA key
-                    first_key = input_keys[0]
-                    new_in_channels = sd[first_key].shape[1]
-                    max_in_channels = max(max_in_channels, new_in_channels)
-            except Exception as e:
-                logger.warning(
-                    f"Failed to process LoRA state dict for {lora_name}: {e}"
-                )
-
-        # Update the model's input channels
-        if max_in_channels > ret_model.model.model_config.unet_config.get(
-            "in_channels", 4
-        ):
-            ret_model.model.model_config.unet_config["in_channels"] = max_in_channels
-            logger.info(f"Updated input channels to {max_in_channels}")
+        # Convert ComfyUI format to Diffusers format, then to PEFT format
+        converted_lora = to_diffusers(lora_state_dict)
+        
+        # Apply the LoRA to the model
+        # Note: The actual application of LoRA weights will be handled by the Nunchaku model
+        # during inference, similar to how it's done in the Flux implementation
+        
+        # Store the LoRA information for later application
+        ret_model_wrapper.lora_state_dict = converted_lora
+        ret_model_wrapper.lora_strength = lora_strength
 
         return (ret_model,)
