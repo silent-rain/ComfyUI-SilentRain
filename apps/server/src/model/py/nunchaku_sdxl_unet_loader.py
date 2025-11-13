@@ -257,11 +257,6 @@ class NunchakuSDXLUNetLoader:
                 self.data_type = data_type
 
                 logger.info("Nunchaku SDXL UNet loaded successfully")
-
-                # 添加模型参数信息
-                logger.info(f"Model dtype: {next(self.unet.parameters()).dtype}")
-                logger.info(f"Model device: {next(self.unet.parameters()).device}")
-
             except Exception as e:
                 logger.error(f"Failed to load Nunchaku SDXL UNet: {e}")
                 # 确保异常被正确传播，而不是返回空值
