@@ -19,6 +19,9 @@ pub use qwen_image_block_swap_path::QwenImageBlockSwapPatch;
 mod flux_block_swap_path;
 pub use flux_block_swap_path::FluxBlockSwapPatch;
 
+mod teacache_qwen_image;
+pub use teacache_qwen_image::TeaCacheQwenImage;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "model")?;
@@ -26,6 +29,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<NunchakuSdxlLoraLoader>()?;
     submodule.add_class::<QwenImageBlockSwapPatch>()?;
     submodule.add_class::<FluxBlockSwapPatch>()?;
+    submodule.add_class::<TeaCacheQwenImage>()?;
     Ok(submodule)
 }
 
@@ -56,6 +60,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "FluxBlockSwapPatch",
             py.get_type::<FluxBlockSwapPatch>(),
             "Flux Block Swap Patch",
+        ),
+        NodeRegister(
+            "TeaCacheQwenImage",
+            py.get_type::<TeaCacheQwenImage>(),
+            "TeaCache Qwen Image",
         ),
     ];
     Ok(nodes)
