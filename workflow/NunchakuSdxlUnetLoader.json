@@ -1,88 +1,283 @@
 {
   "id": "24851f92-af28-4a2d-8809-b465f39fed52",
   "revision": 0,
-  "last_node_id": 13,
-  "last_link_id": 15,
+  "last_node_id": 19,
+  "last_link_id": 23,
   "nodes": [
     {
-      "id": 3,
-      "type": "KSampler",
+      "id": 17,
+      "type": "NunchakuSdxlUnetLoaderV2",
       "pos": [
-        863,
-        186
+        0,
+        30
       ],
       "size": [
-        315,
-        262
+        307.68515625,
+        130
       ],
       "flags": {},
-      "order": 6,
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "NunchakuSdxlUnetLoaderV2"
+      },
+      "widgets_values": [
+        "svdq-int4_r32-sdxl-turbo.safetensors",
+        0,
+        "float16",
+        "disable"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "NunchakuSdxlLoraLoader",
+      "pos": [
+        400,
+        30
+      ],
+      "size": [
+        310,
+        82
+      ],
+      "flags": {},
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
-          "label": "模型",
+          "label": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 13
-        },
-        {
-          "label": "正面条件",
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 4
-        },
-        {
-          "label": "负面条件",
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 6
-        },
-        {
-          "label": "Latent",
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 2
+          "link": 21
         }
       ],
       "outputs": [
         {
-          "label": "Latent",
-          "name": "LATENT",
-          "type": "LATENT",
-          "slot_index": 0,
+          "label": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
           "links": [
-            7
+            22,
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "NunchakuSdxlLoraLoader"
+      },
+      "widgets_values": [
+        "HyperSD/SDXL/Hyper-SDXL-8steps-lora.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 13,
+      "type": "DualCLIPLoader",
+      "pos": [
+        0,
+        330
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            14,
+            15
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
         "ver": "0.3.60",
-        "Node name for S&R": "KSampler"
+        "Node name for S&R": "DualCLIPLoader"
       },
       "widgets_values": [
-        858246978797416,
-        "randomize",
-        20,
-        8,
-        "euler",
-        "normal",
-        1
+        "clip_g.safetensors",
+        "clip_l.safetensors",
+        "sdxl",
+        "default"
       ]
+    },
+    {
+      "id": 12,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        530
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.60",
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "sdxl_vae.safetensors"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        400,
+        330
+      ],
+      "size": [
+        422.84503173828125,
+        164.31304931640625
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "CLIP",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "label": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.60",
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        400,
+        560
+      ],
+      "size": [
+        425.27801513671875,
+        180.6060791015625
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "CLIP",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "label": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.60",
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "text, watermark"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "easy showTensorShape",
+      "pos": [
+        800,
+        40
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "Tensor",
+          "name": "tensor",
+          "type": "*",
+          "link": 23
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.4",
+        "Node name for S&R": "easy showTensorShape"
+      },
+      "widgets_values": []
     },
     {
       "id": 8,
       "type": "VAEDecode",
       "pos": [
-        1209,
-        188
+        1500,
+        30
       ],
       "size": [
         210,
         46
       ],
       "flags": {},
-      "order": 7,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -120,15 +315,15 @@
       "id": 9,
       "type": "SaveImage",
       "pos": [
-        1451,
-        189
+        1500,
+        130
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 8,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -149,102 +344,84 @@
       ]
     },
     {
-      "id": 6,
-      "type": "CLIPTextEncode",
+      "id": 3,
+      "type": "KSampler",
       "pos": [
-        415,
-        186
+        1100,
+        30
       ],
       "size": [
-        422.84503173828125,
-        164.31304931640625
+        315,
+        262
       ],
       "flags": {},
-      "order": 4,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
-          "label": "CLIP",
-          "name": "clip",
-          "type": "CLIP",
-          "link": 14
+          "label": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "link": 22
+        },
+        {
+          "label": "正面条件",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "label": "负面条件",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "label": "Latent",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
         }
       ],
       "outputs": [
         {
-          "label": "条件",
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
+          "label": "Latent",
+          "name": "LATENT",
+          "type": "LATENT",
           "slot_index": 0,
           "links": [
-            4
+            7
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
         "ver": "0.3.60",
-        "Node name for S&R": "CLIPTextEncode"
+        "Node name for S&R": "KSampler"
       },
       "widgets_values": [
-        "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,"
-      ]
-    },
-    {
-      "id": 7,
-      "type": "CLIPTextEncode",
-      "pos": [
-        413,
-        389
-      ],
-      "size": [
-        425.27801513671875,
-        180.6060791015625
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [
-        {
-          "label": "CLIP",
-          "name": "clip",
-          "type": "CLIP",
-          "link": 15
-        }
-      ],
-      "outputs": [
-        {
-          "label": "条件",
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "slot_index": 0,
-          "links": [
-            6
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.60",
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "text, watermark"
+        1044949894773086,
+        "randomize",
+        8,
+        1,
+        "ddim",
+        "sgm_uniform",
+        1
       ]
     },
     {
       "id": 5,
       "type": "EmptyLatentImage",
       "pos": [
-        520,
-        620
+        500,
+        820
       ],
       "size": [
         315,
         106
       ],
       "flags": {},
-      "order": 0,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -267,110 +444,6 @@
         512,
         512,
         1
-      ]
-    },
-    {
-      "id": 13,
-      "type": "DualCLIPLoader",
-      "pos": [
-        -20,
-        370
-      ],
-      "size": [
-        270,
-        130
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "label": "CLIP",
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            14,
-            15
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.60",
-        "Node name for S&R": "DualCLIPLoader"
-      },
-      "widgets_values": [
-        "clip_g.safetensors",
-        "clip_l.safetensors",
-        "sdxl",
-        "default"
-      ]
-    },
-    {
-      "id": 12,
-      "type": "VAELoader",
-      "pos": [
-        -20,
-        550
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "VAE",
-          "type": "VAE",
-          "links": [
-            12
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.60",
-        "Node name for S&R": "VAELoader"
-      },
-      "widgets_values": [
-        "sdxl_vae.safetensors"
-      ]
-    },
-    {
-      "id": 10,
-      "type": "NunchakuSdxlUnetLoader",
-      "pos": [
-        -10,
-        230
-      ],
-      "size": [
-        286.6714782714844,
-        82
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "label": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            13
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "NunchakuSdxlUnetLoader"
-      },
-      "widgets_values": [
-        "svdq-int4_r32-sdxl-turbo.safetensors",
-        "float16"
       ]
     }
   ],
@@ -424,14 +497,6 @@
       "VAE"
     ],
     [
-      13,
-      10,
-      0,
-      3,
-      0,
-      "MODEL"
-    ],
-    [
       14,
       13,
       0,
@@ -446,19 +511,43 @@
       7,
       0,
       "CLIP"
+    ],
+    [
+      21,
+      17,
+      0,
+      18,
+      0,
+      "MODEL"
+    ],
+    [
+      22,
+      18,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      23,
+      18,
+      0,
+      16,
+      0,
+      "*"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7513148009015777,
+      "scale": 1,
       "offset": [
-        120,
-        -86
+        -561.2796962290503,
+        320.6644222631137
       ]
     },
-    "frontendVersion": "1.26.13"
+    "frontendVersion": "1.28.8"
   },
   "version": 0.4
 }

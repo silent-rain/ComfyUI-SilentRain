@@ -166,40 +166,78 @@ def to_diffusers(input_lora: str | dict[str, torch.Tensor], output_path: str | N
     else:
         tensors = {k: v for k, v in input_lora.items()}
 
-    tensors = handle_kohya_lora(tensors)
-
-    # Convert FP8 tensors to BF16
-    for k, v in tensors.items():
-        if v.dtype not in [torch.float64, torch.float32, torch.bfloat16, torch.float16]:
-            tensors[k] = v.to(torch.bfloat16)
-
-    # Apply SDXL-specific key conversion for both PEFT format and ComfyUI format
-    # This handles LoRAs with base_model.model.* prefix or lora_unet_* prefix
-    if any(k.startswith("base_model.model.") for k in tensors.keys()):
-        logger.info("Converting PEFT format to ComfyUI format")
-        tensors = convert_nunchaku_to_comfyui_sdxl_keys(tensors)
-
-    # Convert ComfyUI format to Diffusers format
+    # Check if this is ComfyUI format (lora_unet_*) and convert to Diffusers format
     if any(k.startswith("lora_unet_") for k in tensors.keys()):
         logger.info("Converting ComfyUI format to Diffusers format")
         tensors = convert_comfyui_to_nunchaku_sdxl_keys(tensors)
+        
+        # Convert to PEFT format for Nunchaku
+        new_tensors, alphas = LoraLoaderMixin.lora_state_dict(tensors, return_alphas=True)
+        
+        # Add base_model.model. prefix to all keys for Nunchaku format
+        # Also convert lora.down/lora.up to lora_A/lora_B
+        peft_tensors = {}
+        for key, value in new_tensors.items():
+            # Convert lora.down/lora.up to lora_A/lora_B
+            key = key.replace(".lora.down.", ".lora_A.")
+            key = key.replace(".lora.up.", ".lora_B.")
+            
+            if not key.startswith("base_model.model."):
+                peft_tensors[f"base_model.model.{key}"] = value
+            else:
+                peft_tensors[key] = value
+        
+        # Apply alpha values if present
+        if alphas is not None and len(alphas) > 0:
+            for k, v in alphas.items():
+                key_A = k.replace(".alpha", ".lora_A.weight")
+                key_B = k.replace(".alpha", ".lora_B.weight")
+                # Add base_model.model. prefix for alpha keys
+                if not key_A.startswith("base_model.model."):
+                    key_A = f"base_model.model.{key_A}"
+                if not key_B.startswith("base_model.model."):
+                    key_B = f"base_model.model.{key_B}"
+                    
+                if key_A in peft_tensors and key_B in peft_tensors:
+                    rank = peft_tensors[key_A].shape[0]
+                    if peft_tensors[key_B].shape[1] == rank:
+                        peft_tensors[key_A] = peft_tensors[key_A] * v / rank
+        
+        # Instead of pre-computing updates, keep the original lora_A and lora_B weights
+        # This allows for proper application in ComfySDXLWrapper
+        tensors = peft_tensors
+    else:
+        # Handle other formats (Kohya, PEFT, etc.)
+        tensors = handle_kohya_lora(tensors)
+        
+        # Convert FP8 tensors to BF16
+        for k, v in tensors.items():
+            if v.dtype not in [torch.float64, torch.float32, torch.bfloat16, torch.float16]:
+                tensors[k] = v.to(torch.bfloat16)
 
-    # Convert to PEFT format
-    new_tensors, alphas = LoraLoaderMixin.lora_state_dict(tensors, return_alphas=True)
-    new_tensors = convert_unet_state_dict_to_peft(new_tensors)
-
-    if alphas is not None and len(alphas) > 0:
-        for k, v in alphas.items():
-            key_A = k.replace(".alpha", ".lora_A.weight")
-            key_B = k.replace(".alpha", ".lora_B.weight")
-            if key_A in new_tensors and key_B in new_tensors:
-                rank = new_tensors[key_A].shape[0]
-                if new_tensors[key_B].shape[1] == rank:
-                    new_tensors[key_A] = new_tensors[key_A] * v / rank
+        # Apply SDXL-specific key conversion for PEFT format
+        if any(k.startswith("base_model.model.") for k in tensors.keys()):
+            logger.info("Already in PEFT format")
+        else:
+            # Convert to PEFT format
+            new_tensors, alphas = LoraLoaderMixin.lora_state_dict(tensors, return_alphas=True)
+            new_tensors = convert_unet_state_dict_to_peft(new_tensors)
+            
+            # Apply alpha values if present
+            if alphas is not None and len(alphas) > 0:
+                for k, v in alphas.items():
+                    key_A = k.replace(".alpha", ".lora_A.weight")
+                    key_B = k.replace(".alpha", ".lora_B.weight")
+                    if key_A in new_tensors and key_B in new_tensors:
+                        rank = new_tensors[key_A].shape[0]
+                        if new_tensors[key_B].shape[1] == rank:
+                            new_tensors[key_A] = new_tensors[key_A] * v / rank
+            
+            tensors = new_tensors
 
     if output_path is not None:
         output_dir = os.path.dirname(os.path.abspath(output_path))
         os.makedirs(output_dir, exist_ok=True)
-        save_file(new_tensors, output_path)
+        save_file(tensors, output_path)
 
-    return new_tensors
+    return tensors

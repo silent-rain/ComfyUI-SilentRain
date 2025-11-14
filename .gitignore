@@ -35,3 +35,7 @@ nodes/web/pkg
 
 # demo
 demo
+
+
+# py
+__pycache__

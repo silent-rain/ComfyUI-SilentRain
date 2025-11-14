@@ -165,8 +165,25 @@ class NunchakuSDXLLoraLoader:
         # Load the LoRA state dict and convert keys to Nunchaku SDXL format
         lora_state_dict = load_state_dict_in_safetensors(lora_path, device="cpu")
         
-        # Convert ComfyUI format to Diffusers format, then to PEFT format
+        # Log LoRA format information
+        logger.info(f"Loading LoRA from {lora_path}")
+        logger.info(f"LoRA has {len(lora_state_dict)} keys")
+        
+        # Check LoRA format
+        if any(k.startswith("lora_unet_") for k in lora_state_dict.keys()):
+            logger.info("Detected ComfyUI format LoRA")
+        elif any(k.startswith("base_model.model.") for k in lora_state_dict.keys()):
+            logger.info("Detected PEFT format LoRA")
+        else:
+            logger.info("Unknown LoRA format, attempting conversion")
+        
+        # Convert to PEFT format for Nunchaku
         converted_lora = to_diffusers(lora_state_dict)
+        logger.info(f"Converted LoRA has {len(converted_lora)} keys")
+        
+        # Log a few converted keys for debugging
+        sample_keys = list(converted_lora.keys())[:3]
+        logger.info(f"Sample converted keys: {sample_keys}")
         
         # Apply the LoRA to the model
         # Note: The actual application of LoRA weights will be handled by the Nunchaku model
@@ -175,5 +192,7 @@ class NunchakuSDXLLoraLoader:
         # Store the LoRA information for later application
         ret_model_wrapper.lora_state_dict = converted_lora
         ret_model_wrapper.lora_strength = lora_strength
+        
+        logger.info(f"LoRA {lora_name} loaded with strength {lora_strength}")
 
         return (ret_model,)
