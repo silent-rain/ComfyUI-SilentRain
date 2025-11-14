@@ -1,6 +1,7 @@
 //! Qwen-Image扩散模型 TeaCache加速
 //!
-//! deep: pytorch
+//! deep: pytorch/diffusers
+//! 引用：https://github.com/welltop-cn/ComfyUI-TeaCache
 use log::error;
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
