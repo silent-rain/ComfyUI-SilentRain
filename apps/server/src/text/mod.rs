@@ -48,6 +48,9 @@ pub use load_wan_presets::LoadWanPresets;
 mod wan22_official_prompt_selector;
 pub use wan22_official_prompt_selector::Wan22OfficialPromptSelector;
 
+mod remove_empty_lines;
+pub use remove_empty_lines::RemoveEmptyLines;
+
 /// 文本模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "text")?;
@@ -65,6 +68,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<LoadKontextBflPresetsAssistant>()?;
     submodule.add_class::<LoadWanPresets>()?;
     submodule.add_class::<Wan22OfficialPromptSelector>()?;
+    submodule.add_class::<RemoveEmptyLines>()?;
     Ok(submodule)
 }
 
@@ -124,6 +128,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Wan22OfficialPromptSelector",
             py.get_type::<Wan22OfficialPromptSelector>(),
             "Sr Wan2.2 Official Prompt Selector",
+        ),
+        NodeRegister(
+            "RemoveEmptyLines",
+            py.get_type::<RemoveEmptyLines>(),
+            "Sr Remove Empty Lines",
         ),
     ];
     Ok(nodes)
