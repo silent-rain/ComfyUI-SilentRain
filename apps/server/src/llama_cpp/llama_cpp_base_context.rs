@@ -34,7 +34,7 @@ pub struct LlamaCppBaseContext {
     /// The context for multimodal processing.
     pub context: LlamaContext<'static>,
     /// The batch used for processing tokens.
-    batch: LlamaBatch,
+    batch: LlamaBatch<'static>,
     /// Enables verbose logging from llama.cpp.
     verbose: bool,
 }

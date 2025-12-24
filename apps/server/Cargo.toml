@@ -67,11 +67,6 @@ llama-cpp-2 = { workspace = true, features = [
     "mtmd",
 ] }
 
-# src
-intel-mkl-src = { workspace = true, optional = true }
-accelerate-src = { workspace = true, optional = true }
-
-
 # ONNX Runtime
 # [target.'cfg(not(target_os = "macos"))'.dependencies]
 # ort = { workspace = true, features = [
@@ -89,9 +84,9 @@ accelerate-src = { workspace = true, optional = true }
 # find_cuda_helper = "0.2.0"
 
 [features]
-default = ["mkl", "native"]
+default = ["mkl"]
 mkl = [
-    "dep:intel-mkl-src",
+    # "dep:intel-mkl-src",
     "candle-nn/mkl",
     "candle-transformers/mkl",
     "candle-core/mkl",
@@ -107,16 +102,10 @@ metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
 vulkan = [
     "llama-cpp-2/vulkan",
 ] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
-native = ["llama-cpp-2/native"]
+# native = ["llama-cpp-2/native"]
 cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
 flash-attn = [
     "cuda",
     "candle-transformers/flash-attn",
     "dep:candle-flash-attn",
 ] # 优化后的注意力机制实现，通过分块计算等方法提升Transformer模型的效率。它显著减少了内存占用和计算时间
-accelerate = [
-    "dep:accelerate-src",
-    "candle-core/accelerate",
-    "candle-nn/accelerate",
-    "candle-transformers/accelerate",
-] #  ​​Hugging Face 开发的 accelerate 库​​，它是一个专为 PyTorch 设计的分布式训练加速工具

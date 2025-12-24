@@ -36,7 +36,7 @@ pub struct LlamaCppMtmdContext {
     /// The MTMD context for multimodal processing.
     pub mtmd_context: MtmdContext,
     /// The batch used for processing tokens.
-    pub batch: LlamaBatch,
+    pub batch: LlamaBatch<'static>,
     /// The list of loaded bitmaps (images/audio).
     pub bitmaps: Vec<MtmdBitmap>,
     /// The number of past tokens processed.

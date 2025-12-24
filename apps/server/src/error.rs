@@ -30,7 +30,7 @@ pub enum Error {
     #[error("regex error, {0}")]
     RegexError(#[from] regex::Error),
     #[error("llama_cpp_2 error, {0}")]
-    LLamaCppError(#[from] llama_cpp_2::LLamaCppError),
+    LlamaCppError(#[from] llama_cpp_2::LlamaCppError),
     #[error("llama_cpp_2 error, {0}")]
     LlamaCppModelLoadError(#[from] llama_cpp_2::LlamaModelLoadError),
     #[error("llama_cpp_2 error, {0}")]

@@ -3,7 +3,7 @@
 use std::sync::{Arc, RwLock};
 
 use llama_cpp_2::{
-    LLamaCppError, LogOptions,
+    LlamaCppError, LogOptions,
     llama_backend::LlamaBackend,
     model::{LlamaChatMessage, LlamaModel, params::LlamaModelParams},
     sampling::LlamaSampler,
@@ -40,10 +40,10 @@ impl LlamaCppPipeline {
         // let backend = LlamaBackend::init()?;
         let backend = match LlamaBackend::init() {
             Ok(backend) => backend,
-            Err(LLamaCppError::BackendAlreadyInitialized) => LlamaBackend {},
+            Err(LlamaCppError::BackendAlreadyInitialized) => LlamaBackend {},
             Err(e) => {
                 error!("Failed to initialize backend: {}", e);
-                return Err(Error::LLamaCppError(e));
+                return Err(Error::LlamaCppError(e));
             }
         };
 

@@ -206,6 +206,7 @@ impl TeaCacheQwenImage {
 
 impl TeaCacheQwenImage {
     /// 加载模型
+    #[allow(clippy::too_many_arguments)]
     fn load_unet<'py>(
         &self,
         py: Python<'py>,
