@@ -67,7 +67,8 @@ image = "0.25"
 png = "0.18"                # 用于读取和写入 PNG 图像
 ndarray = "0.17"            # 用于多维数组
 # llama-cpp-2 = "0.1.130"     # llama.cpp 的封装，实现自 Hugging Face 的 Transformers
-llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main" }
+# llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main", tag = "0.1.130" }
+llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", tag = "0.1.130" }
 ort = "=2.0.0-rc.10"                                                                 # ONNX Runtime
 
 # src
