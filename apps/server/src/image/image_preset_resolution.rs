@@ -20,10 +20,7 @@ use pyo3::{
 use std::collections::HashMap;
 use strum_macros::{Display, EnumString};
 
-use crate::{
-    core::category::CATEGORY_IMAGE,
-    wrapper::comfyui::types::{NODE_INT, NODE_STRING},
-};
+use crate::{core::category::CATEGORY_IMAGE, wrapper::comfyui::types::NODE_INT};
 
 /// 宽高比枚举
 #[pyclass]
@@ -108,20 +105,20 @@ impl ImagePresetResolution {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str, &'static str, &'static str) {
-        (NODE_INT, NODE_INT, NODE_STRING, NODE_STRING)
+    fn return_types() -> (&'static str, &'static str) {
+        (NODE_INT, NODE_INT)
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str, &'static str, &'static str) {
-        ("width", "height", "aspect_ratio", "preset_name")
+    fn return_names() -> (&'static str, &'static str) {
+        ("width", "height")
     }
 
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool, bool, bool) {
-        (false, false, false, false)
+    fn output_is_list() -> (bool, bool) {
+        (false, false)
     }
 
     #[classattr]
@@ -194,11 +191,7 @@ impl ImagePresetResolution {
         })
     }
 
-    fn execute(
-        &self,
-        aspect_ratio: String,
-        resolution_level: String,
-    ) -> PyResult<(usize, usize, String, String)> {
+    fn execute(&self, aspect_ratio: String, resolution_level: String) -> PyResult<(usize, usize)> {
         // 解析宽高比和分辨率级别
         let aspect_ratio = aspect_ratio
             .parse::<AspectRatio>()
@@ -208,9 +201,9 @@ impl ImagePresetResolution {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
         // 获取目标尺寸
-        let (width, height, preset_name) = self.get_target_size(aspect_ratio, resolution_level)?;
+        let (width, height) = self.get_target_size(aspect_ratio, resolution_level)?;
 
-        Ok((width, height, aspect_ratio.to_string(), preset_name))
+        Ok((width, height))
     }
 }
 
@@ -220,7 +213,7 @@ impl ImagePresetResolution {
         &self,
         aspect_ratio: AspectRatio,
         resolution_level: ResolutionLevel,
-    ) -> Result<(usize, usize, String), PyErr> {
+    ) -> Result<(usize, usize), PyErr> {
         // 根据宽高比和分辨率级别计算尺寸
         let (width, height) = match aspect_ratio {
             AspectRatio::Ratio1_1 => match resolution_level {
@@ -279,8 +272,6 @@ impl ImagePresetResolution {
         let width = (width / 8) * 8;
         let height = (height / 8) * 8;
 
-        let name = format!("{} - {}x{}", aspect_ratio, width, height);
-
-        Ok((width, height, name))
+        Ok((width, height))
     }
 }
