@@ -1,3 +1,4 @@
+use js_sys::Object;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use web_sys::console;
 
@@ -11,6 +12,12 @@ use string_dyn_list::StringDynList;
 
 mod any_dyn_list;
 use any_dyn_list::AnyDynList;
+
+mod workflow_image;
+use workflow_image::register_workflow_image_export;
+
+mod workflow_image_export;
+use workflow_image_export::register_workflow_image_export as register_workflow_image_export_full;
 
 #[wasm_bindgen(start)]
 fn run() -> Result<(), JsValue> {
@@ -75,6 +82,25 @@ fn run() -> Result<(), JsValue> {
         // }
 
         Ok(())
+    })?;
+
+    // 注册画布菜单项
+    extension.get_canvas_menu_items(|_canvas: Object| {
+        let menu_items = js_sys::Array::new();
+
+        // 使用新的工作流导出功能
+        let full_menu = register_workflow_image_export_full()?;
+        for i in 0..full_menu.length() {
+            menu_items.push(&full_menu.get(i));
+        }
+
+        // 添加分隔符
+        menu_items.push(&JsValue::NULL);
+
+        // 注册工作流图片导出功能注册菜单
+        menu_items.push(&register_workflow_image_export()?);
+
+        Ok(menu_items.into())
     })?;
 
     let app = ComfyApp::new()?;

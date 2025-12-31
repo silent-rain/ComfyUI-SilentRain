@@ -13,6 +13,7 @@ extern "C" {
     static APP: Object;
 }
 
+#[derive(Debug, Clone)]
 #[wasm_bindgen]
 pub struct ComfyApp {
     app: Object,

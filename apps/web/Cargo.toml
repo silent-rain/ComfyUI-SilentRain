@@ -20,6 +20,13 @@ web-sys = { workspace = true, features = [
     "Element",
     "HtmlElement",
     "console",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "HtmlAnchorElement",
+    "CssStyleDeclaration",
 ] }
 
 serde = { workspace = true }
@@ -27,5 +34,8 @@ serde_json = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+base64 = { workspace = true }
+crc32fast = { workspace = true }
+futures = { workspace = true }
 
 comfy_app = { path = "../comfy_app" }

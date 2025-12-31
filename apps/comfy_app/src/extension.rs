@@ -304,6 +304,32 @@ impl Extension {
 
         Ok(())
     }
+
+    /// 设置getCanvasMenuItems钩子
+    ///
+    /// getCanvasMenuItems(canvas)
+    pub fn get_canvas_menu_items<F>(&mut self, handler: F) -> Result<(), JsValue>
+    where
+        F: Fn(Object) -> Result<JsValue, JsValue> + 'static,
+    {
+        console::log_1(&JsValue::from_str("get_canvas_menu_items ..."));
+
+        let handler = Closure::wrap(
+            Box::new(handler) as Box<dyn Fn(Object) -> Result<JsValue, JsValue>>
+        );
+
+        // 设置getCanvasMenuItems方法
+        Reflect::set(
+            &self.inner,
+            &"getCanvasMenuItems".into(),
+            &handler.as_ref().clone(),
+        )?;
+
+        // 保持闭包生命周期
+        handler.forget();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

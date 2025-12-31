@@ -18,4 +18,4 @@ source .venv/bin/activate
 # pip install --upgrade comfyui-frontend-package
 
 # run server
-python main.py --cpu --cpu-va
+python main.py --cpu --cpu-va --enable-manager-legacy-ui
