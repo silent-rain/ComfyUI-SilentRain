@@ -16,7 +16,7 @@ pyo3 = { workspace = true, features = [
     # "generate-import-lib", # 用于为 MinGW-w64 和 MSVC（交叉）编译目标生成 Python DLL 的导入库。
     # "multiple-pymethods",
     # "macros",
-    # "abi3-py312",
+    "abi3-py310", # 支持Python 3.10及以上版本
 ] }
 numpy = { workspace = true }
 pythonize = { workspace = true }
