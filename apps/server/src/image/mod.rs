@@ -37,6 +37,9 @@ pub use image_attachment_text::ImageAttachmentText;
 mod image_preset_resolution;
 pub use image_preset_resolution::ImagePresetResolution;
 
+mod image_preset_resolution_v2;
+pub use image_preset_resolution_v2::ImagePresetResolutionV2;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "image")?;
@@ -50,6 +53,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<ImageGridComposite>()?;
     submodule.add_class::<ImageAttachmentText>()?;
     submodule.add_class::<ImagePresetResolution>()?;
+    submodule.add_class::<ImagePresetResolutionV2>()?;
     Ok(submodule)
 }
 
@@ -101,6 +105,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ImagePresetResolution",
             py.get_type::<ImagePresetResolution>(),
             "Sr Image Preset Resolution",
+        ),
+        NodeRegister(
+            "ImagePresetResolutionV2",
+            py.get_type::<ImagePresetResolutionV2>(),
+            "Sr Image Preset Resolution V2",
         ),
     ];
     Ok(nodes)
