@@ -40,7 +40,7 @@ ComfyUI Manager中搜索 `ComfyUI-SilentRain` 安装.
 或者使用命令行安装
 
 ```shell
-comfy node install silentrain
+comfy node install ComfyUI-SilentRain
 ```
 
 ## 发版

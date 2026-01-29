@@ -19,3 +19,20 @@ PublisherId = "silent-rain"
 DisplayName = "ComfyUI-SilentRain"
 Icon = ""
 includes = []
+
+
+[[tool.uv.index]]
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+default = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+#url = "https://download.pytorch.org/whl/cu126"
+url = "https://mirrors.aliyun.com/pytorch-wheels/cu126"
+explicit = true
+
+[dependency-groups]
+dev = ["pip>=25.0.1", "setuptools>=76.1.0"]
+
+[tool.uv]
+link-mode = "symlink"
