@@ -1,17 +1,16 @@
-//! 纯预设尺寸节点 V2 - 优化版本
-//! 基于总像素数的动态计算，避免硬编码，支持自定义宽高比
+//! 自定义尺寸节点 - 基于数学公式的动态计算
+//! 支持自定义宽高比和分辨率缩放，避免硬编码
 //!
 //! 核心设计原则：
-//! - 基准分辨率：1K = 1024×1024 = 1,048,576 像素
-//! - 分辨率缩放因子：1-8（支持任意倍数）
-//! - 所有宽高比保持相同总像素数（±3%范围内）
-//! - 尺寸自动对齐到8的倍数
+//! - 基准边长：1K = 1024
+//! - 分辨率缩放因子：1-8（边长倍数，如2表示2048，4表示4096）
+//! - 先计算理论尺寸，然后四舍五入到整数，再向上取整到16的倍数
 //! - 支持自定义宽高比（范围：1-21）
 //!
 //! 输入参数：
 //! - aspect_width: 宽度比（整数，1-21）
 //! - aspect_height: 高度比（整数，1-21）
-//! - resolution_scale: 分辨率缩放因子（整数，1-8）
+//! - resolution_scale: 分辨率缩放因子（边长倍数，整数，1-8）
 
 use pyo3::{
     prelude::*,
@@ -21,18 +20,18 @@ use std::collections::HashMap;
 
 use crate::{core::category::CATEGORY_IMAGE, wrapper::comfyui::types::NODE_INT};
 
-/// 基准像素数（1K）
-const BASE_PIXELS: f64 = 1024.0 * 1024.0;
+/// 基准边长（1K）
+const BASE_SIZE: f64 = 1024.0;
 
-/// 纯预设尺寸节点 V2
+/// 自定义尺寸节点
 #[pyclass(subclass)]
-pub struct ImagePresetResolutionV2;
+pub struct ImageCustomResolution {}
 
 #[pymethods]
-impl ImagePresetResolutionV2 {
+impl ImageCustomResolution {
     #[new]
     fn new() -> Self {
-        Self
+        Self {}
     }
 
     #[classattr]
@@ -66,7 +65,7 @@ impl ImagePresetResolutionV2 {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "Dynamic preset resolution based on aspect ratio and level. Maintains consistent pixel count across ratios."
+        "Custom resolution calculator based on aspect ratio and scale. Computes dimensions dynamically with 16-pixel alignment."
     }
 
     #[classattr]
@@ -160,7 +159,7 @@ impl ImagePresetResolutionV2 {
     }
 }
 
-impl ImagePresetResolutionV2 {
+impl ImageCustomResolution {
     /// 基于宽高比和分辨率缩放因子动态计算尺寸
     fn calculate_dimensions(
         &self,
@@ -168,32 +167,33 @@ impl ImagePresetResolutionV2 {
         aspect_height: usize,
         resolution_scale: usize,
     ) -> Result<(usize, usize), PyErr> {
-        // 计算目标总像素数（考虑分辨率缩放）
-        let target_pixels = BASE_PIXELS * resolution_scale as f64;
-
         // 计算宽高比
         let ratio = aspect_width as f64 / aspect_height as f64;
 
-        // 基于总像素数和宽高比计算尺寸
-        // 设宽 = width, 高 = height
-        // width × height = target_pixels
-        // width / height = ratio
-        // => height = width / ratio
-        // => width × (width / ratio) = target_pixels
-        // => width² / ratio = target_pixels
-        // => width² = target_pixels × ratio
-        // => width = sqrt(target_pixels × ratio)
+        // 先计算 1K 的基准尺寸（1024×1024 对应的尺寸）
+        // 然后按 resolution_scale 缩放
+        //
+        // 计算公式：
+        // - 设基准边长为 base = 1024
+        // - 对于非正方形，需要找到 (width, height) 使得：
+        //   - width / height = ratio
+        //   - width × height ≈ base × base
+        // - 解得：width = base × sqrt(ratio), height = base / sqrt(ratio)
+        // - 最后按 scale 缩放：final_width = width × scale, final_height = height × scale
 
-        let width = (target_pixels * ratio).sqrt();
-        let height = width / ratio;
+        let base_size = BASE_SIZE;
+        let sqrt_ratio = ratio.sqrt();
 
-        // 四舍五入到最近的整数
-        let width = width.round() as usize;
-        let height = height.round() as usize;
+        let width = base_size * sqrt_ratio;
+        let height = base_size / sqrt_ratio;
 
-        // 对齐到8的倍数（符合深度学习模型要求）
-        let width = (width / 8) * 8;
-        let height = (height / 8) * 8;
+        // 先四舍五入到整数，再分别向上取整到16的倍数（符合原始预设值的对齐规则）
+        let width = ((width.round() / 16.0).ceil() * 16.0) as usize;
+        let height = ((height.round() / 16.0).ceil() * 16.0) as usize;
+
+        // 按 resolution_scale 缩放
+        let width = width * resolution_scale;
+        let height = height * resolution_scale;
 
         // 确保尺寸不为0
         let width = width.max(64); // 最小64像素
@@ -212,7 +212,7 @@ impl ImagePresetResolutionV2 {
     #[allow(dead_code)]
     fn deviation_percentage(&self, width: usize, height: usize, resolution_scale: usize) -> f64 {
         let actual = self.actual_pixels(width, height) as f64;
-        let target = BASE_PIXELS * resolution_scale as f64;
+        let target = BASE_SIZE * BASE_SIZE * resolution_scale as f64;
         ((actual - target) / target) * 100.0
     }
 }
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_1k_square() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution {};
 
         let (width, height) = node.calculate_dimensions(1, 1, 1).unwrap();
         assert_eq!(width, 1024);
@@ -232,17 +232,17 @@ mod tests {
 
     #[test]
     fn test_1k_portrait_2_3() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution {};
 
         let (width, height) = node.calculate_dimensions(2, 3, 1).unwrap();
-        // 预期结果约 848×1264
+        // 动态计算结果
         assert_eq!(width, 848);
         assert_eq!(height, 1264);
     }
 
     #[test]
     fn test_2k_square() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution::new();
 
         let (width, height) = node.calculate_dimensions(1, 1, 2).unwrap();
         assert_eq!(width, 2048);
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_4k_square() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution::new();
 
         let (width, height) = node.calculate_dimensions(1, 1, 4).unwrap();
         assert_eq!(width, 4096);
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_pixel_consistency() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution::new();
 
         // 常用宽高比测试
         let test_ratios = [
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_alignment_to_8() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution::new();
 
         let test_ratios = [
             (1, 1),
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_various_scales() {
-        let node = ImagePresetResolutionV2;
+        let node = ImageCustomResolution::new();
 
         // 测试不同的缩放因子
         let scales = [1, 2, 4, 8];
