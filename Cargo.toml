@@ -33,7 +33,7 @@ serde_json = "1.0"    # 用于序列化和反序列化
 serde_repr = "0.1"    # 自动将枚举的变体序列化为对应的数字
 strum = "0.27"        # 用于枚举的宏
 strum_macros = "0.27" # 用于枚举的宏
-rust_decimal = "1.39" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
+rust_decimal = "1.40" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
 raw-string = "0.3"
 walkdir = "2.5"       # 用于遍历目录树
 chardet = "0.2"       # 用于检测文本编码的库
@@ -42,13 +42,13 @@ encoding_rs = "0.8"   # 用于编码和解码文本的库
 rand = "0.9"          # 用于生成随机数
 rand_chacha = "0.9"   # 用于生成随机数
 lazy_static = "1.5"   # 用于延迟初始化全局变量
-reqwest = "0.12"      # 用于 HTTP 客户端
+reqwest = "0.13"      # 用于 HTTP 客户端
 regex = "1.12"        # 正则表达式
 base64 = "0.22"       # 用于 base64 编码解码
-rust-embed = "8.7"    # 用于将静态文件嵌入到二进制文件中
+rust-embed = "8.11"   # 用于将静态文件嵌入到二进制文件中
 tempfile = "3.24"     # 用于创建临时文件和目录
-crc32fast = "1.4"
-futures = "0.3"        # 用于异步编程
+crc32fast = "1.5"     # 快速、SIMD加速的CRC32（IEEE）校验和计算
+futures = "0.3"       # 用于异步编程
 
 
 anyhow = "1.0"
@@ -65,13 +65,13 @@ candle-flash-attn = "0.9"   # 用于 Flash Attention
 candle-kernels = "0.9"
 hf-hub = "0.4"              # 与 huggingface hub 集成
 tokenizers = "0.22"         # 标记文本
-parquet = "57.0"            # 列式存储数据文件格式
+parquet = "57.2"            # 列式存储数据文件格式
 image = "0.25"
 png = "0.18"                # 用于读取和写入 PNG 图像
 ndarray = "0.17"            # 用于多维数组
-# llama-cpp-2 = "0.1.130"     # llama.cpp 的封装，实现自 Hugging Face 的 Transformers
-# llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main", tag = "0.1.130" }
-llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", tag = "0.1.130" }
+# llama-cpp-2 = "0.1.132"     # llama.cpp 的封装
+# llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", branch = "main" }
+llama-cpp-2 = { git = "https://github.com/utilityai/llama-cpp-rs", tag = "0.1.132" }
 ort = "=2.0.0-rc.10"                                                                 # ONNX Runtime
 
 # src

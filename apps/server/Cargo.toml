@@ -34,7 +34,7 @@ encoding_rs = { workspace = true }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
 lazy_static = { workspace = true }
-reqwest = { workspace = true, features = ["json", "blocking", "rustls-tls"] }
+reqwest = { workspace = true, features = ["json", "blocking"] }
 regex = { workspace = true }
 base64 = { workspace = true }
 rust-embed = { workspace = true, features = [
