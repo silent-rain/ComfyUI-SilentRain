@@ -72,7 +72,9 @@ impl HistoryMessage {
     pub fn clear(&mut self) {
         self.megs.clear();
     }
+}
 
+impl HistoryMessage {
     pub fn from_cache(cache_key: String) -> Result<Self, Error> {
         let cache = global_cache();
         let cache_key = format!("history_message_{}", cache_key);
