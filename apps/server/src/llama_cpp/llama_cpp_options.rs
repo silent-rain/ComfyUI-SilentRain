@@ -158,6 +158,10 @@ pub struct LlamaCppOptions {
     #[serde(default)]
     pub n_predict: i32,
 
+    /// Disable offloading layers to the gpu
+    #[serde(default)]
+    pub disable_gpu: bool,
+
     /// Index of the main GPU to use.
     /// Relevant for multi-GPU systems.
     #[serde(default)]
@@ -669,8 +673,9 @@ impl Default for LlamaCppOptions {
             n_predict: 2048,    // 要预测的Token数量， -1 表示无限生成
 
             // GPU 相关参数
-            main_gpu: 0,     // 默认主 GPU 索引
-            n_gpu_layers: 0, // 默认不启用 GPU 卸载
+            disable_gpu: true, // 默认禁用GPU
+            main_gpu: 0,       // 默认主 GPU 索引
+            n_gpu_layers: 0,   // 默认不启用 GPU 卸载
             // no_mmproj_offload: false, // 默认启用 mmproj 的 GPU 卸载
             flash_attention: false, // 默认禁用 Flash Attention
 

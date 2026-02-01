@@ -178,6 +178,16 @@ impl LlamaCppChat {
                 )?;
 
                 required.set_item(
+                    "disable_gpu",
+                    (NODE_BOOLEAN, {
+                        let params = PyDict::new(py);
+                        params.set_item("default", options.disable_gpu)?;
+                        params.set_item("tooltip", "Disable GPU usage")?;
+                        params
+                    }),
+                )?;
+
+                required.set_item(
                     "main_gpu",
                     (NODE_INT, {
                         let params = PyDict::new(py);
@@ -249,7 +259,7 @@ impl LlamaCppChat {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, n_ctx, n_predict, seed, main_gpu, n_gpu_layers, keep_context, cache_model, extra_options=None))]
+    #[pyo3(name = "execute", signature = (model_path, system_prompt, user_prompt, n_ctx, n_predict, seed,disable_gpu, main_gpu, n_gpu_layers, keep_context, cache_model, extra_options=None))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
@@ -259,6 +269,7 @@ impl LlamaCppChat {
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
+        disable_gpu: bool,
         main_gpu: i32,
         n_gpu_layers: u32,
         keep_context: bool,
@@ -273,6 +284,7 @@ impl LlamaCppChat {
                 n_ctx,
                 n_predict,
                 seed,
+                disable_gpu,
                 main_gpu,
                 n_gpu_layers,
                 keep_context,
@@ -311,6 +323,7 @@ impl LlamaCppChat {
         n_ctx: u32,
         n_predict: i32,
         seed: i32,
+        disable_gpu: bool,
         main_gpu: i32,
         n_gpu_layers: u32,
         keep_context: bool,
@@ -329,6 +342,7 @@ impl LlamaCppChat {
         options.n_ctx = n_ctx;
         options.n_predict = n_predict;
         options.seed = seed;
+        options.disable_gpu = disable_gpu;
         options.main_gpu = main_gpu;
         options.n_gpu_layers = n_gpu_layers;
         options.keep_context = keep_context;
