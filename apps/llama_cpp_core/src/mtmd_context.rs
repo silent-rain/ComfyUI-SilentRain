@@ -9,6 +9,8 @@
 
 use std::{ffi::CString, io::Write, sync::Arc, time::Duration};
 
+use tokio::sync::mpsc;
+
 use llama_cpp_2::{
     ggml_time_us,
     llama_batch::LlamaBatch,
@@ -24,7 +26,7 @@ use log::info;
 use crate::{
     context::{ContexParams, ContextWrapper},
     error::Error,
-    types::{FinishReason, GenerationOutput},
+    types::{FinishReason, GenerationOutput, StreamToken},
 };
 
 /// State of the MTMD CLI application.
@@ -34,7 +36,7 @@ pub struct MtmdContextWrapper {
     /// Context parameters
     contex_params: ContexParams,
     /// Base context
-    base_context: ContextWrapper,
+    pub base_context: ContextWrapper,
     /// The MTMD context for multimodal processing.
     pub mtmd_context: MtmdContext,
     /// The batch used for processing tokens.
@@ -224,6 +226,78 @@ impl MtmdContextWrapper {
                 FinishReason::Stop
             },
         })
+    }
+
+    /// 流式生成响应，通过 channel 返回 token
+    pub fn generate_response_channel(
+        &mut self,
+        sampler: &mut LlamaSampler,
+    ) -> mpsc::UnboundedReceiver<StreamToken> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let max_tokens = self.contex_params.max_predict();
+        let verbose = self.contex_params.verbose;
+
+        let mut n_cur = self.batch.n_tokens();
+        let mut n_past = self.n_past;
+
+        while n_cur < max_tokens {
+            // 采样下一个 token
+            let token = sampler.sample(&self.base_context.context, -1);
+            sampler.accept(token);
+
+            // 检查是否为结束标记
+            if self.model.is_eog_token(token) {
+                let _ = tx.send(StreamToken::finish(FinishReason::Stop));
+                break;
+            }
+
+            // 将 token 转换为字符串
+            let output_bytes = match self.model.token_to_bytes(token, Special::Tokenize) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
+                    break;
+                }
+            };
+
+            let mut output_string = String::with_capacity(32);
+            let mut decoder = encoding_rs::UTF_8.new_decoder();
+            let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
+
+            if verbose {
+                let _ = std::io::stdout().write_all(output_string.as_bytes());
+                let _ = std::io::stdout().flush();
+            }
+
+            // 发送 token，如果接收端关闭则停止生成
+            if tx.send(StreamToken::content(output_string)).is_err() {
+                break;
+            }
+
+            // 准备下一个 batch
+            self.batch.clear();
+            if let Err(e) = self.batch.add(token, n_past, &[0], true) {
+                let _ = tx.send(StreamToken::error(format!("Batch add error: {}", e)));
+                break;
+            }
+
+            // 解码
+            if let Err(e) = self.base_context.decode(&mut self.batch) {
+                let _ = tx.send(StreamToken::error(format!("Decode error: {}", e)));
+                break;
+            }
+
+            n_past += 1;
+            n_cur += 1;
+
+            // 检查是否达到最大 token 数
+            if n_cur >= max_tokens {
+                let _ = tx.send(StreamToken::finish(FinishReason::Length));
+                break;
+            }
+        }
+
+        rx
     }
 }
 

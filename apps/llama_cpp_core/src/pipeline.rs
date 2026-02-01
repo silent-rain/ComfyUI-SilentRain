@@ -9,6 +9,8 @@
 
 use std::sync::Arc;
 
+use tokio::sync::mpsc;
+
 use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing};
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -21,7 +23,7 @@ use crate::{
     model::ModelConfig,
     mtmd_context::MtmdContextWrapper,
     sampler::SamplerConfig,
-    types::{GenerationOutput, MediaData, PoolingTypeMode},
+    types::{GenerationOutput, MediaData, PoolingTypeMode, StreamToken},
     utils::image::Image,
 };
 
@@ -552,6 +554,62 @@ impl Pipeline {
         }
     }
 
+    pub async fn infer2(&mut self) -> Result<GenerationOutput, Error> {
+        let mut rx = if self.config.is_multimodal() {
+            Self::infer_multimodal_stream_blocking_inner(
+                &self.config,
+                &self.backend,
+                &self.history_message,
+            )
+        } else {
+            Self::infer_text_stream_blocking_inner(
+                &self.config,
+                &self.backend,
+                &self.history_message,
+            )
+        };
+
+        let mut full_text = String::new();
+        while let Some(token) = rx.recv().await {
+            match token {
+                StreamToken::Content(text) => full_text.push_str(&text),
+                StreamToken::Finish(reason) => full_text.push_str(&reason.to_string()),
+                StreamToken::Error(msg) => return Ok(GenerationOutput::new(msg)),
+            }
+        }
+
+        Ok(GenerationOutput::new(full_text))
+    }
+
+    /// 执行流式推理
+    ///
+    /// 返回一个 receiver，每次生成一个 token 时会发送一个 StreamToken
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let rx = pipeline.infer_stream().await?;
+    /// while let Some(token) = rx.recv().await {
+    ///     match token {
+    ///         StreamToken::Content(text) => print!("{}", text),
+    ///         StreamToken::Finish(reason) => println!("\nFinished: {:?}", reason),
+    ///         StreamToken::Error(msg) => eprintln!("Error: {}", msg),
+    ///     }
+    /// }
+    /// ```
+    pub async fn infer_stream(&self) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+        let config = self.config.clone();
+        let backend = self.backend.clone();
+        let history_message = self.history_message.clone();
+
+        let rx = if config.is_multimodal() {
+            Self::infer_multimodal_stream_blocking_inner(&config, &backend, &history_message)
+        } else {
+            Self::infer_text_stream_blocking_inner(&config, &backend, &history_message)
+        };
+
+        Ok(rx)
+    }
+
     /// 纯文本推理
     async fn infer_text(&mut self, config: &PipelineConfig) -> Result<GenerationOutput, Error> {
         // Load model
@@ -655,6 +713,115 @@ impl Pipeline {
         }
 
         Ok(output)
+    }
+
+    /// 纯文本流式推理内部实现（静态方法）
+    ///
+    /// 使用 ContextWrapper::generate_response_channel 直接获取 channel receiver
+    fn infer_text_stream_blocking_inner(
+        config: &PipelineConfig,
+        backend: &LlamaBackend,
+        history_message: &HistoryMessage,
+    ) -> mpsc::UnboundedReceiver<StreamToken> {
+        // Load model
+        let model = Model::from_config(config.clone().into())
+            .load_cache_model(backend)
+            .expect("Failed to load model");
+
+        // Load sampler
+        let mut sampler =
+            Sampler::load_sampler(&config.clone().into()).expect("Failed to load sampler");
+
+        // 创建上下文
+        let contex_params: ContexParams = config.clone().into();
+        let mut ctx = ContextWrapper::try_new(model.clone(), backend, &contex_params)
+            .expect("Failed to create context");
+
+        // 创建消息
+        let msgs = ContextWrapper::create_message(
+            &contex_params,
+            false,
+            vec![],
+            &history_message.messages(),
+        )
+        .expect("Failed to create message");
+
+        // 评估消息
+        ctx.eval_messages(msgs).expect("Failed to eval messages");
+
+        // 使用 channel 方式生成响应
+        ctx.generate_response_channel(&mut sampler)
+    }
+
+    /// 多模态流式推理内部实现（静态方法）
+    fn infer_multimodal_stream_blocking_inner(
+        config: &PipelineConfig,
+        backend: &LlamaBackend,
+        history_message: &HistoryMessage,
+    ) -> mpsc::UnboundedReceiver<StreamToken> {
+        // Load model
+        let model = Model::from_config(config.clone().into())
+            .load_cache_model(backend)
+            .expect("Failed to load model");
+
+        // Load sampler
+        let mut sampler =
+            Sampler::load_sampler(&config.clone().into()).expect("Failed to load sampler");
+
+        // 上下文
+        let contex_params: ContexParams = config.clone().into();
+        let ctx = ContextWrapper::try_new(model.clone(), backend, &contex_params)
+            .expect("Failed to create context");
+        let mut mtmd_ctx = MtmdContextWrapper::try_new(model.clone(), ctx, &contex_params)
+            .expect("Failed to create mtmd context");
+
+        // Load media files
+        for media in &config.medias {
+            info!("Loading media: {}", media.media_type);
+            mtmd_ctx
+                .load_media_buffer(&media.data)
+                .expect("Failed to load media");
+        }
+
+        // 创建消息
+        let msgs = ContextWrapper::create_message(
+            &contex_params,
+            true,
+            config.medias.clone(),
+            &history_message.messages(),
+        )
+        .expect("Failed to create message");
+
+        // 评估消息
+        mtmd_ctx
+            .eval_messages(msgs)
+            .expect("Failed to eval messages");
+
+        // 使用 channel 方式生成响应
+        mtmd_ctx.generate_response_channel(&mut sampler)
+    }
+
+    /// 根据流式生成的结果更新历史消息
+    ///
+    /// # Arguments
+    /// * `full_text` - 流式生成收集到的完整文本
+    pub fn update_history_from_stream(&mut self, full_text: &str) -> Result<(), Error> {
+        if !self.config.keep_context {
+            return Ok(());
+        }
+
+        // 添加系统提示（如果历史不为空且已有系统消息）
+        if !self.history_message.messages().is_empty() && !self.config.system_prompt.is_empty() {
+            self.history_message
+                .add_system(self.config.system_prompt.clone())?;
+        }
+
+        // 添加用户提示和助手响应
+        self.history_message
+            .add_user(self.config.user_prompt.clone())?;
+        self.history_message.add_assistant(full_text.to_string())?;
+
+        Ok(())
     }
 
     /// 清除模型缓存

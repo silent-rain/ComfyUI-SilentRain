@@ -112,7 +112,7 @@ impl MediaData {
 }
 
 /// 生成输出
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct GenerationOutput {
     pub text: String,
     pub tokens_generated: usize,
@@ -140,8 +140,9 @@ impl GenerationOutput {
 }
 
 /// 生成结束原因
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FinishReason {
+    #[default]
     Stop,
     Length,
     Error,
@@ -154,5 +155,51 @@ impl std::fmt::Display for FinishReason {
             FinishReason::Length => write!(f, "length"),
             FinishReason::Error => write!(f, "error"),
         }
+    }
+}
+
+/// 流式生成 Token
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StreamToken {
+    /// 生成的文本内容
+    Content(String),
+    /// 生成完成，包含结束原因
+    Finish(FinishReason),
+    /// 生成过程中发生错误
+    Error(String),
+}
+
+impl StreamToken {
+    /// 创建内容 Token
+    pub fn content(text: impl Into<String>) -> Self {
+        Self::Content(text.into())
+    }
+
+    /// 创建完成 Token
+    pub fn finish(reason: FinishReason) -> Self {
+        Self::Finish(reason)
+    }
+
+    /// 创建错误 Token
+    pub fn error(msg: impl Into<String>) -> Self {
+        Self::Error(msg.into())
+    }
+
+    /// 获取内容（如果是 Content 类型）
+    pub fn as_content(&self) -> Option<&str> {
+        match self {
+            Self::Content(text) => Some(text),
+            _ => None,
+        }
+    }
+
+    /// 是否为完成 Token
+    pub fn is_finish(&self) -> bool {
+        matches!(self, Self::Finish(_))
+    }
+
+    /// 是否为错误 Token
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Error(_))
     }
 }

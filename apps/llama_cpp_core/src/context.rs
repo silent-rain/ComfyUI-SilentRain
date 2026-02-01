@@ -8,6 +8,8 @@
 
 use std::{io::Write, num::NonZero, sync::Arc, time::Duration};
 
+use tokio::sync::mpsc;
+
 use llama_cpp_2::{
     context::{
         LlamaContext,
@@ -26,7 +28,9 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    types::{FinishReason, GenerationOutput, MediaData, PoolingTypeMode, PromptMessageRole},
+    types::{
+        FinishReason, GenerationOutput, MediaData, PoolingTypeMode, PromptMessageRole, StreamToken,
+    },
 };
 
 /// Context Params
@@ -159,7 +163,7 @@ pub struct ContextWrapper {
     /// The context for multimodal processing.
     pub context: LlamaContext<'static>,
     /// The batch used for processing tokens.
-    batch: LlamaBatch<'static>,
+    pub batch: LlamaBatch<'static>,
 }
 
 impl ContextWrapper {
@@ -327,6 +331,77 @@ impl ContextWrapper {
                 FinishReason::Stop
             },
         })
+    }
+
+    /// 流式生成响应，通过 channel 返回 token
+    pub fn generate_response_channel(
+        &mut self,
+        sampler: &mut LlamaSampler,
+    ) -> mpsc::UnboundedReceiver<StreamToken> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let max_tokens = self.contex_params.max_predict();
+        let eos_token = self.model.token_eos();
+        let verbose = self.contex_params.verbose;
+
+        let mut n_cur = self.batch.n_tokens();
+
+        while n_cur < max_tokens {
+            // 采样下一个 token
+            // batch.n_tokens() - 1 表示获取最后一个 token 的 logits
+            let token = sampler.sample(&self.context, self.batch.n_tokens() - 1);
+            sampler.accept(token);
+
+            // 检查是否为结束标记
+            if token == eos_token {
+                let _ = tx.send(StreamToken::finish(FinishReason::Stop));
+                break;
+            }
+
+            // 将 token 转换为字符串
+            let output_bytes = match self.model.token_to_bytes(token, Special::Tokenize) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
+                    break;
+                }
+            };
+            let mut output_string = String::with_capacity(32);
+            let mut decoder = encoding_rs::UTF_8.new_decoder();
+            let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
+
+            if verbose {
+                let _ = std::io::stdout().write_all(output_string.as_bytes());
+                let _ = std::io::stdout().flush();
+            }
+
+            // 发送 token，如果接收端关闭则停止生成
+            if tx.send(StreamToken::content(output_string)).is_err() {
+                break;
+            }
+
+            // 准备下一个 batch
+            self.batch.clear();
+            if let Err(e) = self.batch.add(token, n_cur, &[0], true) {
+                let _ = tx.send(StreamToken::error(format!("Batch add error: {}", e)));
+                break;
+            }
+
+            // 解码
+            if let Err(e) = self.context.decode(&mut self.batch) {
+                let _ = tx.send(StreamToken::error(format!("Decode error: {}", e)));
+                break;
+            }
+
+            n_cur += 1;
+
+            // 检查是否达到最大 token 数
+            if n_cur >= max_tokens {
+                let _ = tx.send(StreamToken::finish(FinishReason::Length));
+                break;
+            }
+        }
+
+        rx
     }
 }
 
