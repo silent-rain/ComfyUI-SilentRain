@@ -579,7 +579,7 @@ impl Pipeline {
         let output = ctx.generate_response(&mut sampler)?;
 
         // 将上下文信息添加到历史消息中
-        {
+        if config.keep_context {
             // 添加系统提示
             if !self.history_message.messages().is_empty() {
                 self.history_message
@@ -642,7 +642,7 @@ impl Pipeline {
         let output = mtmd_ctx.generate_response(&mut sampler)?;
 
         // 将上下文信息添加到历史消息中
-        {
+        if config.keep_context {
             // 添加系统提示
             if !self.history_message.messages().is_empty() {
                 self.history_message
