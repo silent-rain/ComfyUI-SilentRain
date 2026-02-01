@@ -562,7 +562,7 @@ mod tests {
             &contex_params,
             false,
             vec![],
-            &history_message.get_all(),
+            &history_message.messages(),
         )?;
 
         // 评估消息

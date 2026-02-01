@@ -1,8 +1,12 @@
 //! History Context
 
-use llama_cpp_2::model::LlamaChatMessage;
+use std::sync::Arc;
 
-use crate::{error::Error, types::PromptMessageRole};
+use llama_cpp_2::model::LlamaChatMessage;
+use rand::TryRngCore;
+use tracing::error;
+
+use crate::{error::Error, global_cache, types::PromptMessageRole};
 
 #[derive(Debug, Default, Clone)]
 pub struct HistoryMessage {
@@ -52,7 +56,7 @@ impl HistoryMessage {
         Ok(())
     }
 
-    pub fn get_all(&self) -> Vec<LlamaChatMessage> {
+    pub fn messages(&self) -> Vec<LlamaChatMessage> {
         self.megs.clone()
     }
 
@@ -67,5 +71,43 @@ impl HistoryMessage {
 
     pub fn clear(&mut self) {
         self.megs.clear();
+    }
+
+    pub fn from_cache(cache_key: String) -> Result<Self, Error> {
+        let cache = global_cache();
+        let cache_key = format!("history_message_{}", cache_key);
+        let megs = cache
+            .get_data::<Vec<LlamaChatMessage>>(&cache_key)
+            .map_err(|e| {
+                error!("get cache error: {e:?}");
+                e
+            })?;
+        if let Some(data) = megs {
+            return Ok(Self {
+                megs: data.to_vec(),
+            });
+        }
+
+        Ok(Self { megs: Vec::new() })
+    }
+
+    pub fn force_update_cache(
+        &mut self,
+        cache_key: String,
+    ) -> Result<Vec<LlamaChatMessage>, Error> {
+        let cache = global_cache();
+        let cache_key = format!("history_message_{}", cache_key);
+
+        // 随机值
+        let random = rand::rng().try_next_u32().unwrap_or(0);
+        let params = vec![random.to_string()];
+
+        cache.force_update(&cache_key, &params, Arc::new(self.megs.clone()))?;
+
+        if let Some(data) = cache.get_data::<Vec<LlamaChatMessage>>(&cache_key)? {
+            self.megs = data.to_vec();
+            return Ok(self.megs.clone());
+        }
+        Ok(self.megs.clone())
     }
 }

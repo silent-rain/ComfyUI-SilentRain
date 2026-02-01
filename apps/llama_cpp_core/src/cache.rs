@@ -64,8 +64,10 @@ impl fmt::Debug for CacheManager {
 
 impl CacheManager {
     // 单例模式，全局唯一的模型缓存
-    pub fn global() -> &'static Arc<CacheManager> {
-        GLOBAL_CACHE.get_or_init(|| Arc::new(CacheManager::default()))
+    pub fn global() -> Arc<CacheManager> {
+        GLOBAL_CACHE
+            .get_or_init(|| Arc::new(CacheManager::default()))
+            .clone()
     }
 
     /// 添加或更新模型（仅当 hash 值变化时更新）
@@ -284,7 +286,7 @@ impl CacheManager {
 }
 
 /// 便捷函数：获取全局缓存
-pub fn global_cache() -> &'static Arc<CacheManager> {
+pub fn global_cache() -> Arc<CacheManager> {
     CacheManager::global()
 }
 

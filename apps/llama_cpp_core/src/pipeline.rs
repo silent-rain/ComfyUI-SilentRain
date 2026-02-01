@@ -506,6 +506,15 @@ impl Pipeline {
         self
     }
 
+    pub fn with_history_message(mut self, history_message: HistoryMessage) -> Self {
+        self.history_message = history_message;
+        self
+    }
+
+    pub fn history_message(&self) -> HistoryMessage {
+        self.history_message.clone()
+    }
+
     pub fn clear_media(&mut self) {
         self.config.medias.clear();
     }
@@ -560,7 +569,7 @@ impl Pipeline {
             &contex_params,
             false,
             vec![],
-            &self.history_message.get_all(),
+            &self.history_message.messages(),
         )?;
 
         // 评估消息
@@ -572,7 +581,7 @@ impl Pipeline {
         // 将上下文信息添加到历史消息中
         {
             // 添加系统提示
-            if !self.history_message.get_all().is_empty() {
+            if !self.history_message.messages().is_empty() {
                 self.history_message
                     .add_system(contex_params.system_prompt)?;
             }
@@ -620,7 +629,7 @@ impl Pipeline {
             &contex_params,
             true,
             config.medias.clone(),
-            &self.history_message.get_all(),
+            &self.history_message.messages(),
         )?;
 
         // 评估消息
@@ -635,7 +644,7 @@ impl Pipeline {
         // 将上下文信息添加到历史消息中
         {
             // 添加系统提示
-            if !self.history_message.get_all().is_empty() {
+            if !self.history_message.messages().is_empty() {
                 self.history_message
                     .add_system(contex_params.system_prompt)?;
             }

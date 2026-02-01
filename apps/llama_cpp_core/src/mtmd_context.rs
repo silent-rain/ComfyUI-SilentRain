@@ -333,7 +333,7 @@ mod tests {
             &contex_params,
             true,
             medias,
-            &history_message.get_all(),
+            &history_message.messages(),
         )?;
 
         // 评估消息
