@@ -3,6 +3,7 @@
 
 use pyo3::{Bound, PyResult, Python, ffi::c_str, pyfunction};
 
+pub const NODE_NONE: &str = "";
 pub const NODE_INT: &str = "INT";
 pub const NODE_FLOAT: &str = "FLOAT";
 pub const NODE_STRING: &str = "STRING";

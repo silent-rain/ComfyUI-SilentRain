@@ -17,6 +17,9 @@ pub mod category;
 pub mod node;
 pub mod utils;
 
+mod node_base;
+pub use node_base::InputSpec;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "core")?;
