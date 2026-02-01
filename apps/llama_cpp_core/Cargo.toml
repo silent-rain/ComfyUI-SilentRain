@@ -1,0 +1,52 @@
+[package]
+name = "llama_cpp_core"
+version = "0.1.0"
+edition = "2024"
+
+
+[features]
+default = []
+cuda = ["llama-cpp-2/cuda"] # NVIDIA 平台
+vulkan = [
+    "llama-cpp-2/vulkan",
+] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
+# native = ["llama-cpp-2/native"]
+
+
+[dependencies]
+# 异步运行时
+tokio = { workspace = true, features = ["full"] }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+
+# 错误处理
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# 日志
+log = { workspace = true }
+tracing = { workspace = true }
+tracing-log = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+
+# llama.cpp 绑定
+llama-cpp-2 = { workspace = true, features = [
+    "dynamic-link", # 动态链接 llama.cpp 库（如 libllama.so），而非静态编译到应用中。
+    "sampler",
+    "mtmd",
+] }
+
+
+# Utils
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+image = { workspace = true }
+chardet = { workspace = true }
+encoding = { workspace = true }
+encoding_rs = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }

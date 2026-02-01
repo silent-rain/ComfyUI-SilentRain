@@ -67,6 +67,10 @@ llama-cpp-2 = { workspace = true, features = [
     "mtmd",
 ] }
 
+# 本地推理引擎
+llama_cpp_core = { path = "../llama_cpp_core" }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
 # ONNX Runtime
 # [target.'cfg(not(target_os = "macos"))'.dependencies]
 # ort = { workspace = true, features = [
