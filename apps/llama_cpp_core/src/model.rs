@@ -54,14 +54,14 @@ pub struct ModelConfig {
     #[serde(default)]
     pub use_mlock: bool,
 
-    /// Media marker. If not provided, the default marker will be used.
-    #[serde(default)]
-    pub media_marker: Option<String>,
-
     /// Number of threads to use during generation.
     /// Set to a specific value to limit CPU usage.
     #[serde(default)]
     pub n_threads: i32,
+
+    /// Media marker. If not provided, the default marker will be used.
+    #[serde(default)]
+    pub media_marker: Option<String>,
 
     /// 是否缓存模型
     #[serde(default)]
@@ -87,6 +87,17 @@ impl Default for ModelConfig {
             cache_model: false,
             verbose: false,
         }
+    }
+}
+
+impl ModelConfig {
+    ///  vec to str, e.g. "0,1,2"
+    pub fn devices_str(&self) -> String {
+        self.devices
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
+            .join(",")
     }
 }
 
@@ -129,11 +140,11 @@ impl Model {
     pub fn with_cache_key(
         mut self,
         cache_model_key: impl Into<String>,
-        cache_mmproj_key: impl Into<Option<String>>,
+        cache_mmproj_key: Option<impl Into<String>>,
     ) -> Self {
         self.cache_model_key = cache_model_key.into();
-        if let Some(cache_mmproj_key) = cache_mmproj_key.into() {
-            self.cache_mmproj_key = cache_mmproj_key;
+        if let Some(cache_mmproj_key) = cache_mmproj_key {
+            self.cache_mmproj_key = cache_mmproj_key.into();
         }
 
         self

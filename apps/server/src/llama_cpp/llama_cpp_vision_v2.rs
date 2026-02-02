@@ -326,7 +326,7 @@ impl LlamaCppVisionv2 {
             // 执行推理
             let response = tokio::task::block_in_place(|| {
                 tokio::runtime::Handle::current().block_on(async {
-                    self.pipeline.infer(request).await
+                    self.pipeline.generate(request).await
                 })
             }).map_err(|e| Error::InvalidInput(format!("Generation failed: {}", e)))?;
 

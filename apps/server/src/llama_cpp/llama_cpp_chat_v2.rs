@@ -10,18 +10,22 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
+    types::{PyAnyMethods, PyType},
 };
 use std::{path::PathBuf, sync::Arc};
 
 use llama_cpp_core::{
-    CacheManager, Pipeline, InferenceRequest, PipelineConfig,
-    config::SamplerConfig,
+    CacheManager, Pipeline, PipelineConfig,
+    config::{ModelConfig, SamplerConfig},
     history::HistoryMessage,
+    types::PromptMessageRole,
 };
 
 use crate::{
-    core::category::CATEGORY_LLAMA_CPP,
+    core::{
+        category::CATEGORY_LLAMA_CPP,
+        node_base::{InputSpec, InputType},
+    },
     error::Error,
     wrapper::{
         comfy::folder_paths::FolderPaths,
@@ -33,17 +37,9 @@ use crate::{
 };
 
 /// LlamaCpp Chat v2
-///
-//! ### 版本差异
-//! - **v1**: 独立加载模型，无上下文保持
-//! - **v2**: 
-//!   - 复用 LlamaCppModelv2 加载的模型
-//!   - 自动保存/恢复对话上下文
-//!   - 使用 llama_cpp_core 的高性能 Pipeline
 #[pyclass(subclass)]
 pub struct LlamaCppChatv2 {
     cache: Arc<CacheManager>,
-    pipeline: Arc<Pipeline>,
 }
 
 impl PromptServer for LlamaCppChatv2 {}
@@ -53,13 +49,8 @@ impl LlamaCppChatv2 {
     #[new]
     fn new() -> PyResult<Self> {
         let cache = CacheManager::global();
-        let pipeline = Pipeline::with_cache(cache.clone())
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("Failed to create pipeline: {}", e)))?;
-        
-        Ok(Self {
-            cache,
-            pipeline: Arc::new(pipeline),
-        })
+
+        Ok(Self { cache })
     }
 
     #[classattr]
@@ -71,7 +62,7 @@ impl LlamaCppChatv2 {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str, &'static str) {
-        (NODE_STRING, NODE_STRING)  // (response, full_context)
+        (NODE_STRING, NODE_STRING) // (response, full_context)
     }
 
     #[classattr]
@@ -104,122 +95,72 @@ impl LlamaCppChatv2 {
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
         Python::attach(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-
-                // 模型句柄（来自 LlamaCppModelv2）
-                required.set_item(
+            let spec = InputSpec::new()
+                .with_required(
                     "model_handle",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("tooltip", "Model cache key from LlamaCppModelv2")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::string().tooltip("Model cache key from LlamaCppModelv2"),
+                )
+                .with_required(
                     "system_prompt",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "You are a helpful assistant.")?;
-                        params.set_item("multiline", true)?;
-                        params.set_item("tooltip", "System prompt that guides the model's behavior")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::string()
+                        .default("You are a helpful assistant.")
+                        .multiline(true)
+                        .tooltip("System prompt that guides the model's behavior"),
+                )
+                .with_required(
                     "user_prompt",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "")?;
-                        params.set_item("multiline", true)?;
-                        params.set_item("tooltip", "User input to the model")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::string()
+                        .default("")
+                        .multiline(true)
+                        .tooltip("User input to the model"),
+                )
+                .with_required(
                     "n_ctx",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", 4096)?;
-                        params.set_item("min", 256)?;
-                        params.set_item("max", NODE_INT_MAX)?;
-                        params.set_item("step", 1)?;
-                        params.set_item("tooltip", "Context window size")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::int()
+                        .default(4096)
+                        .min(256)
+                        .max(NODE_INT_MAX as i64)
+                        .step_int(1)
+                        .tooltip("Context window size"),
+                )
+                .with_required(
                     "n_predict",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", 2048)?;
-                        params.set_item("min", -1)?;
-                        params.set_item("max", NODE_INT_MAX)?;
-                        params.set_item("step", 1)?;
-                        params.set_item("tooltip", "Max tokens to predict (-1 = unlimited)")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::int()
+                        .default(2048)
+                        .min(-1)
+                        .max(NODE_INT_MAX as i64)
+                        .step_int(1)
+                        .tooltip("Max tokens to predict (-1 = unlimited)"),
+                )
+                .with_required(
                     "seed",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", -1)?;
-                        params.set_item("min", -1)?;
-                        params.set_item("max", NODE_SEED_MAX)?;
-                        params.set_item("step", 1)?;
-                        params.set_item("tooltip", "Random seed (-1 = random)")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::int()
+                        .default(-1)
+                        .min(-1)
+                        .max(NODE_SEED_MAX as i64)
+                        .step_int(1)
+                        .tooltip("Random seed (-1 = random)"),
+                )
+                .with_required(
                     "temperature",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "0.6")?;
-                        params.set_item("tooltip", "Sampling temperature")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::string()
+                        .default("0.6")
+                        .tooltip("Sampling temperature"),
+                )
+                .with_required(
                     "keep_context",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", true)?;
-                        params.set_item("tooltip", "Keep conversation context between calls")?;
-                        params
-                    }),
-                )?;
-
-                required
-            })?;
-
-            dict.set_item("optional", {
-                let optional = PyDict::new(py);
-                
-                // 上下文 key（用于恢复历史对话）
-                optional.set_item(
+                    InputType::bool()
+                        .default(true)
+                        .tooltip("Keep conversation context between calls"),
+                )
+                .with_optional(
                     "context_key",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "")?;
-                        params.set_item("tooltip", "Previous context key to restore conversation history")?;
-                        params
-                    }),
-                )?;
+                    InputType::string()
+                        .default("")
+                        .tooltip("Previous context key to restore conversation history"),
+                );
 
-                optional
-            })?;
-
-            Ok(dict.into())
+            spec.build(py)
         })
     }
 
@@ -301,31 +242,33 @@ impl LlamaCppChatv2 {
             .temperature(temperature.parse::<f32>().unwrap_or(0.6))
             .seed(seed);
 
-        // 构建推理请求
-        let request = InferenceRequest::new(&model_path)
-            .with_system_prompt(&system_prompt)
-            .with_user_prompt(&user_prompt)
-            .with_sampler(sampler_config)
-            .with_model_config(model_config)
-            .with_cache_model(true)
-            .with_keep_context(keep_context);
+        // 构建 Pipeline 配置
+        let pipeline_config = PipelineConfig::new(model_path.to_string_lossy().to_string(), None)
+            .with_system_prompt(system_prompt)
+            .with_user_prompt(user_prompt)
+            .with_n_ctx(n_ctx)
+            .with_n_predict(n_predict)
+            .with_disable_gpu(model_config.disable_gpu)
+            .with_n_gpu_layers(model_config.n_gpu_layers)
+            .with_main_gpu(model_config.main_gpu)
+            .with_keep_context(keep_context)
+            .with_cache_model(true);
+
+        // 创建 Pipeline
+        let mut pipeline = Pipeline::try_new(pipeline_config).with_history_message(history);
 
         info!("Chat inference with model: {}", model_handle);
 
         // 执行推理（需要在 tokio runtime 中）
         let response = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                self.pipeline.infer(request).await
-            })
-        }).map_err(|e| Error::InvalidInput(format!("Generation failed: {}", e)))?;
-
-        // 添加助手回复到历史
-        history.add_assistant(response.text.clone())?;
+            tokio::runtime::Handle::current().block_on(async { pipeline.infer().await })
+        })
+        .map_err(|e| Error::InvalidInput(format!("Generation failed: {}", e)))?;
 
         // 生成新的上下文 key
         let new_context_key = if keep_context {
             let key = format!("chat_ctx:{}", uuid::Uuid::new_v4());
-            self.save_history(&key, &history)?;
+            self.save_history(&key, &pipeline.history_message())?;
             key
         } else {
             String::new()
@@ -337,20 +280,20 @@ impl LlamaCppChatv2 {
     }
 
     /// 解析模型句柄，返回模型路径和配置
-    fn resolve_model_handle(&self, handle: &str) -> Result<(PathBuf, llama_cpp_core::config::ModelConfig), Error> {
+    fn resolve_model_handle(&self, handle: &str) -> Result<(PathBuf, ModelConfig), Error> {
         // 从缓存获取模型信息
-        if let Some((model_path, config)) = self.cache.get_data::<(String, llama_cpp_core::config::ModelConfig)>(handle)? {
+        if let Some((model_path, config)) = self.cache.get_data::<(String, ModelConfig)>(handle)? {
             let base_models_dir = FolderPaths::default().model_path();
             let full_path = base_models_dir.join("LLM").join(&model_path);
-            return Ok((full_path, *config));
+            return Ok((full_path, config));
         }
 
         // 如果缓存中没有，尝试作为普通路径处理
         let base_models_dir = FolderPaths::default().model_path();
         let full_path = base_models_dir.join("LLM").join(handle);
-        
+
         if full_path.exists() {
-            Ok((full_path, llama_cpp_core::config::ModelConfig::default()))
+            Ok((full_path, ModelConfig::default()))
         } else {
             Err(Error::FileNotFound(handle.to_string()))
         }
@@ -358,21 +301,13 @@ impl LlamaCppChatv2 {
 
     /// 加载历史上下文
     fn load_history(&self, key: &str) -> Result<HistoryMessage, Error> {
-        if let Some(messages) = self.cache.get_data::<Vec<llama_cpp_2::model::LlamaChatMessage>>(key)? {
-            Ok(HistoryMessage::from_vec(messages.to_vec()))
-        } else {
-            Ok(HistoryMessage::new())
-        }
+        HistoryMessage::from_cache(key.to_string())
     }
 
     /// 保存历史上下文
     fn save_history(&self, key: &str, history: &HistoryMessage) -> Result<(), Error> {
-        let params = vec![key.to_string()];
-        self.cache.force_update(
-            key,
-            &params,
-            Arc::new(history.messages()),
-        ).map_err(|e| Error::LockError(e.to_string()))?;
+        let mut history_copy = history.clone();
+        history_copy.force_update_cache(key.to_string())?;
         Ok(())
     }
 }

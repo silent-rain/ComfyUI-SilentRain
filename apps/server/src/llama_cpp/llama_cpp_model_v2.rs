@@ -5,45 +5,28 @@
 //! - 通过缓存 key 与推理节点联动
 //! - 减少重复加载，提升性能
 
+use llama_cpp_2::llama_backend::LlamaBackend;
+use llama_cpp_core::{CacheManager, Model, model::ModelConfig};
 use log::{error, info};
 use pyo3::{
-    Bound, Py, PyErr, PyResult, Python,
-    exceptions::PyRuntimeError,
-    pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
+    Bound, Py, PyErr, PyResult, Python, exceptions::PyRuntimeError, pyclass, pymethods,
+    types::PyType,
 };
-use std::sync::Arc;
-
-use llama_cpp_core::{
-    CacheManager, ModelConfig,
-    model::ModelLoadRequest,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    core::category::CATEGORY_LLAMA_CPP,
+    core::{
+        category::CATEGORY_LLAMA_CPP,
+        node_base::{InputSpec, InputType},
+    },
     error::Error,
     wrapper::{
         comfy::folder_paths::FolderPaths,
-        comfyui::{
-            PromptServer,
-            types::{NODE_BOOLEAN, NODE_INT, NODE_STRING},
-        },
+        comfyui::{PromptServer, types::NODE_STRING},
     },
 };
 
-/// 模型信息结构
-#[derive(Clone)]
-pub struct ModelHandleV2 {
-    pub cache_key: String,
-    pub model_path: String,
-    pub config: ModelConfig,
-}
-
 /// LlamaCpp Model Loader v2
-/// 
-//! ### 版本差异
-//! - **v1**: 每个推理节点独立加载模型，重复开销大
-//! - **v2**: 独立模型节点，通过缓存 key 传递，支持模型复用
 #[pyclass(subclass)]
 pub struct LlamaCppModelv2 {
     cache: Arc<CacheManager>,
@@ -69,13 +52,13 @@ impl LlamaCppModelv2 {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str,) {
-        (NODE_STRING,)  // 返回模型缓存 key
+        (NODE_STRING,) // 返回模型缓存 key
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
     fn return_names() -> (&'static str,) {
-        ("model_handle",)
+        ("model",)
     }
 
     #[classattr]
@@ -85,7 +68,7 @@ impl LlamaCppModelv2 {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "llama.cpp model loader v2 - Load and cache model for reuse"
+        "llama.cpp model loader v2"
     }
 
     #[classattr]
@@ -102,94 +85,123 @@ impl LlamaCppModelv2 {
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
         Python::attach(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
+            let model_list = Self::get_model_list();
 
+            let config = ModelConfig::default();
+
+            let spec = InputSpec::new()
                 // 模型路径
-                let model_list = Self::get_model_list();
-                required.set_item(
+                .with_required(
                     "model_path",
-                    (model_list, {
-                        let params = PyDict::new(py);
-                        params.set_item("tooltip", "Path to the GGUF model file")?;
-                        params
-                    }),
-                )?;
-
-                // GPU 配置
-                required.set_item(
-                    "main_gpu",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", 0)?;
-                        params.set_item("min", 0)?;
-                        params.set_item("step", 1)?;
-                        params.set_item("tooltip", "Main GPU index")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "n_gpu_layers",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", 0)?;
-                        params.set_item("min", 0)?;
-                        params.set_item("step", 1)?;
-                        params.set_item("max", 10000)?;
-                        params.set_item("tooltip", "Number of layers to offload to GPU (0 = CPU only)")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::list(model_list).tooltip("Path to the GGUF model file"),
+                )
+                .with_required(
                     "disable_gpu",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", false)?;
-                        params.set_item("tooltip", "Disable GPU acceleration")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
+                    InputType::bool()
+                        .default(config.disable_gpu)
+                        .label_on("Disable")
+                        .label_off("Enable")
+                        .tooltip("Disable GPU acceleration"),
+                )
+                // GPU 配置
+                .with_required(
+                    "main_gpu",
+                    InputType::int()
+                        .default(config.main_gpu)
+                        .min(0)
+                        .step_int(1)
+                        .tooltip("Main GPU index"),
+                )
+                .with_required(
+                    "n_gpu_layers",
+                    InputType::int()
+                        .default(config.n_gpu_layers as i64)
+                        .min(0)
+                        .max_int(10000)
+                        .step_int(1)
+                        .tooltip("Number of layers to offload to GPU (0 = CPU only)"),
+                )
+                // 多 GPU 设备
+                .with_optional(
+                    "devices",
+                    InputType::string().default(config.devices_str()).tooltip(
+                        "GPU devices to use (comma-separated, e.g., 0,1,2). Overrides main_gpu",
+                    ),
+                )
+                .with_required(
+                    "media_marker",
+                    InputType::string()
+                        .default(config.media_marker.unwrap_or_default())
+                        .tooltip("Media marker. If not provided, the default marker will be used."),
+                )
+                // .with_required(
+                //     "n_threads",
+                //     InputType::string().default(config.n_threads).tooltip("Number of threads to use during generation. Set to a specific value to limit CPU usage."),
+                // )
+                // // MoE 配置
+                // .with_optional(
+                //     "cmoe",
+                //     InputType::bool()
+                //         .default(config.cmoe)
+                //         .tooltip("Keep MoE layers on CPU"),
+                // )
+                // // 内存锁定
+                // .with_optional(
+                //     "use_mlock",
+                //     InputType::bool()
+                //         .default(config.use_mlock)
+                //         .tooltip("Force system to keep model in RAM (use mlock)"),
+                // )
+                .with_required(
                     "cache_model",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", true)?;
-                        params.set_item("tooltip", "Cache model in memory for reuse")?;
-                        params
-                    }),
-                )?;
+                    InputType::bool()
+                        .default(config.cache_model)
+                        .tooltip("Cache model in memory for reuse"),
+                )
+                // 详细信息
+                .with_optional(
+                    "verbose",
+                    InputType::bool()
+                        .default(config.verbose)
+                        .tooltip("Print detailed information about model loading"),
+                );
 
-                required
-            })?;
-
-            Ok(dict.into())
+            spec.build(py)
         })
     }
 
-    #[pyo3(name = "execute", signature = (model_path, main_gpu, n_gpu_layers, disable_gpu, cache_model))]
+    #[pyo3(name = "execute")]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
         model_path: String,
-        main_gpu: i32,
-        n_gpu_layers: u32,
+        mmproj_path: String,
         disable_gpu: bool,
+        main_gpu: i32,
+        devices: Option<String>,
+        n_gpu_layers: u32,
+        cmoe: Option<bool>,
+        use_mlock: Option<bool>,
+        media_marker: Option<String>,
         cache_model: bool,
-    ) -> PyResult<(String,)> {
+        verbose: bool,
+    ) -> PyResult<(HashMap<String, String>,)> {
         let result = self.load_model(
             model_path,
-            main_gpu,
-            n_gpu_layers,
+            mmproj_path,
             disable_gpu,
+            main_gpu,
+            devices,
+            n_gpu_layers,
+            cmoe,
+            use_mlock,
+            media_marker,
             cache_model,
+            verbose,
         );
 
         match result {
-            Ok(handle) => Ok((handle.cache_key,)),
+            Ok(v) => Ok(v),
             Err(e) => {
                 error!("LlamaCppModelv2 error: {e}");
                 if let Err(e) = self.send_error(py, "LlamaCppModelv2".to_string(), e.to_string()) {
@@ -206,11 +218,17 @@ impl LlamaCppModelv2 {
     fn load_model(
         &self,
         model_path: String,
-        main_gpu: i32,
-        n_gpu_layers: u32,
+        mmproj_path: String,
         disable_gpu: bool,
+        main_gpu: i32,
+        devices: Option<String>,
+        n_gpu_layers: u32,
+        cmoe: Option<bool>,
+        use_mlock: Option<bool>,
+        media_marker: Option<String>,
         cache_model: bool,
-    ) -> Result<ModelHandleV2, Error> {
+        verbose: bool,
+    ) -> Result<(HashMap<String, String>,), Error> {
         // 解析完整路径
         let base_models_dir = FolderPaths::default().model_path();
         let full_path = base_models_dir.join("LLM").join(&model_path);
@@ -222,59 +240,57 @@ impl LlamaCppModelv2 {
             )));
         }
 
-        // 生成缓存 key
-        let cache_key = format!(
-            "model_v2:{}:gpu{}:layers{}",
-            model_path,
-            main_gpu,
-            if disable_gpu { 0 } else { n_gpu_layers }
-        );
-
-        let config = ModelConfig {
-            main_gpu: if disable_gpu { -1 } else { main_gpu },
-            n_gpu_layers: if disable_gpu { 0 } else { n_gpu_layers },
+        // 解析 devices 参数（逗号分隔的设备索引列表）
+        let devices = if let Some(ref devices_str) = devices {
+            if !devices_str.trim().is_empty() {
+                devices_str
+                    .split(',')
+                    .filter_map(|s| s.trim().parse::<usize>().ok())
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
         };
 
-        info!("Loading model: {} with config: {:?}", model_path, config);
+        // 确保 n_threads 有合理的值（mmproj 编码需要足够线程）
+        let n_threads = std::thread::available_parallelism()
+            .map(|p| p.get() as i32)
+            .unwrap_or(4);
 
-        // 检查缓存
-        if cache_model {
-            if let Ok(Some(_)) = self.cache.get_data::<()>(&cache_key) {
-                info!("Model cache hit: {}", cache_key);
-                return Ok(ModelHandleV2 {
-                    cache_key,
-                    model_path,
-                    config,
-                });
-            }
-        }
+        let config = ModelConfig {
+            model_path: model_path.clone(),
+            mmproj_path: mmproj_path.clone(),
+            disable_gpu,
+            main_gpu,
+            devices,
+            n_gpu_layers,
+            cmoe: cmoe.unwrap_or(false),
+            use_mlock: use_mlock.unwrap_or(false),
+            n_threads,
+            media_marker,
+            cache_model,
+            verbose,
+        };
 
-        // 创建加载请求（实际加载由推理节点触发，这里只存储配置）
-        let _request = ModelLoadRequest::new(&full_path)
-            .with_main_gpu(config.main_gpu)
-            .with_gpu_layers(config.n_gpu_layers);
+        let cache_model_key = "comfyui:model";
+        let cache_mmproj_key = "comfyui:mmproj";
 
-        // 将配置存入缓存
-        if cache_model {
-            let params = vec![
-                model_path.clone(),
-                config.main_gpu.to_string(),
-                config.n_gpu_layers.to_string(),
-            ];
-            self.cache.force_update(
-                &cache_key,
-                &params,
-                Arc::new((model_path.clone(), config)),
-            ).map_err(|e| Error::LockError(e.to_string()))?;
-        }
+        // Initialize backend
+        let backend = LlamaBackend::init()?;
 
-        info!("Model loaded successfully: {}", cache_key);
+        // 将模型加载到缓存
+        let _model = Model::from_config(config.clone().into())
+            .with_cache_key(cache_model_key, Some(cache_mmproj_key))
+            .load_cache_llama_model(&backend)?;
 
-        Ok(ModelHandleV2 {
-            cache_key,
-            model_path,
-            config,
-        })
+        info!("Model loaded successfully: {}", model_path);
+
+        Ok((HashMap::from([
+            ("cache_model_key".to_string(), cache_model_key.to_string()),
+            ("cache_mmproj_key".to_string(), cache_mmproj_key.to_string()),
+        ]),))
     }
 
     /// 获取模型列表
