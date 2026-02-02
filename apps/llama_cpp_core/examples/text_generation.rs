@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut pipeline = Pipeline::try_new(pipeline_config)?;
 
-    let results = pipeline.infer().await?;
+    let results = pipeline.generate().await?;
 
     println!("{results:?}");
     Ok(())
