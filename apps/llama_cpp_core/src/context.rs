@@ -36,11 +36,6 @@ use crate::{
 /// Context Params
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContexParams {
-    /// Path to the multimodal projection file (e.g., "mmproj-model.bin")
-    /// Required for models with multimodal capabilities (e.g., vision or audio).
-    #[serde(default)]
-    pub mmproj_path: String,
-
     /// The system prompt (or instruction) that guides the model's behavior.
     /// This is typically a high-level directive (e.g., "You are a helpful assistant.").
     /// It is often static and set once per session.
@@ -126,8 +121,6 @@ impl ContexParams {
 impl Default for ContexParams {
     fn default() -> Self {
         Self {
-            mmproj_path: String::new(),
-
             // 文本生成参数
             system_prompt: String::new(),
             user_prompt: String::new(),
@@ -619,7 +612,7 @@ mod tests {
 
         // Load model
         let model_path = String::new();
-        let model = Model::new(model_path).load_cache_model(&backend)?;
+        let llama_model = Model::new(model_path, None).load_cache_llama_model(&backend)?;
 
         // Load sampler
         let sampler_config = SamplerConfig::default();
@@ -627,7 +620,7 @@ mod tests {
 
         // 上下文
         let contex_params = ContexParams::default();
-        let mut ctx = ContextWrapper::try_new(model.clone(), &backend, &contex_params)?;
+        let mut ctx = ContextWrapper::try_new(llama_model.clone(), &backend, &contex_params)?;
 
         // 创建历史消息
         let mut history_message = HistoryMessage::new();

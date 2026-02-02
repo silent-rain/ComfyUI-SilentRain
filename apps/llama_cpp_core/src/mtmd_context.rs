@@ -7,7 +7,7 @@
 //!
 //!
 
-use std::{ffi::CString, io::Write, sync::Arc, time::Duration};
+use std::{io::Write, sync::Arc, time::Duration};
 
 use tokio::sync::mpsc;
 
@@ -15,10 +15,7 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_batch::LlamaBatch,
     model::{LlamaChatMessage, LlamaModel, Special},
-    mtmd::{
-        MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams, MtmdInputText,
-        mtmd_default_marker,
-    },
+    mtmd::{MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdInputText},
     sampling::LlamaSampler,
 };
 use log::info;
@@ -29,16 +26,15 @@ use crate::{
     types::{FinishReason, GenerationOutput, StreamToken},
 };
 
-/// State of the MTMD CLI application.
-#[allow(missing_debug_implementations)]
+/// State of the MTMD application.
 pub struct MtmdContextWrapper {
-    model: Arc<LlamaModel>,
+    llama_model: Arc<LlamaModel>,
     /// Context parameters
     contex_params: ContexParams,
     /// Base context
     pub base_context: ContextWrapper,
     /// The MTMD context for multimodal processing.
-    pub mtmd_context: MtmdContext,
+    pub mtmd_context: Arc<MtmdContext>,
     /// The batch used for processing tokens.
     pub batch: LlamaBatch<'static>,
     /// The list of loaded bitmaps (images/audio).
@@ -53,18 +49,16 @@ unsafe impl Sync for MtmdContextWrapper {}
 impl MtmdContextWrapper {
     /// Creates a new MTMD context
     pub fn try_new(
-        model: Arc<LlamaModel>,
+        llama_model: Arc<LlamaModel>,
         base_context: ContextWrapper,
+        mtmd_context: Arc<MtmdContext>,
         contex_params: &ContexParams,
     ) -> Result<Self, Error> {
-        // Initialize MTMD context
-        let mtmd_context = Self::init_mtmd_context(model.clone(), contex_params)?;
-
         // Create batch for token processing
         let batch = LlamaBatch::new(contex_params.n_ctx as usize, 1);
 
         Ok(Self {
-            model,
+            llama_model,
             contex_params: contex_params.clone(),
             base_context,
             mtmd_context,
@@ -72,47 +66,6 @@ impl MtmdContextWrapper {
             bitmaps: Vec::new(),
             n_past: 0,
         })
-    }
-
-    /// Initialize MTMD context
-    pub fn init_mtmd_context(
-        model: Arc<LlamaModel>,
-        contex_params: &ContexParams,
-    ) -> Result<MtmdContext, Error> {
-        let use_gpu = !contex_params.disable_gpu;
-
-        // Create media marker CString
-        let media_marker = CString::new(
-            contex_params
-                .media_marker
-                .as_ref()
-                .unwrap_or(&mtmd_default_marker().to_string())
-                .clone(),
-        )
-        .map_err(|e| Error::InvalidInput {
-            field: "media_marker".into(),
-            message: e.to_string(),
-        })?;
-
-        // 确保 n_threads 有合理的值（mmproj 编码需要足够线程）
-        let n_threads = if contex_params.n_threads > 0 {
-            contex_params.n_threads
-        } else {
-            std::thread::available_parallelism()
-                .map(|p| p.get() as i32)
-                .unwrap_or(4)
-        };
-
-        let mtmd_params = MtmdContextParams {
-            use_gpu,
-            print_timings: contex_params.verbose,
-            n_threads,
-            media_marker,
-        };
-        let mtmd_context =
-            MtmdContext::init_from_file(&contex_params.mmproj_path, &model, &mtmd_params)?;
-
-        Ok(mtmd_context)
     }
 
     /// Loads media (image or audio) from the specified file path
@@ -132,10 +85,11 @@ impl MtmdContextWrapper {
     pub fn eval_messages(&mut self, msgs: Vec<LlamaChatMessage>) -> Result<(), Error> {
         info!("eval messages ...");
 
-        let chat_template = ContextWrapper::chat_template(self.model.clone(), &self.contex_params)?;
+        let chat_template =
+            ContextWrapper::chat_template(self.llama_model.clone(), &self.contex_params)?;
 
         let (formatted_chat_template, tokens) =
-            ContextWrapper::apply_chat_template(self.model.clone(), &chat_template, &msgs)?;
+            ContextWrapper::apply_chat_template(self.llama_model.clone(), &chat_template, &msgs)?;
 
         ContextWrapper::validate_tokens_size(
             tokens.len(),
@@ -170,7 +124,7 @@ impl MtmdContextWrapper {
             sampler.accept(token);
 
             // Check for end of generation
-            if self.model.is_eog_token(token) {
+            if self.llama_model.is_eog_token(token) {
                 println!();
                 break;
             }
@@ -184,7 +138,7 @@ impl MtmdContextWrapper {
 
             // let output_string = self.model.token_to_str(token, Special::Tokenize)?;
 
-            let output_bytes = self.model.token_to_bytes(token, Special::Tokenize)?;
+            let output_bytes = self.llama_model.token_to_bytes(token, Special::Tokenize)?;
             let mut output_string = String::with_capacity(32);
             let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
             results.push_str(&output_string);
@@ -246,13 +200,13 @@ impl MtmdContextWrapper {
             sampler.accept(token);
 
             // 检查是否为结束标记
-            if self.model.is_eog_token(token) {
+            if self.llama_model.is_eog_token(token) {
                 let _ = tx.send(StreamToken::finish(FinishReason::Stop));
                 break;
             }
 
             // 将 token 转换为字符串
-            let output_bytes = match self.model.token_to_bytes(token, Special::Tokenize) {
+            let output_bytes = match self.llama_model.token_to_bytes(token, Special::Tokenize) {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
@@ -372,7 +326,10 @@ mod tests {
 
         // Load model
         let model_path = String::new();
-        let model = Model::new(model_path).load_cache_model(&backend)?;
+        let mmproj_path = String::new();
+        let model = Model::new(model_path, mmproj_path);
+        let llama_model = model.load_cache_llama_model(&backend)?;
+        let mtmd_context = model.load_cache_mtmd_context(llama_model.clone())?;
 
         // Load sampler
         let sampler_config = SamplerConfig::default();
@@ -380,8 +337,9 @@ mod tests {
 
         // 上下文
         let contex_params = ContexParams::default();
-        let ctx = ContextWrapper::try_new(model.clone(), &backend, &contex_params)?;
-        let mut mtmd_ctx = MtmdContextWrapper::try_new(model.clone(), ctx, &contex_params)?;
+        let ctx = ContextWrapper::try_new(llama_model.clone(), &backend, &contex_params)?;
+        let mut mtmd_ctx =
+            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)?;
 
         // Load media files
         // for image_path in &params.images {

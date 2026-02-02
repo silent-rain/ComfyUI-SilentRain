@@ -182,7 +182,8 @@ impl Pipeline {
     /// 纯文本推理
     async fn generate_text(&mut self, config: &PipelineConfig) -> Result<GenerationOutput, Error> {
         // Load model
-        let model = Model::from_config(config.clone().into()).load_cache_model(&self.backend)?;
+        let model =
+            Model::from_config(config.clone().into()).load_cache_llama_model(&self.backend)?;
 
         // Load sampler
         let mut sampler = Sampler::load_sampler(&config.clone().into())?;
@@ -224,15 +225,18 @@ impl Pipeline {
     /// 媒体内容推理
     async fn generate_media(&mut self, config: &PipelineConfig) -> Result<GenerationOutput, Error> {
         // Load model
-        let model = Model::from_config(config.clone().into()).load_cache_model(&self.backend)?;
+        let model = Model::from_config(config.clone().into());
+        let llama_model = model.load_cache_llama_model(&self.backend)?;
+        let mtmd_context = model.load_cache_mtmd_context(llama_model.clone())?;
 
         // Load sampler
         let mut sampler = Sampler::load_sampler(&config.clone().into())?;
 
         // 上下文
         let contex_params: ContexParams = config.clone().into();
-        let ctx = ContextWrapper::try_new(model.clone(), &self.backend, &contex_params)?;
-        let mut mtmd_ctx = MtmdContextWrapper::try_new(model.clone(), ctx, &contex_params)?;
+        let ctx = ContextWrapper::try_new(llama_model.clone(), &self.backend, &contex_params)?;
+        let mut mtmd_ctx =
+            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)?;
 
         // Load media files
         // for image_path in &params.images {
@@ -243,6 +247,7 @@ impl Pipeline {
         //     mtmd_ctx.load_media_file(audio_path)?;
         // }
 
+        // 加载媒体资源
         for media in &config.medias {
             info!("Loading media: {}", media.media_type);
             mtmd_ctx.load_media_buffer(&media.data)?;
@@ -291,7 +296,7 @@ impl Pipeline {
     ) -> mpsc::UnboundedReceiver<StreamToken> {
         // Load model
         let model = Model::from_config(config.clone().into())
-            .load_cache_model(backend)
+            .load_cache_llama_model(backend)
             .expect("Failed to load model");
 
         // Load sampler
@@ -326,9 +331,13 @@ impl Pipeline {
         history_message: &HistoryMessage,
     ) -> mpsc::UnboundedReceiver<StreamToken> {
         // Load model
-        let model = Model::from_config(config.clone().into())
-            .load_cache_model(backend)
-            .expect("Failed to load model");
+        let model = Model::from_config(config.clone().into());
+        let llama_model = model
+            .load_cache_llama_model(backend)
+            .expect("Failed to load llama model");
+        let mtmd_context = model
+            .load_cache_mtmd_context(llama_model.clone())
+            .expect("Failed to load mtmd context");
 
         // Load sampler
         let mut sampler =
@@ -336,10 +345,11 @@ impl Pipeline {
 
         // 上下文
         let contex_params: ContexParams = config.clone().into();
-        let ctx = ContextWrapper::try_new(model.clone(), backend, &contex_params)
+        let ctx = ContextWrapper::try_new(llama_model.clone(), backend, &contex_params)
             .expect("Failed to create context");
-        let mut mtmd_ctx = MtmdContextWrapper::try_new(model.clone(), ctx, &contex_params)
-            .expect("Failed to create mtmd context");
+        let mut mtmd_ctx =
+            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)
+                .expect("Failed to create mtmd context");
 
         // Load media files
         for media in &config.medias {

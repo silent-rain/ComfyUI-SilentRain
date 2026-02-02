@@ -381,7 +381,6 @@ impl PipelineConfig {
 impl From<PipelineConfig> for ContexParams {
     fn from(pipeline_config: PipelineConfig) -> Self {
         ContexParams {
-            mmproj_path: pipeline_config.mmproj_path.clone(),
             system_prompt: pipeline_config.system_prompt.clone(),
             user_prompt: pipeline_config.user_prompt.clone(),
             n_threads: pipeline_config.n_threads,
@@ -405,12 +404,15 @@ impl From<PipelineConfig> for ModelConfig {
     fn from(pipeline_config: PipelineConfig) -> Self {
         ModelConfig {
             model_path: pipeline_config.model_path.clone(),
+            mmproj_path: pipeline_config.mmproj_path.clone(),
             disable_gpu: pipeline_config.disable_gpu,
             cmoe: pipeline_config.cmoe,
             use_mlock: pipeline_config.use_mlock,
             main_gpu: pipeline_config.main_gpu,
             devices: pipeline_config.devices,
             n_gpu_layers: pipeline_config.n_gpu_layers,
+            media_marker: pipeline_config.media_marker,
+            n_threads: pipeline_config.n_threads,
             cache_model: pipeline_config.cache_model,
             verbose: pipeline_config.verbose,
         }
