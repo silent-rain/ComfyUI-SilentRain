@@ -900,6 +900,7 @@ dependencies = [
  "encoding_rs",
  "hf-hub",
  "image",
+ "indexmap",
  "lazy_static",
  "llama-cpp-2",
  "llama_cpp_core",

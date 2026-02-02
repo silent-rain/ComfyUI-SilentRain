@@ -77,24 +77,35 @@ impl Default for ModelConfig {
 pub struct Model {
     config: ModelConfig,
     cache: Arc<CacheManager>,
+    cache_key: String,
 }
 
 impl Model {
     pub fn new(model_path: impl Into<String>) -> Self {
         let cache = global_cache().clone();
-
+        let model_path = model_path.into();
         Self {
             config: ModelConfig {
-                model_path: model_path.into(),
+                model_path: model_path.clone(),
                 ..ModelConfig::default()
             },
             cache,
+            cache_key: format!("model:{model_path}"),
         }
     }
 
     pub fn from_config(config: ModelConfig) -> Self {
         let cache = global_cache().clone();
-        Self { config, cache }
+        Self {
+            config: config.clone(),
+            cache,
+            cache_key: format!("model:{}", config.model_path),
+        }
+    }
+
+    pub fn with_cache_key(mut self, cache_key: impl Into<String>) -> Self {
+        self.cache_key = cache_key.into();
+        self
     }
 
     pub fn with_model_path(mut self, path: impl Into<String>) -> Self {
@@ -219,15 +230,8 @@ impl Model {
             return Ok(Arc::new(self.load_model(backend)?));
         }
 
-        let cache_key = format!("model:{}", self.config.model_path);
-        let params = vec![
-            self.config.model_path.clone(),
-            self.config.main_gpu.to_string(),
-            self.config.n_gpu_layers.to_string(),
-        ];
-
         // 尝试从缓存获取
-        if let Some(entry) = self.cache.get_data::<LlamaModel>(&cache_key)? {
+        if let Some(entry) = self.cache.get_data::<LlamaModel>(&self.cache_key)? {
             info!("Model cache hit: {:?}", self.config.model_path);
             return Ok(entry);
         }
@@ -235,9 +239,15 @@ impl Model {
         // 加载新模型
         let model = Arc::new(self.load_model(backend)?);
 
+        let params = vec![
+            self.config.model_path.clone(),
+            self.config.main_gpu.to_string(),
+            self.config.n_gpu_layers.to_string(),
+        ];
+
         // 缓存模型
         self.cache.insert(
-            &cache_key,
+            &self.cache_key,
             &params,
             model.clone() as Arc<dyn std::any::Any + Send + Sync>,
         )?;

@@ -45,6 +45,7 @@ rust-embed = { workspace = true, features = [
 tempfile = { workspace = true }
 image = { workspace = true }
 png = { workspace = true }
+indexmap = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }

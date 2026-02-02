@@ -15,10 +15,9 @@ use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing}
 use tracing::info;
 
 use crate::{
-    Backend, CacheManager, HistoryMessage, Model, PipelineConfig, Sampler,
+    Backend, HistoryMessage, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
-    global_cache,
     mtmd_context::MtmdContextWrapper,
     types::{GenerationOutput, MediaData, StreamToken},
     utils::image::Image,
@@ -27,7 +26,6 @@ use crate::{
 /// 推理流水线
 pub struct Pipeline {
     backend: Arc<LlamaBackend>,
-    cache: Arc<CacheManager>,
     config: PipelineConfig,
     history_message: HistoryMessage,
 }
@@ -35,9 +33,6 @@ pub struct Pipeline {
 impl Pipeline {
     /// 创建新的流水线
     pub fn try_new(config: PipelineConfig) -> Result<Self, Error> {
-        // 初始化缓存
-        let cache = global_cache().clone();
-
         // 初始化后端
         let backend = Backend::init_backend()?;
 
@@ -46,15 +41,9 @@ impl Pipeline {
 
         Ok(Self {
             backend: Arc::new(backend),
-            cache,
             config,
             history_message,
         })
-    }
-
-    pub fn config(mut self, config: PipelineConfig) -> Self {
-        self.config = config;
-        self
     }
 
     /// 将日志发送到 tracing
@@ -64,6 +53,11 @@ impl Pipeline {
 
         // 初始化 LogTracer 以转发 log 事件到 tracing
         tracing_log::LogTracer::init().expect("Failed to set logger");
+    }
+
+    pub fn with_config(mut self, config: PipelineConfig) -> Self {
+        self.config = config;
+        self
     }
 
     pub fn with_system_prompt(mut self, system_prompt: impl Into<String>) -> Self {
@@ -93,7 +87,9 @@ impl Pipeline {
     pub fn clear_media(&mut self) {
         self.config.medias.clear();
     }
+}
 
+impl Pipeline {
     /// Load image from the specified file path
     pub fn load_image_file(&mut self, path: &str) -> Result<(), Error> {
         let mut img = Image::from_file(path)?;
@@ -392,11 +388,6 @@ impl Pipeline {
         self.history_message.add_assistant(full_text.to_string())?;
 
         Ok(())
-    }
-
-    /// 清除模型缓存
-    pub fn clear_model_cache(&self) -> Result<(), Error> {
-        self.cache.clear()
     }
 }
 

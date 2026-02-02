@@ -15,10 +15,8 @@ use always_equal_proxy2::AlwaysEqualProxy2;
 
 pub mod category;
 pub mod node;
+pub mod node_base;
 pub mod utils;
-
-mod node_base;
-pub use node_base::InputSpec;
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
