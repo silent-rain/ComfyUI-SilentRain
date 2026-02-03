@@ -14,9 +14,13 @@ pub mod sampler;
 pub mod types;
 pub mod utils;
 
+// Re-export llama_cpp_2 types for building history messages
+pub use llama_cpp_2::model::LlamaChatMessage;
+
 pub use backend::Backend;
 pub use cache::{CacheManager, global_cache};
 pub use history::HistoryMessage;
 pub use model::Model;
 pub use pipeline::{Pipeline, PipelineConfig};
 pub use sampler::Sampler;
+pub use types::{GenerationOutput, GenerateRequest, MediaData, FinishReason, StreamToken, PromptMessageRole};

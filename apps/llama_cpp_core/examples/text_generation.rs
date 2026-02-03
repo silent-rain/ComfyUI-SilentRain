@@ -1,6 +1,8 @@
-//! 基础使用示例
+//! 基础使用示例 - 新版API
 
-use llama_cpp_core::{Pipeline, PipelineConfig, utils::log::init_logger};
+use std::sync::Arc;
+
+use llama_cpp_core::{Pipeline, PipelineConfig, types::GenerateRequest, utils::log::init_logger};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,11 +10,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model_path =
         "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-    let pipeline_config = PipelineConfig::new(model_path, None).with_user_prompt("你是谁？");
+    let pipeline_config = PipelineConfig::new(model_path, None);
 
-    let mut pipeline = Pipeline::try_new(pipeline_config)?;
+    let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
-    let results = pipeline.generate().await?;
+    // 使用新版API进行推理
+    let request = GenerateRequest::text("你是谁？");
+    let results = pipeline.generate(&request).await?;
 
     println!("{results:?}");
     Ok(())

@@ -1,6 +1,8 @@
-//! 视觉推理示例 - 性能优化版本
+//! 视觉推理示例 - 并发版本
 
-use llama_cpp_core::{Pipeline, PipelineConfig, utils::log::init_logger};
+use std::sync::Arc;
+
+use llama_cpp_core::{GenerateRequest, MediaData, Pipeline, PipelineConfig, utils::image::Image, utils::log::init_logger};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,12 +23,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // .with_use_mlock(true)  // 内存锁定配置 - 影响处理速度
         .with_image_max_resolution(768) // 图片最大分辨率配置
         .with_cache_model(true) // 模型缓存配置
-        .with_keep_context(true) // 保持上下文配置
-        // .with_user_prompt("请描述这张图片") // 提示词配置
+        .with_keep_context(false) // 关闭上下文保持，支持并发
         .with_media_marker("<start_of_image>") // 媒体标记配置
         .with_verbose(true);
 
-    let user_prompt = {
+    // 创建 Pipeline（注意：是 Arc，支持并发共享）
+    let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+
+    // 读取图片数据
+    let image_data = Image::from_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?.to_vec()?;
+    let media = MediaData::new_image(image_data);
+
+    // 第一个推理请求
+    let request1 = GenerateRequest::media(
         r#"
 任务：根据提供的单张人物图片，生成9个结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致
 
@@ -79,31 +88,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K
 
-...（共9条）"#
-    };
+...（共9条）"#,
+        vec![media.clone()]
+    ).with_system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。");
 
-    let mut pipeline = Pipeline::try_new(pipeline_config)?
-    .with_system_prompt("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-    .with_user_prompt(user_prompt);
+    // 第二个推理请求（可以并发执行）
+    let request2 = GenerateRequest::media(
+        "再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
+        vec![media]
+    ).with_system("你是专注生成套图模特提示词专家。");
 
-    // 图片推理
-    {
-        pipeline.load_image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
+    // 执行第一个推理
+    let results1 = pipeline.generate(&request1).await?;
+    println!("Response 1: {}", results1.text);
 
-        let results = pipeline.generate().await?;
+    println!("========================== 并发测试 ==========================");
 
-        println!("Response: {}", results.text);
+    // 并发执行多个请求
+    let pipeline_clone = Arc::clone(&pipeline);
+    let request_clone = request2.clone();
+    let task1 = tokio::spawn(async move {
+        pipeline_clone.generate(&request_clone).await
+    });
+
+    let pipeline_clone2 = Arc::clone(&pipeline);
+    let request_clone2 = request2.clone();
+    let task2 = tokio::spawn(async move {
+        pipeline_clone2.generate(&request_clone2).await
+    });
+
+    // 等待并发结果
+    let (result1, result2) = tokio::try_join!(task1, task2)?;
+    
+    match result1 {
+        Ok(output) => println!("并发结果 1: {}", output.text),
+        Err(e) => eprintln!("并发错误 1: {}", e),
     }
-
-    println!("========================== 缓存测试 ==========================");
-
-    // 缓存的使用
-    {
-        pipeline = pipeline.with_user_prompt("再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征");
-
-        let results = pipeline.generate().await?;
-
-        println!("Response: {}", results.text);
+    
+    match result2 {
+        Ok(output) => println!("并发结果 2: {}", output.text),
+        Err(e) => eprintln!("并发错误 2: {}", e),
     }
 
     Ok(())
