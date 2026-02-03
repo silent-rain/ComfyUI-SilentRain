@@ -1,6 +1,7 @@
 //! Request processing module for pipeline operations
 use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
 use tracing::{error, info};
+use uuid::Uuid;
 
 use crate::{HistoryMessage, MediaData, PromptMessageRole, error::Error, utils::image::Image};
 
@@ -10,7 +11,7 @@ pub struct GenerateRequest {
     /// 会话ID（可选）
     /// 用于在 Pipeline 内部自动管理历史上下文，实现并发隔离
     /// 不同 session_id 的对话历史完全隔离
-    pub session_id: Option<String>,
+    pub session_id: String,
 
     /// 历史消息
     pub history: Option<HistoryMessage>,
@@ -34,8 +35,9 @@ pub struct GenerateRequest {
 
 impl Default for GenerateRequest {
     fn default() -> Self {
+        let session_id = Uuid::new_v4().to_string();
         Self {
-            session_id: None,
+            session_id,
             history: None,
             system_prompt: None,
             user_prompt: String::new(),
@@ -59,18 +61,6 @@ impl GenerateRequest {
         }
     }
 
-    /// 创建带会话ID的纯文本请求
-    pub fn text_with_session(
-        user_prompt: impl Into<String>,
-        session_id: impl Into<String>,
-    ) -> Self {
-        Self {
-            user_prompt: user_prompt.into(),
-            session_id: Some(session_id.into()),
-            ..Default::default()
-        }
-    }
-
     /// 创建多模态请求
     pub fn media(media: MediaData) -> Self {
         Self {
@@ -87,7 +77,7 @@ impl GenerateRequest {
 
     /// 设置会话ID，用于自动管理历史上下文
     pub fn with_session_id(mut self, session_id: impl Into<String>) -> Self {
-        self.session_id = Some(session_id.into());
+        self.session_id = session_id.into();
         self
     }
 
@@ -219,9 +209,9 @@ impl GenerateRequest {
             // 外部历史
             messages.extend(history.messages());
         }
-        if let Some(session_id) = self.session_id.clone() {
+        if !self.session_id.clone().is_empty() {
             // 内部历史
-            let history = HistoryMessage::from_cache(session_id)?;
+            let history = HistoryMessage::from_cache(self.session_id.clone())?;
             messages.extend(history.messages());
         }
 

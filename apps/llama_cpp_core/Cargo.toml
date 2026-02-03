@@ -51,3 +51,4 @@ encoding_rs = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 infer = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }

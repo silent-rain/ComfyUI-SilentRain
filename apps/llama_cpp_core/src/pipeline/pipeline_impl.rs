@@ -106,11 +106,11 @@ impl Pipeline {
         request: &GenerateRequest,
         assistant_response: &str,
     ) -> Result<(), Error> {
-        if let Some(ref session_id) = request.session_id {
+        if !request.session_id.is_empty() {
             if request.keep_context {
-                self.save_session_history(session_id, request, assistant_response)?;
+                self.save_session_history(&request.session_id, request, assistant_response)?;
             } else {
-                self.clear_session_history(session_id)?;
+                self.clear_session_history(&request.session_id)?;
             }
         }
         Ok(())
