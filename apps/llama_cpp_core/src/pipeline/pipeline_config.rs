@@ -392,9 +392,7 @@ impl From<PipelineConfig> for ContexParams {
             pooling_type: pipeline_config.pooling_type.clone(),
             chat_template: pipeline_config.chat_template.clone(),
             media_marker: pipeline_config.media_marker.clone(),
-            disable_gpu: pipeline_config.disable_gpu,
             keep_context: pipeline_config.keep_context,
-            cache_model: pipeline_config.cache_model,
             verbose: pipeline_config.verbose,
         }
     }
@@ -432,5 +430,28 @@ impl From<PipelineConfig> for SamplerConfig {
             penalty_freq: pipeline_config.penalty_freq,
             penalty_present: pipeline_config.penalty_present,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple() -> anyhow::Result<()> {
+        let pipeline_config = PipelineConfig::default();
+
+        let s = serde_json::to_string(&pipeline_config)?;
+        println!("{s:?}\n\n");
+
+        let model_config: ModelConfig = serde_json::from_str(&s)?;
+        println!("{model_config:#?}\n\n");
+
+        let sampler_config: SamplerConfig = serde_json::from_str(&s)?;
+        println!("{sampler_config:#?}\n\n");
+
+        let contex_params: ContexParams = serde_json::from_str(&s)?;
+        println!("{contex_params:#?}\n\n");
+        Ok(())
     }
 }

@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         pipeline = pipeline.with_user_prompt("再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征");
 
-        let results = pipeline.generate2().await?;
+        let results = pipeline.generate().await?;
 
         println!("Response: {}", results.text);
     }

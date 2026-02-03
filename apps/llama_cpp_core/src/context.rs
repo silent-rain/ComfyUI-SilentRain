@@ -21,6 +21,7 @@ use llama_cpp_2::{
     model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
     mtmd::mtmd_default_marker,
     sampling::LlamaSampler,
+    timing::LlamaTimings,
     token::LlamaToken,
 };
 use serde::{Deserialize, Serialize};
@@ -28,9 +29,7 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    types::{
-        FinishReason, GenerationOutput, MediaData, PoolingTypeMode, PromptMessageRole, StreamToken,
-    },
+    types::{FinishReason, MediaData, PoolingTypeMode, PromptMessageRole, StreamToken},
 };
 
 /// Context Params
@@ -91,17 +90,9 @@ pub struct ContexParams {
     #[serde(default)]
     pub media_marker: Option<String>,
 
-    /// Disable offloading layers to the gpu
-    #[serde(default)]
-    pub disable_gpu: bool,
-
     /// Whether to keep context between requests
     #[serde(default)]
     pub keep_context: bool,
-
-    /// Whether to cache model between requests
-    #[serde(default)]
-    pub cache_model: bool,
 
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
@@ -138,9 +129,7 @@ impl Default for ContexParams {
             chat_template: None,
             media_marker: Some("<__media__>".to_string()), // 默认媒体标记
 
-            disable_gpu: true,
             keep_context: false,
-            cache_model: false,
 
             verbose: false,
         }
@@ -236,108 +225,23 @@ impl ContextWrapper {
         Ok(())
     }
 
-    /// Generates a response by sampling tokens from the model
-    pub fn generate_response(
-        &mut self,
-        // context: &mut LlamaContext,
-        sampler: &mut LlamaSampler,
-    ) -> Result<GenerationOutput, Error> {
-        // The `Decoder`
-        let mut decoder = encoding_rs::UTF_8.new_decoder();
-        let max_tokens = self.contex_params.max_predict();
-        let t_main_start = ggml_time_us();
-
-        let mut n_cur = self.batch.n_tokens();
-        let mut tokens_generated = 0;
-        let eos_token = self.model.token_eos();
-        let mut results = String::new();
-
-        // 循环生成 token，直到达到最大长度 n_predict
-        while n_cur < max_tokens {
-            // 使用采样器从上下文中采样下一个 token
-            // batch.n_tokens() - 1 表示获取最后一个 token 的 logits
-            let token = sampler.sample(&self.context, self.batch.n_tokens() - 1);
-
-            // 接受采样的 token，更新采样器的内部状态
-            sampler.accept(token);
-
-            // 检查是否为结束标记 (End of Stream)
-            if token == eos_token {
-                println!();
-                break; // 如果是结束标记，则退出循环
-            }
-
-            // 将 token 转换为字符串
-            // let output_string = self
-            //     .model
-            //     .tokens_to_str(&[token], Special::Tokenize)
-            //     .unwrap_or("口".to_string());
-
-            // let output_string = self.model.token_to_str(token, Special::Tokenize)?;
-
-            let output_bytes = self.model.token_to_bytes(token, Special::Tokenize)?;
-            let mut output_string = String::with_capacity(32);
-            let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
-            results.push_str(&output_string);
-
-            // 清空批处理对象，准备添加新的 token
-            self.batch.clear();
-            // 添加新生成的 token 到批处理中
-            // 参数：token值, 位置索引, 序列ID数组, 是否需要计算 logits (true)
-            self.batch.add(token, n_cur, &[0], true)?;
-
-            // 解码新添加的 token，计算下一个 token 的概率分布
-            self.context.decode(&mut self.batch).map_err(|e| {
-                error!("failed to eval, {e}");
-                e
-            })?;
-
-            // 增加当前位置索引，为下一个 token 做准备
-            n_cur += 1;
-            tokens_generated += 1;
-
-            if self.contex_params.verbose {
-                // 打印解码后的字符串，不换行
-                print!("{output_string}");
-                // 刷新标准输出，确保文本立即显示
-                std::io::stdout().flush()?;
-            }
-        }
-
-        let t_main_end = ggml_time_us();
-        let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
-        info!(
-            "Generated {} tokens in {:.2}s ({:.2} t/s)",
-            tokens_generated,
-            duration.as_secs_f32(),
-            tokens_generated as f32 / duration.as_secs_f32().max(0.001)
-        );
-
-        info!("{}", self.context.timings());
-
-        Ok(GenerationOutput {
-            text: results,
-            tokens_generated,
-            finish_reason: if n_cur >= max_tokens {
-                FinishReason::Length
-            } else {
-                FinishReason::Stop
-            },
-        })
-    }
-
     /// 流式生成响应，通过 channel 返回 token
-    pub fn generate_response_channel(
+    pub fn generate_response(
         &mut self,
         sampler: &mut LlamaSampler,
     ) -> mpsc::UnboundedReceiver<StreamToken> {
         let (tx, rx) = mpsc::unbounded_channel();
+        let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
         let eos_token = self.model.token_eos();
         let verbose = self.contex_params.verbose;
+        let t_main_start = ggml_time_us();
 
         let mut n_cur = self.batch.n_tokens();
+        let mut tokens_generated = 0;
+        let mut results = String::new();
 
+        // 循环生成 token，直到达到最大长度 max_tokens
         while n_cur < max_tokens {
             // 采样下一个 token
             // batch.n_tokens() - 1 表示获取最后一个 token 的 logits
@@ -346,6 +250,19 @@ impl ContextWrapper {
 
             // 检查是否为结束标记
             if token == eos_token {
+                {
+                    // 记录结束时间并计算持续时间
+                    let t_main_end = ggml_time_us();
+                    let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
+                    info!(
+                        "Generated {} tokens in {:.2}s ({:.2} t/s)",
+                        tokens_generated,
+                        duration.as_secs_f32(),
+                        tokens_generated as f32 / duration.as_secs_f32().max(0.001)
+                    );
+
+                    info!("{}", self.context.timings());
+                }
                 let _ = tx.send(StreamToken::finish(FinishReason::Stop));
                 break;
             }
@@ -359,7 +276,6 @@ impl ContextWrapper {
                 }
             };
             let mut output_string = String::with_capacity(32);
-            let mut decoder = encoding_rs::UTF_8.new_decoder();
             let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
 
             if verbose {
@@ -368,12 +284,15 @@ impl ContextWrapper {
             }
 
             // 发送 token，如果接收端关闭则停止生成
+            results.push_str(&output_string);
             if tx.send(StreamToken::content(output_string)).is_err() {
                 break;
             }
 
             // 准备下一个 batch
             self.batch.clear();
+            // 添加新生成的 token 到批处理中
+            // 参数：token值, 位置索引, 序列ID数组, 是否需要计算 logits (true)
             if let Err(e) = self.batch.add(token, n_cur, &[0], true) {
                 let _ = tx.send(StreamToken::error(format!("Batch add error: {}", e)));
                 break;
@@ -386,6 +305,7 @@ impl ContextWrapper {
             }
 
             n_cur += 1;
+            tokens_generated += 1;
 
             // 检查是否达到最大 token 数
             if n_cur >= max_tokens {
@@ -418,6 +338,9 @@ impl ContextWrapper {
     /// Clear the KV cache
     pub fn clear_kv_cache(&mut self) {
         self.context.clear_kv_cache();
+    }
+    pub fn timings(&mut self) -> LlamaTimings {
+        self.context.timings()
     }
 }
 
@@ -604,9 +527,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    #[tokio::test]
     #[ignore]
-    fn test_simple() -> anyhow::Result<()> {
+    async fn test_simple() -> anyhow::Result<()> {
         // Initialize backend
         let backend = Backend::init_backend()?;
 
@@ -637,7 +560,17 @@ mod tests {
         ctx.eval_messages(msgs)?;
 
         // 生成响应
-        let results = ctx.generate_response(&mut sampler)?;
+        let mut rx = ctx.generate_response(&mut sampler);
+
+        // 接收响应
+        let mut full_text = String::new();
+        while let Some(token) = rx.recv().await {
+            match token {
+                StreamToken::Content(text) => full_text.push_str(&text),
+                StreamToken::Finish(reason) => full_text.push_str(&reason.to_string()),
+                StreamToken::Error(msg) => return Err(anyhow::anyhow!(msg)),
+            }
+        }
 
         // 将上下文信息添加到历史消息中
         {
@@ -645,10 +578,10 @@ mod tests {
 
             // 每轮聊天都添加用户提示和助手响应
             history_message.add_user(contex_params.user_prompt)?;
-            history_message.add_assistant(results.text.clone())?;
+            history_message.add_assistant(full_text.clone())?;
         }
 
-        println!("{results:?}");
+        println!("{full_text:?}");
         Ok(())
     }
 }
