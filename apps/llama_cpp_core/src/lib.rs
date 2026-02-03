@@ -21,8 +21,6 @@ pub use backend::Backend;
 pub use cache::{CacheManager, global_cache};
 pub use history::HistoryMessage;
 pub use model::Model;
-pub use pipeline::{Pipeline, PipelineConfig};
+pub use pipeline::{GenerateRequest, Pipeline, PipelineConfig};
 pub use sampler::Sampler;
-pub use types::{
-    FinishReason, GenerateRequest, GenerationOutput, MediaData, PromptMessageRole, StreamToken,
-};
+pub use types::{FinishReason, GenerationOutput, MediaData, PromptMessageRole, StreamToken};

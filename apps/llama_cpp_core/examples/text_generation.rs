@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use llama_cpp_core::{Pipeline, PipelineConfig, types::GenerateRequest, utils::log::init_logger};
+use llama_cpp_core::{GenerateRequest, Pipeline, PipelineConfig, utils::log::init_logger};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +14,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
-    // 使用新版API进行推理
     let request = GenerateRequest::text("你是谁？");
     let results = pipeline.generate(&request).await?;
 

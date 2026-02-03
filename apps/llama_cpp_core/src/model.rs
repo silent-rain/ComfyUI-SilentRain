@@ -236,14 +236,11 @@ impl Model {
             model_params = model_params.with_main_gpu(self.config.main_gpu);
             // Enable single GPU mode
             model_params = model_params.with_split_mode(LlamaSplitMode::None);
-        }
-
-        if !self.config.disable_gpu {
             model_params = model_params.with_n_gpu_layers(self.config.n_gpu_layers);
-        }
 
-        // 设置 use_mlock
-        model_params = model_params.with_use_mlock(self.config.use_mlock);
+            // 设置 use_mlock
+            model_params = model_params.with_use_mlock(self.config.use_mlock);
+        }
 
         let mut model_params = pin!(model_params);
 
@@ -257,6 +254,8 @@ impl Model {
         }
 
         // Load model
+        info!("Loading model from file: {:?}", self.config.model_path);
+        info!("Loading model model_params: {:?}", model_params);
         let model = LlamaModel::load_from_file(backend, &self.config.model_path, &model_params)
             .map_err(|e| {
                 error!("Failed to load model: {:?}", e);

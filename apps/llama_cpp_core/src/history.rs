@@ -30,28 +30,32 @@ impl HistoryMessage {
         self.megs.extend(msgs);
     }
 
-    pub fn add_assistant(&mut self, msg: String) -> Result<(), Error> {
+    pub fn add_assistant(&mut self, msg: impl Into<String>) -> Result<(), Error> {
         let assistant_message =
-            LlamaChatMessage::new(PromptMessageRole::Assistant.to_string(), msg.clone())?;
+            LlamaChatMessage::new(PromptMessageRole::Assistant.to_string(), msg.into())?;
         self.add(assistant_message);
         Ok(())
     }
 
-    pub fn add_user(&mut self, msg: String) -> Result<(), Error> {
-        let user_message = LlamaChatMessage::new(PromptMessageRole::User.to_string(), msg.clone())?;
+    pub fn add_user(&mut self, msg: impl Into<String>) -> Result<(), Error> {
+        let user_message = LlamaChatMessage::new(PromptMessageRole::User.to_string(), msg.into())?;
         self.add(user_message);
         Ok(())
     }
 
-    pub fn add_system(&mut self, msg: String) -> Result<(), Error> {
+    pub fn add_system(&mut self, msg: impl Into<String>) -> Result<(), Error> {
         let system_message =
-            LlamaChatMessage::new(PromptMessageRole::System.to_string(), msg.clone())?;
+            LlamaChatMessage::new(PromptMessageRole::System.to_string(), msg.into())?;
         self.add(system_message);
         Ok(())
     }
 
-    pub fn add_custom(&mut self, role: PromptMessageRole, msg: String) -> Result<(), Error> {
-        let custom_message = LlamaChatMessage::new(role.to_string(), msg.clone())?;
+    pub fn add_custom(
+        &mut self,
+        role: PromptMessageRole,
+        msg: impl Into<String>,
+    ) -> Result<(), Error> {
+        let custom_message = LlamaChatMessage::new(role.to_string(), msg.into())?;
         self.add(custom_message);
         Ok(())
     }

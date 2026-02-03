@@ -10,19 +10,17 @@
 use std::sync::Arc;
 
 use llama_cpp_2::model::LlamaChatMessage;
-use llama_cpp_2::mtmd::mtmd_default_marker;
 use tokio::sync::mpsc;
 
 use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing};
 use tracing::{error, info};
 
 use crate::{
-    Backend, Model, PipelineConfig, Sampler,
+    Backend, GenerateRequest, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
     mtmd_context::MtmdContextWrapper,
-    types::{GenerateRequest, GenerationOutput, MediaData, PromptMessageRole, StreamToken},
-    utils::image::Image,
+    types::{GenerationOutput, MediaData, StreamToken},
 };
 
 /// 推理流水线
@@ -59,96 +57,10 @@ impl Pipeline {
         self.config = config;
         self
     }
-
-    pub fn with_system_prompt(mut self, system_prompt: impl Into<String>) -> Self {
-        self.config.system_prompt = system_prompt.into();
-        self
-    }
-
-    /// 获取配置
-    pub fn config(&self) -> &PipelineConfig {
-        &self.config
-    }
 }
 
 impl Pipeline {
-    /// Load image from the specified file path
-    pub fn load_image_file(&self, path: &str) -> Result<MediaData, Error> {
-        let mut img = Image::from_file(path)?;
-
-        let max_resolution = img.longest().min(self.config.image_max_resolution);
-        img = img.resize_to_longest(max_resolution)?;
-
-        info!(
-            "image size width: {}, height: {}",
-            img.width(),
-            img.height()
-        );
-
-        let data = img.to_vec()?;
-        Ok(MediaData::new_image(data))
-    }
-
-    /// Load image from the specified buffer
-    pub fn load_image_buffer(&self, data: &[u8]) -> Result<MediaData, Error> {
-        Ok(MediaData::new_image(data.to_vec()))
-    }
-
-    /// 根据请求准备消息
-    ///
-    /// 将 GenerateRequest 转换为 LlamaChatMessage 列表
-    pub fn prepare_messages(
-        &self,
-        request: &GenerateRequest,
-    ) -> Result<Vec<LlamaChatMessage>, Error> {
-        let mut messages = Vec::new();
-
-        // 系统消息：优先使用请求中的，其次使用配置中的
-        let system_prompt = request.system_prompt.as_ref().cloned().or_else(|| {
-            if self.config.system_prompt.is_empty() {
-                None
-            } else {
-                Some(self.config.system_prompt.clone())
-            }
-        });
-
-        if let Some(system) = system_prompt {
-            messages.push(LlamaChatMessage::new(
-                PromptMessageRole::System.to_string(),
-                system,
-            )?);
-        }
-
-        // 用户消息：多模态时添加媒体标记
-        let user_prompt = if request.is_multimodal() {
-            let default_marker = mtmd_default_marker().to_string();
-            let media_marker = self.config.media_marker.as_ref().unwrap_or(&default_marker);
-            let markers = media_marker.repeat(request.medias.len());
-            format!(
-                "{} {}",
-                request.user_prompt.replace(&default_marker, ""),
-                markers
-            )
-        } else {
-            request.user_prompt.clone()
-        };
-
-        // 添加历史消息（如果有）
-        // 注意：历史消息完全由调用者管理，Pipeline 无状态
-        if !request.history.is_empty() {
-            messages.extend(request.history.clone());
-        }
-
-        info!("User prompt: {}", user_prompt);
-        messages.push(LlamaChatMessage::new(
-            PromptMessageRole::User.to_string(),
-            user_prompt,
-        )?);
-
-        Ok(messages)
-    }
-
-    /// 执行推理 - 新版API（支持并发）
+    /// 执行推理
     ///
     /// # Arguments
     /// * `request` - 生成请求
@@ -159,8 +71,12 @@ impl Pipeline {
     /// let result = pipeline.generate(&request).await?;
     /// ```
     pub async fn generate(&self, request: &GenerateRequest) -> Result<GenerationOutput, Error> {
-        let msgs = self.prepare_messages(request)?;
-        let mut rx = self.generate_with_messages(&msgs, &request.medias).await?;
+        let msgs = request.to_messages()?;
+        let mut rx = if !request.is_multimodal() {
+            self.generate_text_stream(&msgs)?
+        } else {
+            self.generate_media_stream(&msgs, &request.medias)?
+        };
 
         let mut full_text = String::new();
         while let Some(token) = rx.recv().await {
@@ -174,7 +90,7 @@ impl Pipeline {
         Ok(GenerationOutput::new(full_text))
     }
 
-    /// 执行流式推理 - 新版API（支持并发）
+    /// 执行流式推理
     ///
     /// # Arguments
     /// * `request` - 生成请求
@@ -185,21 +101,12 @@ impl Pipeline {
         &self,
         request: &GenerateRequest,
     ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
-        let msgs = self.prepare_messages(request)?;
-        let rx = self.generate_with_messages(&msgs, &request.medias).await?;
-        Ok(rx)
-    }
+        let msgs = request.to_messages()?;
 
-    /// 基于消息的推理内部实现
-    async fn generate_with_messages(
-        &self,
-        msgs: &[LlamaChatMessage],
-        medias: &[MediaData],
-    ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
-        let rx = if medias.is_empty() {
-            self.generate_text_stream(msgs)?
+        let rx = if !request.is_multimodal() {
+            self.generate_text_stream(&msgs)?
         } else {
-            self.generate_media_stream(msgs, medias)?
+            self.generate_media_stream(&msgs, &request.medias)?
         };
         Ok(rx)
     }
@@ -299,36 +206,25 @@ impl Pipeline {
         // 使用 channel 方式生成响应
         Ok(mtmd_ctx.generate_response(&mut sampler))
     }
-
-    /// 执行推理 - 旧版API（向后兼容）
-    ///
-    /// 使用配置中的 system_prompt 和 user_prompt 进行推理
-    ///
-    /// **注意：** 此 API 不适用于并发场景，且不再维护历史消息。
-    /// 建议使用 `generate` 方法并自行管理历史消息。
-    pub async fn generate_legacy(&self) -> Result<GenerationOutput, Error> {
-        let request = GenerateRequest {
-            system_prompt: if self.config.system_prompt.is_empty() {
-                None
-            } else {
-                Some(self.config.system_prompt.clone())
-            },
-            user_prompt: self.config.user_prompt.clone(),
-            history: Vec::new(),
-            medias: self.config.medias.clone(),
-        };
-
-        let result = self.generate(&request).await?;
-
-        Ok(result)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::log::init_logger;
+    use crate::{HistoryMessage, Model, utils::log::init_logger};
 
     use super::*;
+
+    #[test]
+    fn test_check_gpu() -> anyhow::Result<()> {
+        init_logger();
+        // 检测设备是否可用，如果没有 GPU 则使用 CPU
+        let model = Model::new("", None::<String>);
+        let devices = model.devices();
+
+        println!("devices list {devices:?}");
+        println!("Detected {} GPU device(s)", devices.len());
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_simple() -> anyhow::Result<()> {
@@ -336,7 +232,12 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None);
+
+        let pipeline_config = PipelineConfig::new(model_path, None)
+            .with_disable_gpu(false)
+            .with_main_gpu(0)
+            .with_n_gpu_layers(10)
+            .with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
@@ -356,17 +257,19 @@ mod tests {
         let mmproj_path =
             "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf"
                 .to_string();
+
         let pipeline_config = PipelineConfig::new(model_path, Some(mmproj_path))
             .with_disable_gpu(false)
+            .with_main_gpu(0)
+            .with_n_gpu_layers(10)
             .with_media_marker("<start_of_image>")
             .with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
-        let image_data =
-            Image::from_file("/home/one/Downloads/cy/00089-915810967.png")?.to_vec()?;
-        let request =
-            GenerateRequest::media("描述这张图片", vec![MediaData::new_image(image_data)]);
+        let request = GenerateRequest::text("描述这张图片")
+            .with_media_file("/home/one/Downloads/cy/00089-915810967.png")?
+            .with_media_marker("<start_of_image>");
 
         let results = pipeline.generate(&request).await?;
 
@@ -426,33 +329,31 @@ mod tests {
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
         // 外部管理历史消息
-        let mut history = Vec::new();
+        let mut history = HistoryMessage::new();
 
         // 第一轮对话
-        let request1 =
-            GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
-        let result1 = pipeline.generate(&request1).await?;
-        println!("Assistant: {}", result1.text);
+        {
+            let request1 =
+                GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
+            let result1 = pipeline.generate(&request1).await?;
+            println!("Assistant: {}", result1.text);
 
-        // 更新历史（外部管理）
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::User.to_string(),
-            "你好，我叫小明".to_string(),
-        )?);
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::Assistant.to_string(),
-            result1.text.clone(),
-        )?);
+            // 更新历史（外部管理）
+            history.add_user("你好，我叫小明")?;
+            history.add_assistant(result1.text.clone())?;
+        }
 
         // 第二轮对话（带历史）
-        let request2 = GenerateRequest::text("我叫什么名字？")
-            .with_system("你是一个 helpful 的助手")
-            .with_history(history.clone());
-        let result2 = pipeline.generate(&request2).await?;
-        println!("Assistant: {}", result2.text);
+        {
+            let request2 = GenerateRequest::text("我叫什么名字？")
+                .with_system("你是一个 helpful 的助手")
+                .with_history(history.clone());
+            let result2 = pipeline.generate(&request2).await?;
+            println!("Assistant: {}", result2.text);
 
-        // 验证模型是否记住了名字
-        assert!(result2.text.contains("小明"));
+            // 验证模型是否记住了名字
+            assert!(result2.text.contains("小明"));
+        }
 
         Ok(())
     }

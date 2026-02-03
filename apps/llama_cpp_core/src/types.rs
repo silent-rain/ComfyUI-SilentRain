@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 /// 对话消息角色枚举
-#[derive(Debug, Clone, PartialEq, EnumString, Display)]
+#[derive(Debug, Clone, PartialEq, EnumString)]
 #[strum(serialize_all = "kebab-case")]
 pub enum PromptMessageRole {
     /// 系统角色（用于初始化或系统级指令）
@@ -21,6 +21,17 @@ pub enum PromptMessageRole {
     /// 可选：自定义角色（如多AI代理场景）
     #[strum(transparent)]
     Custom(String),
+}
+
+impl std::fmt::Display for PromptMessageRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PromptMessageRole::System => write!(f, "System"),
+            PromptMessageRole::User => write!(f, "User"),
+            PromptMessageRole::Assistant => write!(f, "Assistant"),
+            PromptMessageRole::Custom(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 impl PromptMessageRole {
@@ -155,64 +166,6 @@ impl std::fmt::Display for FinishReason {
             FinishReason::Length => write!(f, "length"),
             FinishReason::Error => write!(f, "error"),
         }
-    }
-}
-
-/// 生成请求结构体
-#[derive(Debug, Clone)]
-pub struct GenerateRequest {
-    /// 系统提示词（可选）
-    pub system_prompt: Option<String>,
-    /// 用户提示词
-    pub user_prompt: String,
-    /// 历史消息（可选）
-    pub history: Vec<llama_cpp_2::model::LlamaChatMessage>,
-    /// 媒体数据（多模态场景）
-    pub medias: Vec<MediaData>,
-}
-
-impl GenerateRequest {
-    /// 创建纯文本请求
-    pub fn text(user_prompt: impl Into<String>) -> Self {
-        Self {
-            system_prompt: None,
-            user_prompt: user_prompt.into(),
-            history: Vec::new(),
-            medias: Vec::new(),
-        }
-    }
-
-    /// 创建多模态请求
-    pub fn media(user_prompt: impl Into<String>, medias: Vec<MediaData>) -> Self {
-        Self {
-            system_prompt: None,
-            user_prompt: user_prompt.into(),
-            history: Vec::new(),
-            medias,
-        }
-    }
-
-    /// 设置系统提示词
-    pub fn with_system(mut self, system: impl Into<String>) -> Self {
-        self.system_prompt = Some(system.into());
-        self
-    }
-
-    /// 设置历史消息
-    pub fn with_history(mut self, history: Vec<llama_cpp_2::model::LlamaChatMessage>) -> Self {
-        self.history = history;
-        self
-    }
-
-    /// 添加媒体
-    pub fn with_media(mut self, media: MediaData) -> Self {
-        self.medias.push(media);
-        self
-    }
-
-    /// 是否为多模态请求
-    pub fn is_multimodal(&self) -> bool {
-        !self.medias.is_empty()
     }
 }
 

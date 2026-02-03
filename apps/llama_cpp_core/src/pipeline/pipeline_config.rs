@@ -3,10 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::ContexParams,
-    model::ModelConfig,
-    sampler::SamplerConfig,
-    types::{MediaData, PoolingTypeMode},
+    context::ContexParams, model::ModelConfig, sampler::SamplerConfig, types::PoolingTypeMode,
 };
 
 /// 流水线配置
@@ -20,18 +17,6 @@ pub struct PipelineConfig {
     /// Required for models with multimodal capabilities (e.g., vision or audio).
     #[serde(default)]
     pub mmproj_path: String,
-
-    /// The system prompt (or instruction) that guides the model's behavior.
-    /// This is typically a high-level directive (e.g., "You are a helpful assistant.").
-    /// It is often static and set once per session.
-    #[serde(default)]
-    pub system_prompt: String,
-
-    /// The user-provided input or query to the model.
-    /// This is the dynamic part of the prompt that changes with each interaction.
-    /// May include media markers - else they will be added automatically.
-    #[serde(default)]
-    pub user_prompt: String,
 
     /// Controls diversity via top-k sampling.
     /// Higher values mean more diverse outputs.
@@ -166,13 +151,6 @@ pub struct PipelineConfig {
     #[serde(default)]
     pub chat_template: Option<String>,
 
-    /// Path to image file(s)
-    #[serde(default)]
-    pub medias: Vec<MediaData>,
-
-    /// Image max resolution
-    pub image_max_resolution: u32,
-
     // *************************
     /// Whether to normalise the produced embeddings
     #[serde(default)]
@@ -200,10 +178,6 @@ impl Default for PipelineConfig {
             // 多模态投影文件路径（需用户指定，默认留空）
             mmproj_path: String::new(),
 
-            // 文本生成参数
-            system_prompt: String::new(), // 描述模型行为的系统级指令（例如“你是一个有用的助手”）。
-            user_prompt: String::new(),   // 用户提供的输入或查询
-
             // 采样参数
             top_k: 40,        // 默认 top-k 采样值
             top_p: 0.95,      // 默认 top-p 采样值
@@ -212,8 +186,8 @@ impl Default for PipelineConfig {
             seed: -1,         // 默认随机种子（-1 表示随机）
 
             // 线程和批处理参数
-            n_threads: 0,       // 0 表示自动使用所有可用线程
-            n_threads_batch: 0, // 0 表示自动使用所有可用线程
+            n_threads: 4,       // 0 表示自动使用所有可用线程
+            n_threads_batch: 1, // 0 表示自动使用所有可用线程
             n_batch: 512,       // 默认批处理大小
             n_ubatch: 1024,     // 默认微批处理大小（视觉模型需要较大值）
             n_ctx: 4096,        // 默认上下文窗口大小
@@ -245,8 +219,6 @@ impl Default for PipelineConfig {
             // 多模态输入（默认留空）
             media_marker: Some("<__media__>".to_string()), // 默认媒体标记
             chat_template: None,                           // 默认聊天模板
-            medias: Vec::new(),
-            image_max_resolution: 768,
 
             // 日志和调试
             verbose: false, // 默认禁用详细日志
@@ -278,33 +250,8 @@ impl PipelineConfig {
         self
     }
 
-    pub fn with_system_prompt(mut self, system_prompt: impl Into<String>) -> Self {
-        self.system_prompt = system_prompt.into();
-        self
-    }
-
-    pub fn with_user_prompt(mut self, user_prompt: impl Into<String>) -> Self {
-        self.user_prompt = user_prompt.into();
-        self
-    }
-
-    pub fn with_media(mut self, media: MediaData) -> Self {
-        self.medias.push(media);
-        self
-    }
-
-    pub fn with_medias(mut self, medias: Vec<MediaData>) -> Self {
-        self.medias = medias;
-        self
-    }
-
     pub fn with_n_threads(mut self, n_threads: u32) -> Self {
         self.n_threads = n_threads as i32;
-        self
-    }
-
-    pub fn with_image_max_resolution(mut self, image_max_resolution: u32) -> Self {
-        self.image_max_resolution = image_max_resolution;
         self
     }
 
@@ -333,12 +280,18 @@ impl PipelineConfig {
         self
     }
 
-    pub fn with_n_gpu_layers(mut self, n_gpu_layers: u32) -> Self {
-        self.n_gpu_layers = n_gpu_layers;
+    pub fn with_main_gpu(mut self, main_gpu: i32) -> Self {
+        self.main_gpu = main_gpu;
         self
     }
+
     pub fn with_disable_gpu(mut self, disable_gpu: bool) -> Self {
         self.disable_gpu = disable_gpu;
+        self
+    }
+
+    pub fn with_n_gpu_layers(mut self, n_gpu_layers: u32) -> Self {
+        self.n_gpu_layers = n_gpu_layers;
         self
     }
 
@@ -371,18 +324,11 @@ impl PipelineConfig {
         self.verbose = verbose;
         self
     }
-
-    /// 检查是否为媒体请求
-    pub fn is_media(&self) -> bool {
-        !self.medias.is_empty()
-    }
 }
 
 impl From<PipelineConfig> for ContexParams {
     fn from(pipeline_config: PipelineConfig) -> Self {
         ContexParams {
-            system_prompt: pipeline_config.system_prompt.clone(),
-            user_prompt: pipeline_config.user_prompt.clone(),
             n_threads: pipeline_config.n_threads,
             n_threads_batch: pipeline_config.n_threads_batch,
             n_batch: pipeline_config.n_batch,
@@ -392,7 +338,6 @@ impl From<PipelineConfig> for ContexParams {
             pooling_type: pipeline_config.pooling_type.clone(),
             chat_template: pipeline_config.chat_template.clone(),
             media_marker: pipeline_config.media_marker.clone(),
-            keep_context: pipeline_config.keep_context,
             verbose: pipeline_config.verbose,
         }
     }
@@ -404,9 +349,9 @@ impl From<PipelineConfig> for ModelConfig {
             model_path: pipeline_config.model_path.clone(),
             mmproj_path: pipeline_config.mmproj_path.clone(),
             disable_gpu: pipeline_config.disable_gpu,
+            main_gpu: pipeline_config.main_gpu,
             cmoe: pipeline_config.cmoe,
             use_mlock: pipeline_config.use_mlock,
-            main_gpu: pipeline_config.main_gpu,
             devices: pipeline_config.devices,
             n_gpu_layers: pipeline_config.n_gpu_layers,
             media_marker: pipeline_config.media_marker,

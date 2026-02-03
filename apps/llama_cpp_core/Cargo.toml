@@ -50,3 +50,4 @@ encoding = { workspace = true }
 encoding_rs = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
+infer = { workspace = true }

@@ -119,19 +119,6 @@ pub enum Error {
     #[error("Cache not initialized: {0}")]
     CacheNotInitialized(String),
 
-    // ==================== 插件错误 ====================
-    #[error("Plugin not found: {name}")]
-    PluginNotFound { name: String },
-
-    #[error("Plugin initialization failed: {name}")]
-    PluginInit { name: String },
-
-    #[error("Plugin execution failed: {name}")]
-    PluginExecution { name: String },
-
-    #[error("No plugin supports the given input")]
-    NoSupportedPlugin,
-
     // ==================== IO和序列化错误 ====================
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

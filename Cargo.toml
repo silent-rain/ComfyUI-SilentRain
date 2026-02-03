@@ -54,6 +54,7 @@ async-trait = "0.1"   # 异步 trait
 dashmap = "6.1"       # 并发 HashMap
 parking_lot = "0.12"  # 更高效的锁
 indexmap = "2.13"     # 有序的 HashMap
+infer = "0.19.0"      # 推断文件和MIME类型的轻量级工具
 
 anyhow = "1.0"
 thiserror = "2.0"

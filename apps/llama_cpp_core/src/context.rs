@@ -19,7 +19,6 @@ use llama_cpp_2::{
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
-    mtmd::mtmd_default_marker,
     sampling::LlamaSampler,
     timing::LlamaTimings,
     token::LlamaToken,
@@ -29,24 +28,12 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    types::{FinishReason, MediaData, PoolingTypeMode, PromptMessageRole, StreamToken},
+    types::{FinishReason, PoolingTypeMode, StreamToken},
 };
 
 /// Context Params
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContexParams {
-    /// The system prompt (or instruction) that guides the model's behavior.
-    /// This is typically a high-level directive (e.g., "You are a helpful assistant.").
-    /// It is often static and set once per session.
-    #[serde(default)]
-    pub system_prompt: String,
-
-    /// The user-provided input or query to the model.
-    /// This is the dynamic part of the prompt that changes with each interaction.
-    /// May include media markers - else they will be added automatically.
-    #[serde(default)]
-    pub user_prompt: String,
-
     /// Number of threads to use during generation.
     /// Set to a specific value to limit CPU usage.
     #[serde(default)]
@@ -90,10 +77,6 @@ pub struct ContexParams {
     #[serde(default)]
     pub media_marker: Option<String>,
 
-    /// Whether to keep context between requests
-    #[serde(default)]
-    pub keep_context: bool,
-
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
     pub verbose: bool,
@@ -112,10 +95,6 @@ impl ContexParams {
 impl Default for ContexParams {
     fn default() -> Self {
         Self {
-            // 文本生成参数
-            system_prompt: String::new(),
-            user_prompt: String::new(),
-
             // 线程和批处理参数
             n_threads: 0,
             n_threads_batch: 0,
@@ -128,8 +107,6 @@ impl Default for ContexParams {
 
             chat_template: None,
             media_marker: Some("<__media__>".to_string()), // 默认媒体标记
-
-            keep_context: false,
 
             verbose: false,
         }
@@ -372,55 +349,6 @@ impl ContextWrapper {
 }
 
 impl ContextWrapper {
-    /// Create message
-    pub fn create_message(
-        contex_params: &ContexParams,
-        is_multimodal: bool,
-        medias: Vec<MediaData>,
-        history_message: &[LlamaChatMessage],
-    ) -> Result<Vec<LlamaChatMessage>, Error> {
-        let mut messages = Vec::new();
-
-        // 系统消息
-        if !contex_params.system_prompt.is_empty() {
-            messages.push(LlamaChatMessage::new(
-                PromptMessageRole::System.to_string(),
-                contex_params.system_prompt.clone(),
-            )?);
-        }
-
-        // 用户消息（多模态时添加媒体标记）
-        let user_prompt = if is_multimodal {
-            // 媒体标记
-            let default_marker = mtmd_default_marker().to_string();
-            let media_marker = contex_params
-                .media_marker
-                .as_ref()
-                .unwrap_or(&default_marker);
-            let additional_markers = media_marker.repeat(medias.len());
-
-            format!(
-                "{} {}",
-                contex_params.user_prompt.replace(&default_marker, ""),
-                additional_markers
-            )
-        } else {
-            contex_params.user_prompt.clone()
-        };
-        info!("User prompt: {}", user_prompt);
-        messages.push(LlamaChatMessage::new(
-            PromptMessageRole::User.to_string(),
-            user_prompt.clone(),
-        )?);
-
-        // Add history messages
-        if contex_params.keep_context {
-            messages.extend(history_message.to_owned());
-        }
-
-        Ok(messages)
-    }
-
     /// 模板处理
     pub fn chat_template(
         model: Arc<LlamaModel>,
@@ -523,7 +451,9 @@ impl ContextWrapper {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig};
+    use crate::{
+        Backend, HistoryMessage, Model, PromptMessageRole, Sampler, sampler::SamplerConfig,
+    };
 
     use super::*;
 
@@ -549,12 +479,12 @@ mod tests {
         let mut history_message = HistoryMessage::new();
 
         // 创建消息
-        let msgs = ContextWrapper::create_message(
-            &contex_params,
-            false,
-            vec![],
-            &history_message.messages(),
-        )?;
+        let system_prompt = "You are a helpful assistant".to_string();
+        let user_prompt = "Hello, how are you?".to_string();
+        let msgs = vec![
+            LlamaChatMessage::new(PromptMessageRole::System.to_string(), system_prompt.clone())?,
+            LlamaChatMessage::new(PromptMessageRole::User.to_string(), user_prompt.clone())?,
+        ];
 
         // 评估消息
         ctx.eval_messages(msgs)?;
@@ -574,10 +504,10 @@ mod tests {
 
         // 将上下文信息添加到历史消息中
         {
-            history_message.add_system(contex_params.system_prompt)?; // 仅添加系统提示
+            history_message.add_system(system_prompt)?; // 仅添加系统提示
 
             // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user(contex_params.user_prompt)?;
+            history_message.add_user(user_prompt)?;
             history_message.add_assistant(full_text.clone())?;
         }
 

@@ -253,7 +253,8 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::MediaData,
+        Backend, HistoryMessage, Model, PromptMessageRole, Sampler, sampler::SamplerConfig,
+        types::MediaData,
     };
 
     use super::*;
@@ -301,12 +302,12 @@ mod tests {
         let mut history_message = HistoryMessage::new();
 
         // 创建消息
-        let msgs = ContextWrapper::create_message(
-            &contex_params,
-            true,
-            medias,
-            &history_message.messages(),
-        )?;
+        let system_prompt = "You are a helpful assistant".to_string();
+        let user_prompt = "Hello, how are you?".to_string();
+        let msgs = vec![
+            LlamaChatMessage::new(PromptMessageRole::System.to_string(), system_prompt.clone())?,
+            LlamaChatMessage::new(PromptMessageRole::User.to_string(), user_prompt.clone())?,
+        ];
 
         // 评估消息
         mtmd_ctx.eval_messages(msgs)?;
@@ -326,10 +327,10 @@ mod tests {
 
         // 将上下文信息添加到历史消息中
         {
-            history_message.add_system(contex_params.system_prompt)?; // 仅添加系统提示
+            history_message.add_system(system_prompt)?; // 仅添加系统提示
 
             // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user(contex_params.user_prompt)?;
+            history_message.add_user(user_prompt)?;
             history_message.add_assistant(full_text.clone())?;
         }
 
