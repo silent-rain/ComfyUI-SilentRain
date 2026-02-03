@@ -4,6 +4,7 @@
 use pyo3::{Bound, PyResult, Python, ffi::c_str, pyfunction};
 
 pub const NODE_NONE: &str = "";
+pub const NODE_ANY: &str = "any";
 pub const NODE_INT: &str = "INT";
 pub const NODE_FLOAT: &str = "FLOAT";
 pub const NODE_STRING: &str = "STRING";
@@ -21,6 +22,7 @@ pub const NODE_LATENT: &str = "LATENT";
 
 pub const NODE_STRING_LIST: &str = "STRING_LIST";
 pub const NODE_LLAMA_CPP_OPTIONS: &str = "LlamaCppExtraOptions";
+pub const NODE_LLAMA_CPP_MODEL_V2: &str = "LlamaCppModelv2";
 
 pub const NODE_INT_MAX: u64 = 0xffffffffffffffffu64;
 pub const NODE_SEED_MAX: u64 = 10000000;

@@ -9,8 +9,10 @@ use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_core::{CacheManager, Model, model::ModelConfig};
 use log::{error, info};
 use pyo3::{
-    Bound, Py, PyErr, PyResult, Python, exceptions::PyRuntimeError, pyclass, pymethods,
-    types::PyType,
+    Bound, Py, PyErr, PyResult, Python,
+    exceptions::PyRuntimeError,
+    pyclass, pymethods,
+    types::{PyDict, PyType},
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -22,7 +24,7 @@ use crate::{
     error::Error,
     wrapper::{
         comfy::folder_paths::FolderPaths,
-        comfyui::{PromptServer, types::NODE_STRING},
+        comfyui::{PromptServer, types::NODE_LLAMA_CPP_MODEL_V2},
     },
 };
 
@@ -52,7 +54,7 @@ impl LlamaCppModelv2 {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str,) {
-        (NODE_STRING,) // 返回模型缓存 key
+        (NODE_LLAMA_CPP_MODEL_V2,) // 返回模型缓存 key
     }
 
     #[classattr]
@@ -84,90 +86,86 @@ impl LlamaCppModelv2 {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::attach(|py| {
-            let model_list = Self::get_model_list();
+        let model_list = Self::get_model_list();
+        let config = ModelConfig::default();
 
-            let config = ModelConfig::default();
-
-            let spec = InputSpec::new()
-                // 模型路径
-                .with_required(
-                    "model_path",
-                    InputType::list(model_list).tooltip("Path to the GGUF model file"),
-                )
-                .with_required(
-                    "disable_gpu",
-                    InputType::bool()
-                        .default(config.disable_gpu)
-                        .label_on("Disable")
-                        .label_off("Enable")
-                        .tooltip("Disable GPU acceleration"),
-                )
-                // GPU 配置
-                .with_required(
-                    "main_gpu",
-                    InputType::int()
-                        .default(config.main_gpu)
-                        .min(0)
-                        .step_int(1)
-                        .tooltip("Main GPU index"),
-                )
-                .with_required(
-                    "n_gpu_layers",
-                    InputType::int()
-                        .default(config.n_gpu_layers as i64)
-                        .min(0)
-                        .max_int(10000)
-                        .step_int(1)
-                        .tooltip("Number of layers to offload to GPU (0 = CPU only)"),
-                )
-                // 多 GPU 设备
-                .with_optional(
-                    "devices",
-                    InputType::string().default(config.devices_str()).tooltip(
-                        "GPU devices to use (comma-separated, e.g., 0,1,2). Overrides main_gpu",
-                    ),
-                )
-                .with_required(
-                    "media_marker",
-                    InputType::string()
-                        .default(config.media_marker.unwrap_or_default())
-                        .tooltip("Media marker. If not provided, the default marker will be used."),
-                )
-                // .with_required(
-                //     "n_threads",
-                //     InputType::string().default(config.n_threads).tooltip("Number of threads to use during generation. Set to a specific value to limit CPU usage."),
-                // )
-                // // MoE 配置
-                // .with_optional(
-                //     "cmoe",
-                //     InputType::bool()
-                //         .default(config.cmoe)
-                //         .tooltip("Keep MoE layers on CPU"),
-                // )
-                // // 内存锁定
-                // .with_optional(
-                //     "use_mlock",
-                //     InputType::bool()
-                //         .default(config.use_mlock)
-                //         .tooltip("Force system to keep model in RAM (use mlock)"),
-                // )
-                .with_required(
-                    "cache_model",
-                    InputType::bool()
-                        .default(config.cache_model)
-                        .tooltip("Cache model in memory for reuse"),
-                )
-                // 详细信息
-                .with_optional(
-                    "verbose",
-                    InputType::bool()
-                        .default(config.verbose)
-                        .tooltip("Print detailed information about model loading"),
-                );
-
-            spec.build(py)
-        })
+        InputSpec::new()
+            // 模型路径
+            .with_required(
+                "model_path",
+                InputType::list(model_list).tooltip("Path to the GGUF model file"),
+            )
+            .with_required(
+                "disable_gpu",
+                InputType::bool()
+                    .default(config.disable_gpu)
+                    .label_on("Disable")
+                    .label_off("Enable")
+                    .tooltip("Disable GPU acceleration"),
+            )
+            // GPU 配置
+            .with_required(
+                "main_gpu",
+                InputType::int()
+                    .default(config.main_gpu)
+                    .min(0)
+                    .step_int(1)
+                    .tooltip("Main GPU index"),
+            )
+            .with_required(
+                "n_gpu_layers",
+                InputType::int()
+                    .default(config.n_gpu_layers as i64)
+                    .min(0)
+                    .max_int(10000)
+                    .step_int(1)
+                    .tooltip("Number of layers to offload to GPU (0 = CPU only)"),
+            )
+            // 多 GPU 设备
+            .with_optional(
+                "devices",
+                InputType::string().default(config.devices_str()).tooltip(
+                    "GPU devices to use (comma-separated, e.g., 0,1,2). Overrides main_gpu",
+                ),
+            )
+            .with_required(
+                "media_marker",
+                InputType::string()
+                    .default(config.media_marker.unwrap_or_default())
+                    .tooltip("Media marker. If not provided, the default marker will be used."),
+            )
+            // .with_required(
+            //     "n_threads",
+            //     InputType::string().default(config.n_threads).tooltip("Number of threads to use during generation. Set to a specific value to limit CPU usage."),
+            // )
+            // // MoE 配置
+            // .with_optional(
+            //     "cmoe",
+            //     InputType::bool()
+            //         .default(config.cmoe)
+            //         .tooltip("Keep MoE layers on CPU"),
+            // )
+            // // 内存锁定
+            // .with_optional(
+            //     "use_mlock",
+            //     InputType::bool()
+            //         .default(config.use_mlock)
+            //         .tooltip("Force system to keep model in RAM (use mlock)"),
+            // )
+            .with_required(
+                "cache_model",
+                InputType::bool()
+                    .default(config.cache_model)
+                    .tooltip("Cache model in memory for reuse"),
+            )
+            // 详细信息
+            .with_optional(
+                "verbose",
+                InputType::bool()
+                    .default(config.verbose)
+                    .tooltip("Print detailed information about model loading"),
+            )
+            .build()
     }
 
     #[pyo3(name = "execute")]

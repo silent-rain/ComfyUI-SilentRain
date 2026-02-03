@@ -23,8 +23,7 @@ use pyo3::{
 
 use crate::wrapper::comfyui::types::{
     NODE_BOOLEAN, NODE_CLIP, NODE_CONDITIONING, NODE_FLOAT, NODE_IMAGE, NODE_INT, NODE_JSON,
-    NODE_LATENT, NODE_LIST, NODE_MASK, NODE_METADATA_RAW, NODE_MODEL, NODE_NONE, NODE_STRING,
-    NODE_VAE,
+    NODE_LATENT, NODE_MASK, NODE_METADATA_RAW, NODE_MODEL, NODE_STRING, NODE_VAE, any_type,
 };
 
 /// 输入规范构建器
@@ -68,31 +67,33 @@ impl InputSpec {
     /// 构建 PyDict
     ///
     /// 生成符合 ComfyUI INPUT_TYPES 格式的字典结构
-    pub fn build(self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        let dict = PyDict::new(py);
+    pub fn build(self) -> PyResult<Py<PyDict>> {
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
 
-        // Required 字段
-        let required = PyDict::new(py);
-        for (name, input_type) in self.required {
-            required.set_item(name, input_type.to_py_tuple(py)?)?;
-        }
-        dict.set_item("required", required)?;
+            // Required 字段
+            let required = PyDict::new(py);
+            for (name, input_type) in self.required {
+                required.set_item(name, input_type.to_py_tuple(py)?)?;
+            }
+            dict.set_item("required", required)?;
 
-        // Optional 字段
-        let optional = PyDict::new(py);
-        for (name, input_type) in self.optional {
-            optional.set_item(name, input_type.to_py_tuple(py)?)?;
-        }
-        dict.set_item("optional", optional)?;
+            // Optional 字段
+            let optional = PyDict::new(py);
+            for (name, input_type) in self.optional {
+                optional.set_item(name, input_type.to_py_tuple(py)?)?;
+            }
+            dict.set_item("optional", optional)?;
 
-        // Hidden 字段
-        let hidden = PyDict::new(py);
-        for (name, input_type) in self.hidden {
-            hidden.set_item(name, input_type.to_py_tuple(py)?)?;
-        }
-        dict.set_item("hidden", hidden)?;
+            // Hidden 字段
+            let hidden = PyDict::new(py);
+            for (name, input_type) in self.hidden {
+                hidden.set_item(name, input_type.to_py_tuple(py)?)?;
+            }
+            dict.set_item("hidden", hidden)?;
 
-        Ok(dict.into())
+            Ok(dict.into())
+        })
     }
 }
 
@@ -115,6 +116,7 @@ pub struct InputType {
 #[derive(Debug, Clone, PartialEq)]
 enum InputKind {
     None,
+    Any,
     String,
     Int,
     Float,
@@ -153,6 +155,11 @@ impl InputType {
     /// None 类型
     pub fn none() -> Self {
         Self::new(InputKind::None)
+    }
+
+    /// Any 类型
+    pub fn any() -> Self {
+        Self::new(InputKind::Any)
     }
 
     /// String 类型
@@ -344,22 +351,27 @@ impl InputType {
     /// 列表类型：(options_list, params_dict)
     /// 其他类型：(type_name, params_dict)
     fn to_py_tuple<'py>(self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        if self.kind == InputKind::List {
-            // 列表类型：返回 (options_list, params_dict)
-            let params_dict = self.params.to_py_dict(py)?;
-            return Ok((self.list_options, params_dict)
-                .into_pyobject(py)?
-                .into_any());
-        }
-
         let type_str = match &self.kind {
-            InputKind::None => NODE_NONE,
+            InputKind::None => {
+                return Ok(PyDict::new(py).into_any());
+            }
+            InputKind::Any => {
+                // 列表类型：返回 (options_list, params_dict)
+                let params_dict = self.params.to_py_dict(py)?;
+                return Ok((any_type(py)?, params_dict).into_pyobject(py)?.into_any());
+            }
             InputKind::String => NODE_STRING,
             InputKind::Int => NODE_INT,
             InputKind::Float => NODE_FLOAT,
             InputKind::Bool => NODE_BOOLEAN,
             InputKind::Image => NODE_IMAGE,
-            InputKind::List => NODE_LIST,
+            InputKind::List => {
+                // 列表类型：返回 (options_list, params_dict)
+                let params_dict = self.params.to_py_dict(py)?;
+                return Ok((self.list_options, params_dict)
+                    .into_pyobject(py)?
+                    .into_any());
+            }
             InputKind::Json => NODE_JSON,
             InputKind::MetadataRaw => NODE_METADATA_RAW,
             InputKind::Mask => NODE_MASK,

@@ -11,29 +11,21 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
+    types::{PyDict, PyType},
 };
-use std::collections::HashMap;
 
-use llama_cpp_core::CacheManager;
+use llama_cpp_core::{CacheManager, cache::CacheType};
 
 use crate::{
-    core::category::CATEGORY_LLAMA_CPP,
-    error::Error,
-    wrapper::comfyui::{
-        PromptServer,
-        types::{NODE_BOOLEAN, NODE_STRING, any_type},
+    core::{
+        category::CATEGORY_LLAMA_CPP,
+        node_base::{InputSpec, InputType},
     },
+    error::Error,
+    wrapper::comfyui::{PromptServer, types::NODE_STRING},
 };
 
 /// LlamaCpp Purge VRAM v2
-///
-//! ### 版本差异
-//! - **v1**: 清理所有缓存，无选择性
-//! - **v2**:
-//!   - 支持清理特定模型缓存
-//!   - 支持清理对话上下文缓存
-//!   - 提供详细的清理统计报告
 ///
 /// # 输入参数
 /// - `model_handle`: 可选，指定要清理的模型缓存 key
@@ -74,7 +66,7 @@ impl LlamaCppPurgeVramv2 {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str,) {
-        (NODE_STRING,)  // JSON 清理报告
+        (NODE_STRING,) // JSON 清理报告
     }
 
     #[classattr]
@@ -106,97 +98,39 @@ impl LlamaCppPurgeVramv2 {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::attach(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-
-                // 触发信号
-                required.set_item(
-                    "trigger",
-                    (any_type(py)?, {
-                        let params = PyDict::new(py);
-                        params.set_item("tooltip", "Any input to trigger cleanup")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "clear_all_models",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", false)?;
-                        params.set_item("tooltip", "Clear all model caches")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "clear_all_contexts",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", false)?;
-                        params.set_item("tooltip", "Clear all conversation contexts")?;
-                        params
-                    }),
-                )?;
-
-                required.set_item(
-                    "clear_chat_history",
-                    (NODE_BOOLEAN, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", false)?;
-                        params.set_item("tooltip", "Clear chat history")?;
-                        params
-                    }),
-                )?;
-
-                required
-            })?;
-
-            dict.set_item("optional", {
-                let optional = PyDict::new(py);
-
-                // 可选的特定模型句柄
-                optional.set_item(
-                    "model_handle",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "")?;
-                        params.set_item("tooltip", "Specific model cache key to clear (empty = all)")?;
-                        params
-                    }),
-                )?;
-
-                optional
-            })?;
-
-            Ok(dict.into())
-        })
+        InputSpec::new()
+            .with_required(
+                "trigger",
+                InputType::any().tooltip("Any input to trigger cleanup"),
+            )
+            .with_required(
+                "clear_models",
+                InputType::bool().tooltip("Clear all model caches"),
+            )
+            .with_required(
+                "clear_contexts",
+                InputType::bool().tooltip("Clear all conversation contexts"),
+            )
+            .build()
     }
 
-    #[pyo3(name = "execute", signature = (trigger, clear_all_models, clear_all_contexts, clear_chat_history, model_handle=None))]
+    #[pyo3(name = "execute")]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
-        _trigger: Bound<'py, PyAny>,
-        clear_all_models: bool,
-        clear_all_contexts: bool,
-        clear_chat_history: bool,
-        model_handle: Option<String>,
+        trigger: Bound<'py, PyAny>,
+        clear_models: bool,
+        clear_contexts: bool,
     ) -> PyResult<(String,)> {
-        let result = self.purge_vram(
-            clear_all_models,
-            clear_all_contexts,
-            clear_chat_history,
-            model_handle,
-        );
+        let result = self.purge_vram(py, trigger, clear_models, clear_contexts);
 
         match result {
             Ok(report) => Ok((report,)),
             Err(e) => {
                 error!("LlamaCppPurgeVramv2 error: {e}");
-                if let Err(e) = self.send_error(py, "LlamaCppPurgeVramv2".to_string(), e.to_string()) {
+                if let Err(e) =
+                    self.send_error(py, "LlamaCppPurgeVramv2".to_string(), e.to_string())
+                {
                     error!("send error failed: {e}");
                 }
                 Err(PyErr::new::<PyRuntimeError, _>(e.to_string()))
@@ -207,12 +141,12 @@ impl LlamaCppPurgeVramv2 {
 
 impl LlamaCppPurgeVramv2 {
     /// 执行 VRAM 清理
-    fn purge_vram(
+    fn purge_vram<'py>(
         &self,
-        clear_all_models: bool,
-        clear_all_contexts: bool,
-        clear_chat_history: bool,
-        model_handle: Option<String>,
+        _py: Python<'py>,
+        _trigger: Bound<'py, PyAny>,
+        clear_models: bool,
+        clear_contexts: bool,
     ) -> Result<String, Error> {
         let mut report = PurgeReport::default();
 
@@ -225,65 +159,29 @@ impl LlamaCppPurgeVramv2 {
         };
         report.total_keys_before = keys_before.len();
 
-        info!("Starting VRAM cleanup v2, {} keys in cache", keys_before.len());
-
-        // 清理特定模型
-        if let Some(handle) = model_handle {
-            if !handle.is_empty() {
-                info!("Clearing specific model: {}", handle);
-                if let Ok(Some(_)) = self.cache.remove(&handle) {
-                    report.models_cleared += 1;
-                    report.specific_model_cleared = Some(handle);
-                }
-            }
-        }
+        info!(
+            "Starting VRAM cleanup v2, {} keys in cache",
+            keys_before.len()
+        );
 
         // 清理所有模型
-        if clear_all_models {
-            let model_keys: Vec<String> = keys_before
-                .iter()
-                .filter(|k| k.starts_with("model_v2:") || k.starts_with("model:"))
-                .cloned()
-                .collect();
+        if clear_models {
+            let model_keys: Vec<String> = self.cache.get_keys_by_type(CacheType::Model)?;
+            self.cache.clear_cache_type(CacheType::Model)?;
 
-            for key in model_keys {
-                if let Ok(Some(_)) = self.cache.remove(&key) {
-                    report.models_cleared += 1;
-                }
-            }
+            report.models_cleared = model_keys.len();
             info!("Cleared {} model caches", report.models_cleared);
         }
 
         // 清理所有上下文
-        if clear_all_contexts {
-            let context_keys: Vec<String> = keys_before
-                .iter()
-                .filter(|k| k.starts_with("chat_ctx:") || k.starts_with("vision_ctx:"))
-                .cloned()
-                .collect();
+        if clear_contexts {
+            let context_keys: Vec<String> =
+                self.cache.get_keys_by_type(CacheType::MessageContext)?;
+            self.cache.clear_cache_type(CacheType::MessageContext)?;
 
-            for key in context_keys {
-                if let Ok(Some(_)) = self.cache.remove(&key) {
-                    report.contexts_cleared += 1;
-                }
-            }
+            report.contexts_cleared = context_keys.len();
+
             info!("Cleared {} context caches", report.contexts_cleared);
-        }
-
-        // 清理聊天历史
-        if clear_chat_history {
-            let history_keys: Vec<String> = keys_before
-                .iter()
-                .filter(|k| k.starts_with("history_message_"))
-                .cloned()
-                .collect();
-
-            for key in history_keys {
-                if let Ok(Some(_)) = self.cache.remove(&key) {
-                    report.chat_histories_cleared += 1;
-                }
-            }
-            info!("Cleared {} chat histories", report.chat_histories_cleared);
         }
 
         // 获取清理后的缓存状态
@@ -294,13 +192,18 @@ impl LlamaCppPurgeVramv2 {
             }
         };
         report.total_keys_after = keys_after.len();
-        report.keys_cleared = report.total_keys_before.saturating_sub(report.total_keys_after);
+        report.keys_cleared = report
+            .total_keys_before
+            .saturating_sub(report.total_keys_after);
 
-        info!("VRAM cleanup v2 complete: {} keys cleared", report.keys_cleared);
+        info!(
+            "VRAM cleanup v2 complete: {} keys cleared",
+            report.keys_cleared
+        );
 
         // 生成 JSON 报告
-        let json_report = serde_json::to_string_pretty(&report)
-            .map_err(|e| Error::SerdeJsonError(e))?;
+        let json_report =
+            serde_json::to_string_pretty(&report).map_err(|e| Error::SerdeJsonError(e))?;
 
         Ok(json_report)
     }

@@ -36,7 +36,7 @@ pub use llama_cpp_purge_vram::LlamaCppPurgeVram;
 
 // v2 版本节点
 mod llama_cpp_model_v2;
-pub use llama_cpp_model_v2::{LlamaCppModelv2, ModelHandleV2};
+pub use llama_cpp_model_v2::LlamaCppModelv2;
 
 mod llama_cpp_chat_v2;
 pub use llama_cpp_chat_v2::LlamaCppChatv2;
