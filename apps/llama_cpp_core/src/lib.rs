@@ -23,4 +23,6 @@ pub use history::HistoryMessage;
 pub use model::Model;
 pub use pipeline::{Pipeline, PipelineConfig};
 pub use sampler::Sampler;
-pub use types::{GenerationOutput, GenerateRequest, MediaData, FinishReason, StreamToken, PromptMessageRole};
+pub use types::{
+    FinishReason, GenerateRequest, GenerationOutput, MediaData, PromptMessageRole, StreamToken,
+};

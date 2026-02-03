@@ -314,9 +314,8 @@ impl Extension {
     {
         console::log_1(&JsValue::from_str("get_canvas_menu_items ..."));
 
-        let handler = Closure::wrap(
-            Box::new(handler) as Box<dyn Fn(Object) -> Result<JsValue, JsValue>>
-        );
+        let handler =
+            Closure::wrap(Box::new(handler) as Box<dyn Fn(Object) -> Result<JsValue, JsValue>>);
 
         // 设置getCanvasMenuItems方法
         Reflect::set(

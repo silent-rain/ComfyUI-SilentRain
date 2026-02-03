@@ -199,10 +199,7 @@ impl GenerateRequest {
     }
 
     /// 设置历史消息
-    pub fn with_history(
-        mut self,
-        history: Vec<llama_cpp_2::model::LlamaChatMessage>,
-    ) -> Self {
+    pub fn with_history(mut self, history: Vec<llama_cpp_2::model::LlamaChatMessage>) -> Self {
         self.history = history;
         self
     }

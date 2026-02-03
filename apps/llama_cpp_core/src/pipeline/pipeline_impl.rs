@@ -429,8 +429,8 @@ mod tests {
         let mut history = Vec::new();
 
         // 第一轮对话
-        let request1 = GenerateRequest::text("你好，我叫小明")
-            .with_system("你是一个 helpful 的助手");
+        let request1 =
+            GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let result1 = pipeline.generate(&request1).await?;
         println!("Assistant: {}", result1.text);
 

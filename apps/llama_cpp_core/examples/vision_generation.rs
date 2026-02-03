@@ -2,7 +2,10 @@
 
 use std::sync::Arc;
 
-use llama_cpp_core::{GenerateRequest, MediaData, Pipeline, PipelineConfig, utils::image::Image, utils::log::init_logger};
+use llama_cpp_core::{
+    GenerateRequest, MediaData, Pipeline, PipelineConfig, utils::image::Image,
+    utils::log::init_logger,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -95,8 +98,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 第二个推理请求（可以并发执行）
     let request2 = GenerateRequest::media(
         "再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
-        vec![media]
-    ).with_system("你是专注生成套图模特提示词专家。");
+        vec![media],
+    )
+    .with_system("你是专注生成套图模特提示词专家。");
 
     // 执行第一个推理
     let results1 = pipeline.generate(&request1).await?;
@@ -107,24 +111,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 并发执行多个请求
     let pipeline_clone = Arc::clone(&pipeline);
     let request_clone = request2.clone();
-    let task1 = tokio::spawn(async move {
-        pipeline_clone.generate(&request_clone).await
-    });
+    let task1 = tokio::spawn(async move { pipeline_clone.generate(&request_clone).await });
 
     let pipeline_clone2 = Arc::clone(&pipeline);
     let request_clone2 = request2.clone();
-    let task2 = tokio::spawn(async move {
-        pipeline_clone2.generate(&request_clone2).await
-    });
+    let task2 = tokio::spawn(async move { pipeline_clone2.generate(&request_clone2).await });
 
     // 等待并发结果
     let (result1, result2) = tokio::try_join!(task1, task2)?;
-    
+
     match result1 {
         Ok(output) => println!("并发结果 1: {}", output.text),
         Err(e) => eprintln!("并发错误 1: {}", e),
     }
-    
+
     match result2 {
         Ok(output) => println!("并发结果 2: {}", output.text),
         Err(e) => eprintln!("并发错误 2: {}", e),
