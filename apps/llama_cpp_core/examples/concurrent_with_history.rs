@@ -8,8 +8,7 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, LlamaChatMessage, Pipeline, PipelineConfig, PromptMessageRole,
-    utils::log::init_logger,
+    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig, utils::log::init_logger,
 };
 
 #[tokio::main]
@@ -18,9 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model_path =
         "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-    let pipeline_config = PipelineConfig::new(model_path, None)
-        .with_system_prompt("你是一个 helpful 的助手")
-        .with_cache_model(true);
+    let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
 
     // 创建 Pipeline（Arc 包装，支持并发共享）
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
@@ -28,39 +25,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ========== 场景1：单用户多轮对话 ==========
     println!("========== 场景1：单用户多轮对话 ==========");
     {
-        let mut history = Vec::new();
+        let mut history = HistoryMessage::new();
 
         // 第一轮
-        let request1 = GenerateRequest::text("你好，我叫小明");
+        let request1 =
+            GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let response1 = pipeline.generate(&request1).await?;
         println!("User: 你好，我叫小明");
         println!("Assistant: {}", response1.text);
 
         // 更新历史（外部管理）
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::User.to_string(),
-            "你好，我叫小明".to_string(),
-        )?);
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::Assistant.to_string(),
-            response1.text.clone(),
-        )?);
+        history.add_user("你好，我叫小明")?;
+        history.add_assistant(response1.text.clone())?;
 
         // 第二轮（带历史）
-        let request2 = GenerateRequest::text("我叫什么名字？").with_history(history.clone());
+        let request2 = GenerateRequest::text("我叫什么名字？")
+            .with_system("你是一个 helpful 的助手")
+            .with_history(history.clone());
         let response2 = pipeline.generate(&request2).await?;
         println!("User: 我叫什么名字？");
         println!("Assistant: {}", response2.text);
 
         // 更新历史
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::User.to_string(),
-            "我叫什么名字？".to_string(),
-        )?);
-        history.push(LlamaChatMessage::new(
-            PromptMessageRole::Assistant.to_string(),
-            response2.text.clone(),
-        )?);
+        history.add_user("我叫什么名字？")?;
+        history.add_assistant(response2.text.clone())?;
 
         // 第三轮（带完整历史）
         let request3 = GenerateRequest::text("我们刚才聊了什么？").with_history(history);
@@ -73,28 +61,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n========== 场景2：并发多用户 ==========");
     {
         // 用户A的上下文
-        let user_a_history = vec![
-            LlamaChatMessage::new(
-                PromptMessageRole::User.to_string(),
-                "我喜欢Python".to_string(),
-            )?,
-            LlamaChatMessage::new(
-                PromptMessageRole::Assistant.to_string(),
-                "那很棒！Python 是一门优秀的编程语言。".to_string(),
-            )?,
-        ];
+        let mut user_a_history = HistoryMessage::new();
+        user_a_history.add_user("我喜欢Python")?;
+        user_a_history.add_assistant("那很棒！Python 是一门优秀的编程语言。")?;
 
         // 用户B的上下文
-        let user_b_history = vec![
-            LlamaChatMessage::new(
-                PromptMessageRole::User.to_string(),
-                "我喜欢Rust".to_string(),
-            )?,
-            LlamaChatMessage::new(
-                PromptMessageRole::Assistant.to_string(),
-                "太棒了！Rust 以性能和安全性著称。".to_string(),
-            )?,
-        ];
+        let mut user_b_history = HistoryMessage::new();
+        user_b_history.add_user("我喜欢Rust")?;
+        user_b_history.add_assistant("太棒了！Rust 以性能和安全性著称。")?;
 
         // 并发执行两个用户的请求
         let pipeline_a = Arc::clone(&pipeline);

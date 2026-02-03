@@ -87,16 +87,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 第一个推理请求
     let request1 = GenerateRequest::text(user_prompt).with_system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-    .with_media_marker("<start_of_image>") // 媒体标记配置
     .with_image_max_resolution(768) // 图片最大分辨率配置
     .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
 
-    // 第二个推理请求
+    // 第二个推理请求（可以并发执行）
     let request2 = GenerateRequest::text(
-        "生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
+        "再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
     )
     .with_system("你是专注生成套图模特提示词专家。")
-    .with_media_marker("<start_of_image>") // 媒体标记配置
     .with_image_max_resolution(768)
     .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
 
@@ -104,8 +102,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let results1 = pipeline.generate(&request1).await?;
     println!("Response 1: {}", results1.text);
 
-    // 执行第二个推理
-    let results2 = pipeline.generate(&request2).await?;
-    println!("Response 2: {}", results2.text);
+    println!("========================== 并发测试 ==========================");
+
+    // 并发执行多个请求
+    let pipeline_clone = Arc::clone(&pipeline);
+    let request_clone = request2.clone();
+    let task1 = tokio::spawn(async move { pipeline_clone.generate(&request_clone).await });
+
+    let pipeline_clone2 = Arc::clone(&pipeline);
+    let request_clone2 = request2.clone();
+    let task2 = tokio::spawn(async move { pipeline_clone2.generate(&request_clone2).await });
+
+    // 等待并发结果
+    let (result1, result2) = tokio::try_join!(task1, task2)?;
+
+    match result1 {
+        Ok(output) => println!("并发结果 1: {}", output.text),
+        Err(e) => eprintln!("并发错误 1: {}", e),
+    }
+
+    match result2 {
+        Ok(output) => println!("并发结果 2: {}", output.text),
+        Err(e) => eprintln!("并发错误 2: {}", e),
+    }
+
     Ok(())
 }

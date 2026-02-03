@@ -210,33 +210,19 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::{HistoryMessage, Model, utils::log::init_logger};
+    use crate::{HistoryMessage, utils::log::init_logger};
 
     use super::*;
 
-    #[test]
-    fn test_check_gpu() -> anyhow::Result<()> {
-        init_logger();
-        // 检测设备是否可用，如果没有 GPU 则使用 CPU
-        let model = Model::new("", None::<String>);
-        let devices = model.devices();
-
-        println!("devices list {devices:?}");
-        println!("Detected {} GPU device(s)", devices.len());
-        Ok(())
-    }
-
     #[tokio::test]
-    async fn test_simple() -> anyhow::Result<()> {
+    async fn test_simple_text() -> anyhow::Result<()> {
         init_logger();
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
 
         let pipeline_config = PipelineConfig::new(model_path, None)
-            .with_disable_gpu(false)
-            .with_main_gpu(0)
-            .with_n_gpu_layers(10)
+            .with_disable_gpu(true)
             .with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
@@ -259,9 +245,7 @@ mod tests {
                 .to_string();
 
         let pipeline_config = PipelineConfig::new(model_path, Some(mmproj_path))
-            .with_disable_gpu(false)
-            .with_main_gpu(0)
-            .with_n_gpu_layers(10)
+            .with_disable_gpu(true)
             .with_media_marker("<start_of_image>")
             .with_verbose(true);
 

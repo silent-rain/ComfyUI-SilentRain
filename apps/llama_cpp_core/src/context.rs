@@ -73,10 +73,6 @@ pub struct ContexParams {
     #[serde(default)]
     pub chat_template: Option<String>,
 
-    /// Media marker. If not provided, the default marker will be used.
-    #[serde(default)]
-    pub media_marker: Option<String>,
-
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
     pub verbose: bool,
@@ -106,7 +102,6 @@ impl Default for ContexParams {
             pooling_type: PoolingTypeMode::Unspecified.to_string(),
 
             chat_template: None,
-            media_marker: Some("<__media__>".to_string()), // 默认媒体标记
 
             verbose: false,
         }

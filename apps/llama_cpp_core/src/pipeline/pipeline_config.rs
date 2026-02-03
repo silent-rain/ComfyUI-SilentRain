@@ -337,7 +337,6 @@ impl From<PipelineConfig> for ContexParams {
             n_ctx: pipeline_config.n_ctx,
             pooling_type: pipeline_config.pooling_type.clone(),
             chat_template: pipeline_config.chat_template.clone(),
-            media_marker: pipeline_config.media_marker.clone(),
             verbose: pipeline_config.verbose,
         }
     }

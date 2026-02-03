@@ -205,6 +205,7 @@ cargo test --package llama_cpp_core --lib
 
 
 # GPU
+cargo run --package llama_cpp_core --example check_gpu --features vulkan
 cargo run --package llama_cpp_core --example text_generation --features vulkan
 cargo run --package llama_cpp_core --example vision_generation --features vulkan
 ```
