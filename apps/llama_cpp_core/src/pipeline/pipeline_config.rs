@@ -178,8 +178,8 @@ impl Default for PipelineConfig {
             seed: -1,         // 默认随机种子（-1 表示随机）
 
             // 线程和批处理参数
-            n_threads: 4,       // 0 表示自动使用所有可用线程
-            n_threads_batch: 1, // 0 表示自动使用所有可用线程
+            n_threads: 0,       // 0 表示自动使用所有可用线程
+            n_threads_batch: 0, // 0 表示自动使用所有可用线程
             n_batch: 512,       // 默认批处理大小
             n_ubatch: 1024,     // 默认微批处理大小（视觉模型需要较大值）
             n_ctx: 4096,        // 默认上下文窗口大小
@@ -328,10 +328,10 @@ impl From<PipelineConfig> for ModelConfig {
             mmproj_path: pipeline_config.mmproj_path.clone(),
             disable_gpu: pipeline_config.disable_gpu,
             main_gpu: pipeline_config.main_gpu,
-            cmoe: pipeline_config.cmoe,
-            use_mlock: pipeline_config.use_mlock,
             devices: pipeline_config.devices,
             n_gpu_layers: pipeline_config.n_gpu_layers,
+            cmoe: pipeline_config.cmoe,
+            use_mlock: pipeline_config.use_mlock,
             n_threads: pipeline_config.n_threads,
             cache_model: pipeline_config.cache_model,
             verbose: pipeline_config.verbose,
