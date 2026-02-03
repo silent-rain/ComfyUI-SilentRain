@@ -79,46 +79,39 @@ impl HistoryMessage {
 }
 
 impl HistoryMessage {
-    pub fn from_cache(cache_key: String) -> Result<Self, Error> {
+    pub fn from_cache(session_id: String) -> Result<Arc<Self>, Error> {
         let cache = global_cache();
-        let cache_key = format!("history_message_{}", cache_key);
-        let megs = cache
-            .get_data::<Vec<LlamaChatMessage>>(&cache_key)
+        let data = cache
+            .get_data::<HistoryMessage>(&session_id)
             .map_err(|e| {
                 error!("get cache error: {e:?}");
                 e
+            })?
+            .ok_or_else(|| {
+                error!("Cache data not found");
+                Error::InvalidInput {
+                    field: "HistoryMessage".to_string(),
+                    message: "Cache data not found".to_string(),
+                }
             })?;
-        if let Some(data) = megs {
-            return Ok(Self {
-                megs: data.to_vec(),
-            });
-        }
 
-        Ok(Self { megs: Vec::new() })
+        Ok(data.clone())
     }
 
-    pub fn force_update_cache(
-        &mut self,
-        cache_key: String,
-    ) -> Result<Vec<LlamaChatMessage>, Error> {
+    pub fn force_update_cache(&mut self, session_id: String) -> Result<(), Error> {
         let cache = global_cache();
-        let cache_key = format!("history_message_{}", cache_key);
 
         // 随机值
         let random = rand::rng().try_next_u32().unwrap_or(0);
         let params = vec![random.to_string()];
 
         cache.force_update(
-            &cache_key,
+            &session_id,
             CacheType::MessageContext,
             &params,
-            Arc::new(self.megs.clone()),
+            Arc::new(self.clone()),
         )?;
 
-        if let Some(data) = cache.get_data::<Vec<LlamaChatMessage>>(&cache_key)? {
-            self.megs = data.to_vec();
-            return Ok(self.megs.clone());
-        }
-        Ok(self.megs.clone())
+        Ok(())
     }
 }

@@ -225,6 +225,7 @@ impl MtmdContextWrapper {
         // 处理位图
         let bitmap_refs: Vec<&MtmdBitmap> = self.bitmaps.iter().collect();
         if bitmap_refs.is_empty() {
+            info!("No bitmaps loaded");
         } else {
             info!("Tokenizing with {} bitmaps", bitmap_refs.len());
         }

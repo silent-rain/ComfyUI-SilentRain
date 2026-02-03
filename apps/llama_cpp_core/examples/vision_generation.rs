@@ -22,8 +22,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_n_ubatch(2048) // 对于大图像需要较大的 n_ubatch
         // .with_use_mlock(true)  // 内存锁定配置 - 影响处理速度
         .with_cache_model(true) // 模型缓存配置
-        .with_keep_context(false) // 关闭上下文保持，支持并发
-        .with_media_marker("<start_of_image>") // 媒体标记配置
         .with_verbose(true);
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）
@@ -86,14 +84,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 第一个推理请求
-    let request1 = GenerateRequest::text(user_prompt).with_system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+    let request1 = GenerateRequest::text(user_prompt).with_system("你是专注生成套图模特提示词专家，用于生成3个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
     .with_media_marker("<start_of_image>") // 媒体标记配置
     .with_image_max_resolution(768) // 图片最大分辨率配置
     .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
 
     // 第二个推理请求
     let request2 = GenerateRequest::text(
-        "生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
+        "生成3个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
     )
     .with_system("你是专注生成套图模特提示词专家。")
     .with_media_marker("<start_of_image>") // 媒体标记配置

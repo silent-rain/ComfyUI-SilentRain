@@ -7,12 +7,18 @@ use crate::{HistoryMessage, MediaData, PromptMessageRole, error::Error, utils::i
 /// 生成请求结构体
 #[derive(Debug, Clone)]
 pub struct GenerateRequest {
+    /// 会话ID（可选）
+    /// 用于在 Pipeline 内部自动管理历史上下文，实现并发隔离
+    /// 不同 session_id 的对话历史完全隔离
+    pub session_id: Option<String>,
+
+    /// 历史消息
+    pub history: Option<HistoryMessage>,
+
     /// 系统提示词（可选）
     pub system_prompt: Option<String>,
     /// 用户提示词
     pub user_prompt: String,
-    /// 历史消息（可选）
-    pub history: Option<HistoryMessage>,
     /// 媒体数据（多模态场景）
     pub medias: Vec<MediaData>,
 
@@ -21,17 +27,22 @@ pub struct GenerateRequest {
 
     /// Image max resolution, default is 768，防止图片过大导致编码失败
     pub image_max_resolution: u32,
+
+    /// Whether to keep context between requests
+    pub keep_context: bool,
 }
 
 impl Default for GenerateRequest {
     fn default() -> Self {
         Self {
+            session_id: None,
+            history: None,
             system_prompt: None,
             user_prompt: String::new(),
-            history: None,
             medias: Vec::new(),
             media_marker: Some("<__media__>".to_string()),
             image_max_resolution: 768,
+            keep_context: false,
         }
     }
 }
@@ -48,6 +59,18 @@ impl GenerateRequest {
         }
     }
 
+    /// 创建带会话ID的纯文本请求
+    pub fn text_with_session(
+        user_prompt: impl Into<String>,
+        session_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            user_prompt: user_prompt.into(),
+            session_id: Some(session_id.into()),
+            ..Default::default()
+        }
+    }
+
     /// 创建多模态请求
     pub fn media(media: MediaData) -> Self {
         Self {
@@ -59,6 +82,12 @@ impl GenerateRequest {
     /// 设置系统提示词
     pub fn with_system(mut self, system: impl Into<String>) -> Self {
         self.system_prompt = Some(system.into());
+        self
+    }
+
+    /// 设置会话ID，用于自动管理历史上下文
+    pub fn with_session_id(mut self, session_id: impl Into<String>) -> Self {
+        self.session_id = Some(session_id.into());
         self
     }
 
@@ -109,6 +138,11 @@ impl GenerateRequest {
     /// 设置图片最大分辨率
     pub fn with_image_max_resolution(mut self, image_max_resolution: u32) -> Self {
         self.image_max_resolution = image_max_resolution;
+        self
+    }
+
+    pub fn with_keep_context(mut self, keep_context: bool) -> Self {
+        self.keep_context = keep_context;
         self
     }
 
@@ -181,7 +215,13 @@ impl GenerateRequest {
         }
 
         // 添加历史消息（如果有）
-        if let Some(history) = self.history.clone() {
+        if let Some(history) = &self.history {
+            // 外部历史
+            messages.extend(history.messages());
+        }
+        if let Some(session_id) = self.session_id.clone() {
+            // 内部历史
+            let history = HistoryMessage::from_cache(session_id)?;
             messages.extend(history.messages());
         }
 

@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
     let _backend = Backend::init_backend()?;
 
     // 检测设备是否可用，如果没有 GPU 则使用 CPU
-    let model = Model::new("", None::<String>).with_verbose(true);
+    let model = Model::new("", None::<String>);
     let devices = model.devices();
 
     println!("devices list {devices:?}");

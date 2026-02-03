@@ -91,6 +91,51 @@ impl Default for ModelConfig {
 }
 
 impl ModelConfig {
+    pub fn with_model_path(mut self, path: impl Into<String>) -> Self {
+        self.model_path = path.into();
+        self
+    }
+
+    pub fn with_disable_gpu(mut self, disable_gpu: bool) -> Self {
+        self.disable_gpu = disable_gpu;
+        self
+    }
+
+    pub fn with_cmoe(mut self, cmoe: bool) -> Self {
+        self.cmoe = cmoe;
+        self
+    }
+
+    pub fn with_main_gpu(mut self, gpu: i32) -> Self {
+        self.main_gpu = gpu;
+        self
+    }
+
+    pub fn with_n_gpu_layers(mut self, layers: u32) -> Self {
+        self.n_gpu_layers = layers;
+        self
+    }
+
+    pub fn with_use_mlock(mut self, use_mlock: bool) -> Self {
+        self.use_mlock = use_mlock;
+        self
+    }
+
+    pub fn with_media_marker(mut self, media_marker: impl Into<String>) -> Self {
+        self.media_marker = Some(media_marker.into());
+        self
+    }
+
+    pub fn with_cache_model(mut self, cache_model: bool) -> Self {
+        self.cache_model = cache_model;
+        self
+    }
+
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
+
     ///  vec to str, e.g. "0,1,2"
     pub fn devices_str(&self) -> String {
         self.devices
@@ -147,46 +192,6 @@ impl Model {
             self.cache_mmproj_key = cache_mmproj_key.into();
         }
 
-        self
-    }
-
-    pub fn with_model_path(mut self, path: impl Into<String>) -> Self {
-        self.config.model_path = path.into();
-        self
-    }
-
-    pub fn with_disable_gpu(mut self, disable_gpu: bool) -> Self {
-        self.config.disable_gpu = disable_gpu;
-        self
-    }
-
-    pub fn with_cmoe(mut self, cmoe: bool) -> Self {
-        self.config.cmoe = cmoe;
-        self
-    }
-
-    pub fn with_main_gpu(mut self, gpu: i32) -> Self {
-        self.config.main_gpu = gpu;
-        self
-    }
-
-    pub fn with_n_gpu_layers(mut self, layers: u32) -> Self {
-        self.config.n_gpu_layers = layers;
-        self
-    }
-
-    pub fn with_use_mlock(mut self, use_mlock: bool) -> Self {
-        self.config.use_mlock = use_mlock;
-        self
-    }
-
-    pub fn with_cache_model(mut self, cache_model: bool) -> Self {
-        self.config.cache_model = cache_model;
-        self
-    }
-
-    pub fn with_verbose(mut self, verbose: bool) -> Self {
-        self.config.verbose = verbose;
         self
     }
 }

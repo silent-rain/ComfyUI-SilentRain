@@ -22,8 +22,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_n_ubatch(2048) // 对于大图像需要较大的 n_ubatch
         // .with_use_mlock(true)  // 内存锁定配置 - 影响处理速度
         .with_cache_model(true) // 模型缓存配置
-        .with_keep_context(false) // 关闭上下文保持，支持并发
-        .with_media_marker("<start_of_image>") // 媒体标记配置
         .with_verbose(true);
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）

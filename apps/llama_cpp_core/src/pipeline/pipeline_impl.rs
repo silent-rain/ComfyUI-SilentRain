@@ -9,18 +9,19 @@
 
 use std::sync::Arc;
 
-use llama_cpp_2::model::LlamaChatMessage;
 use tokio::sync::mpsc;
 
 use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing};
 use tracing::{error, info};
 
 use crate::{
-    Backend, GenerateRequest, Model, PipelineConfig, Sampler,
+    Backend, GenerateRequest, HistoryMessage, Model, PipelineConfig, Sampler,
+    cache::{CacheType, global_cache},
     context::{ContexParams, ContextWrapper},
     error::Error,
+    model::ModelConfig,
     mtmd_context::MtmdContextWrapper,
-    types::{GenerationOutput, MediaData, StreamToken},
+    types::{GenerationOutput, StreamToken},
 };
 
 /// 推理流水线
@@ -57,6 +58,69 @@ impl Pipeline {
         self.config = config;
         self
     }
+
+    /// 保存会话历史
+    ///
+    /// # Arguments
+    /// * `session_id` - 会话ID
+    /// * `request` - 生成请求
+    /// * `assistant_response` - 助手回复内容
+    fn save_session_history(
+        &self,
+        session_id: &str,
+        request: &GenerateRequest,
+        assistant_response: &str,
+    ) -> Result<(), Error> {
+        let mut history = HistoryMessage::new();
+
+        // 添加用户消息
+        history.add_user(&request.user_prompt)?;
+        // 添加助手回复
+        history.add_assistant(assistant_response)?;
+
+        // 保存到缓存
+        history.force_update_cache(session_id.to_string())?;
+
+        info!("Session '{}' history saved", session_id);
+        Ok(())
+    }
+
+    /// 清除指定会话的历史
+    ///
+    /// # Arguments
+    /// * `session_id` - 会话ID
+    pub fn clear_session_history(&self, session_id: &str) -> Result<(), Error> {
+        let cache_key = format!("history_message_{}", session_id);
+        global_cache().remove(&cache_key)?;
+        info!("Session '{}' history cleared", session_id);
+        Ok(())
+    }
+
+    /// 保存或清除会话历史
+    ///
+    /// # Arguments
+    /// * `request` - 原始请求（需要包含 session_id）
+    /// * `assistant_response` - 助手的回复内容
+    pub fn save_or_clear_session_history(
+        &self,
+        request: &GenerateRequest,
+        assistant_response: &str,
+    ) -> Result<(), Error> {
+        if let Some(ref session_id) = request.session_id {
+            if request.keep_context {
+                self.save_session_history(session_id, request, assistant_response)?;
+            } else {
+                self.clear_session_history(session_id)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// 获取所有会话ID列表
+    pub fn list_session_ids(&self) -> Result<Vec<String>, Error> {
+        let session_ids = global_cache().get_keys_by_type(CacheType::MessageContext)?;
+        Ok(session_ids)
+    }
 }
 
 impl Pipeline {
@@ -71,11 +135,10 @@ impl Pipeline {
     /// let result = pipeline.generate(&request).await?;
     /// ```
     pub async fn generate(&self, request: &GenerateRequest) -> Result<GenerationOutput, Error> {
-        let msgs = request.to_messages()?;
         let mut rx = if !request.is_multimodal() {
-            self.generate_text_stream(&msgs)?
+            self.generate_text_stream(request)?
         } else {
-            self.generate_media_stream(&msgs, &request.medias)?
+            self.generate_media_stream(request)?
         };
 
         let mut full_text = String::new();
@@ -87,6 +150,9 @@ impl Pipeline {
             }
         }
 
+        // 如果有 session_id，保存或清除会话历史
+        self.save_or_clear_session_history(request, &full_text)?;
+
         Ok(GenerationOutput::new(full_text))
     }
 
@@ -97,16 +163,17 @@ impl Pipeline {
     ///
     /// # Returns
     /// 返回一个 receiver，每次生成一个 token 时会发送一个 StreamToken
+    ///
+    /// # Note
+    /// 流式推理不会自动保存会话历史，如需保存请手动保存
     pub async fn generate_stream(
         &self,
         request: &GenerateRequest,
     ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
-        let msgs = request.to_messages()?;
-
         let rx = if !request.is_multimodal() {
-            self.generate_text_stream(&msgs)?
+            self.generate_text_stream(request)?
         } else {
-            self.generate_media_stream(&msgs, &request.medias)?
+            self.generate_media_stream(request)?
         };
         Ok(rx)
     }
@@ -114,8 +181,10 @@ impl Pipeline {
     /// 纯文本流式推理内部实现
     fn generate_text_stream(
         &self,
-        msgs: &[LlamaChatMessage],
+        request: &GenerateRequest,
     ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+        let msgs = request.to_messages()?;
+
         // Load model
         let llama_model = Model::from_config(self.config.clone().into())
             .load_cache_llama_model(&self.backend)
@@ -151,11 +220,26 @@ impl Pipeline {
     /// 媒体流式推理内部实现
     fn generate_media_stream(
         &self,
-        msgs: &[LlamaChatMessage],
-        medias: &[MediaData],
+        request: &GenerateRequest,
     ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+        let msgs = request.to_messages()?;
+
         // Load model
-        let model = Model::from_config(self.config.clone().into());
+        let model_config = {
+            let model_config: ModelConfig = self.config.clone().into();
+
+            // 设置媒体标记
+            let media_marker = request.media_marker.clone().ok_or_else(|| {
+                error!("media_marker is empty");
+                Error::InvalidInput {
+                    field: "media_marker".to_string(),
+                    message: "media_marker is empty".to_string(),
+                }
+            })?;
+            model_config.with_media_marker(media_marker)
+        };
+
+        let model = Model::from_config(model_config);
         let llama_model = model.load_cache_llama_model(&self.backend).map_err(|e| {
             error!("Failed to load llama model: {}", e);
             e
@@ -189,7 +273,7 @@ impl Pipeline {
                 })?;
 
         // Load media files
-        for media in medias {
+        for media in request.medias.clone() {
             info!("Loading media: {}", media.media_type);
             mtmd_ctx.load_media_buffer(&media.data).map_err(|e| {
                 error!("Failed to load media: {}", e);
@@ -246,7 +330,6 @@ mod tests {
 
         let pipeline_config = PipelineConfig::new(model_path, Some(mmproj_path))
             .with_disable_gpu(true)
-            .with_media_marker("<start_of_image>")
             .with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
@@ -267,9 +350,7 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None)
-            .with_cache_model(true)
-            .with_keep_context(false);
+        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
 
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -338,6 +419,131 @@ mod tests {
             // 验证模型是否记住了名字
             assert!(result2.text.contains("小明"));
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_session_based_history() -> anyhow::Result<()> {
+        init_logger();
+
+        let model_path =
+            "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
+        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
+
+        let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+
+        // 测试会话 A（用户 A 的对话）
+        let session_a = "user_a_session";
+        {
+            let request = GenerateRequest::text("你好，我叫小明")
+                .with_system("你是一个 helpful 的助手")
+                .with_session_id(session_a);
+            let result = pipeline.generate(&request).await?;
+            println!("[Session A] Assistant: {}", result.text);
+
+            // 第二轮：验证能否记住名字
+            let request = GenerateRequest::text("我叫什么名字？")
+                .with_system("你是一个 helpful 的助手")
+                .with_session_id(session_a);
+            let result = pipeline.generate(&request).await?;
+            println!("[Session A] Assistant: {}", result.text);
+            assert!(result.text.contains("小明"));
+        }
+
+        // 测试会话 B（用户 B 的对话）- 并发隔离
+        let session_b = "user_b_session";
+        {
+            // 用户 B 说不同的话
+            let request = GenerateRequest::text("你好，我叫小红")
+                .with_system("你是一个 helpful 的助手")
+                .with_session_id(session_b);
+            let result = pipeline.generate(&request).await?;
+            println!("[Session B] Assistant: {}", result.text);
+
+            // 验证用户 B 的历史独立于 A
+            let request = GenerateRequest::text("我叫什么名字？")
+                .with_system("你是一个 helpful 的助手")
+                .with_session_id(session_b);
+            let result = pipeline.generate(&request).await?;
+            println!("[Session B] Assistant: {}", result.text);
+            assert!(result.text.contains("小红"));
+        }
+
+        // 验证会话 A 仍然是小明（没有被 B 覆盖）
+        {
+            let request = GenerateRequest::text("我叫什么名字？")
+                .with_system("你是一个 helpful 的助手")
+                .with_session_id(session_a);
+            let result = pipeline.generate(&request).await?;
+            println!("[Session A] Assistant: {}", result.text);
+            assert!(result.text.contains("小明"));
+        }
+
+        // 测试清除会话
+        {
+            pipeline.clear_session_history(session_a)?;
+            let sessions = pipeline.list_session_ids()?;
+            assert!(!sessions.contains(&session_a.to_string()));
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_sessions() -> anyhow::Result<()> {
+        init_logger();
+
+        let model_path =
+            "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
+        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
+
+        let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+
+        // 并发创建多个会话
+        let mut tasks = vec![];
+        for i in 0..3 {
+            let pipeline = Arc::clone(&pipeline);
+            let task = tokio::spawn(async move {
+                let session_id = format!("concurrent_user_{}", i);
+                let name = format!("用户{}", i);
+
+                // 第一轮：自我介绍
+                let request = GenerateRequest::text(format!("你好，我叫{}", name))
+                    .with_system("你是一个 helpful 的助手")
+                    .with_session_id(&session_id);
+                let result = pipeline.generate(&request).await?;
+                println!("[{}] Round 1: {}", session_id, result.text);
+
+                // 第二轮：验证记忆
+                let request = GenerateRequest::text("我叫什么名字？")
+                    .with_system("你是一个 helpful 的助手")
+                    .with_session_id(&session_id);
+                let result = pipeline.generate(&request).await?;
+                println!("[{}] Round 2: {}", session_id, result.text);
+
+                // 验证结果
+                if !result.text.contains(&name) {
+                    return Err(anyhow::anyhow!(
+                        "Session {} should remember name {}",
+                        session_id,
+                        name
+                    ));
+                }
+
+                Ok::<_, anyhow::Error>(())
+            });
+            tasks.push(task);
+        }
+
+        // 等待所有任务完成
+        for task in tasks {
+            task.await??;
+        }
+
+        // 验证所有会话都存在
+        let sessions = pipeline.list_session_ids()?;
+        assert_eq!(sessions.len(), 3);
 
         Ok(())
     }

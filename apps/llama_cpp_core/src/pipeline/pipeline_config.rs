@@ -109,10 +109,6 @@ pub struct PipelineConfig {
     #[serde(default)]
     pub flash_attention: bool,
 
-    /// Whether to keep context between requests
-    #[serde(default)]
-    pub keep_context: bool,
-
     /// Whether to cache model between requests
     #[serde(default)]
     pub cache_model: bool,
@@ -141,10 +137,6 @@ pub struct PipelineConfig {
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
     pub pooling_type: String,
-
-    /// Media marker. If not provided, the default marker will be used.
-    #[serde(default)]
-    pub media_marker: Option<String>,
 
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
@@ -204,8 +196,7 @@ impl Default for PipelineConfig {
             use_mlock: false,
             devices: Vec::new(),
 
-            keep_context: false, // 保持上下文（默认禁用）
-            cache_model: false,  // 缓存模型（默认禁用）
+            cache_model: false, // 缓存模型（默认禁用）
 
             // Penalizes tokens for being present in the context.
             penalty_last_n: 64,   // 重复惩罚的窗口大小
@@ -216,9 +207,7 @@ impl Default for PipelineConfig {
             // 池化类型（默认未指定）
             pooling_type: PoolingTypeMode::Unspecified.to_string(),
 
-            // 多模态输入（默认留空）
-            media_marker: Some("<__media__>".to_string()), // 默认媒体标记
-            chat_template: None,                           // 默认聊天模板
+            chat_template: None, // 默认聊天模板
 
             // 日志和调试
             verbose: false, // 默认禁用详细日志
@@ -305,18 +294,8 @@ impl PipelineConfig {
         self
     }
 
-    pub fn with_media_marker(mut self, media_marker: impl Into<String>) -> Self {
-        self.media_marker = Some(media_marker.into());
-        self
-    }
-
     pub fn with_cache_model(mut self, cache_model: bool) -> Self {
         self.cache_model = cache_model;
-        self
-    }
-
-    pub fn with_keep_context(mut self, keep_context: bool) -> Self {
-        self.keep_context = keep_context;
         self
     }
 
@@ -353,10 +332,10 @@ impl From<PipelineConfig> for ModelConfig {
             use_mlock: pipeline_config.use_mlock,
             devices: pipeline_config.devices,
             n_gpu_layers: pipeline_config.n_gpu_layers,
-            media_marker: pipeline_config.media_marker,
             n_threads: pipeline_config.n_threads,
             cache_model: pipeline_config.cache_model,
             verbose: pipeline_config.verbose,
+            ..Default::default()
         }
     }
 }
