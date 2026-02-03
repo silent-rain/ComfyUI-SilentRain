@@ -4,7 +4,7 @@ use std::{
     collections::HashMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
-    sync::{Arc, OnceLock, RwLock},
+    sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use tracing::error;
@@ -13,11 +13,30 @@ use crate::error::Error;
 
 static GLOBAL_CACHE: OnceLock<Arc<CacheManager>> = OnceLock::new();
 
+/// 缓存类型
+#[derive(Clone, PartialEq)]
+pub enum CacheType {
+    Model,
+    MessageContext,
+    Custom(String),
+}
+
+impl std::fmt::Display for CacheType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CacheType::Model => write!(f, "model"),
+            CacheType::MessageContext => write!(f, "message_context"),
+            CacheType::Custom(name) => write!(f, "custom:{}", name),
+        }
+    }
+}
+
 /// 缓存条目
 #[derive(Clone)]
 pub struct CacheEntry<T: Any + Send + Sync> {
-    data: T,
-    params_hash: u64,
+    pub cache_type: CacheType,
+    pub params_hash: u64,
+    pub data: T,
 }
 
 /// Debug 展示
@@ -32,17 +51,26 @@ impl<T: Any + Send + Sync> fmt::Debug for CacheEntry<T> {
     ///
     /// # 示例
     /// ```
-    /// let entry = CacheEntry { params_hash: 123 };
-    /// println!("{}", entry);
+    /// use llama_cpp_core::cache::CacheEntry;
+    /// use llama_cpp_core::cache::CacheType;
+    ///
+    /// let cache = CacheEntry { cache_type: CacheType::Model, params_hash: 123, data: "" };
+    /// println!("{:?}", cache);
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CacheEntry params_hash: {}", self.params_hash)
+        write!(
+            f,
+            "CacheEntry(cache_type: {}, params_hash: {}, data: Object)",
+            self.cache_type, self.params_hash
+        )
     }
 }
 
+pub type CachePool = HashMap<String, CacheEntry<Arc<dyn Any + Send + Sync>>>;
+
 /// 全局单例的模型缓存
 pub struct CacheManager {
-    pool: RwLock<HashMap<String, CacheEntry<Arc<dyn Any + Send + Sync>>>>,
+    pool: RwLock<CachePool>,
 }
 
 impl Default for CacheManager {
@@ -69,11 +97,27 @@ impl CacheManager {
             .get_or_init(|| Arc::new(CacheManager::default()))
             .clone()
     }
+    /// 获取读取锁
+    pub fn read(&self) -> Result<RwLockReadGuard<'_, CachePool>, Error> {
+        self.pool.read().map_err(|e| {
+            error!("get cache read lock error: {e:?}");
+            Error::LockError(e.to_string())
+        })
+    }
+
+    /// 获取读写锁
+    pub fn write(&self) -> Result<RwLockWriteGuard<'_, CachePool>, Error> {
+        self.pool.write().map_err(|e| {
+            error!("get cache write lock error: {e:?}");
+            Error::LockError(e.to_string())
+        })
+    }
 
     /// 添加或更新模型（仅当 hash 值变化时更新）
     pub fn insert<T>(
         &self,
         key: &str,
+        cache_type: CacheType,
         params: &[T],
         data: Arc<dyn Any + Send + Sync>,
     ) -> Result<(), Error>
@@ -81,10 +125,7 @@ impl CacheManager {
         T: Hash,
     {
         let params_hash = Self::compute_hash(params);
-        let mut pool = self.pool.write().map_err(|e| {
-            error!("get cache write lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let mut pool = self.write()?;
 
         if let Some(cache) = pool.get(key)
             && cache.params_hash == params_hash
@@ -92,7 +133,14 @@ impl CacheManager {
             // hash 值未变化，不更新
             return Ok(());
         }
-        pool.insert(key.to_string(), CacheEntry { params_hash, data });
+        pool.insert(
+            key.to_string(),
+            CacheEntry {
+                cache_type,
+                params_hash,
+                data,
+            },
+        );
 
         Ok(())
     }
@@ -101,6 +149,7 @@ impl CacheManager {
     pub fn force_update<T>(
         &self,
         key: &str,
+        cache_type: CacheType,
         params: &[T],
         data: Arc<dyn Any + Send + Sync>,
     ) -> Result<(), Error>
@@ -108,11 +157,15 @@ impl CacheManager {
         T: Hash,
     {
         let params_hash = Self::compute_hash(params);
-        let mut pool = self.pool.write().map_err(|e| {
-            error!("get cache write lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
-        pool.insert(key.to_string(), CacheEntry { params_hash, data });
+        let mut pool = self.write()?;
+        pool.insert(
+            key.to_string(),
+            CacheEntry {
+                cache_type,
+                params_hash,
+                data,
+            },
+        );
 
         Ok(())
     }
@@ -121,6 +174,7 @@ impl CacheManager {
     pub fn get_or_insert<F, T, P>(
         &self,
         key: &str,
+        cache_type: CacheType,
         params: &[P],
         handler: F,
     ) -> Result<CacheEntry<Arc<T>>, Error>
@@ -133,10 +187,7 @@ impl CacheManager {
 
         // 先检查缓存（读锁）
         {
-            let pool = self.pool.read().map_err(|e| {
-                error!("get cache read lock error: {:?}", e);
-                Error::LockError(e.to_string())
-            })?;
+            let pool = self.read()?;
             if let Some(cache) = pool.get(key)
                 && cache.params_hash == params_hash
             {
@@ -152,34 +203,34 @@ impl CacheManager {
             e
         })?;
         let cache = CacheEntry {
+            cache_type: cache_type.clone(),
             params_hash,
             data: data.clone() as Arc<dyn Any + Send + Sync>,
         };
-        let mut pool = self.pool.write().map_err(|e| {
-            error!("get cache write lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let mut pool = self.write()?;
         pool.insert(key.to_string(), cache.clone());
 
         // 返回正确类型的 CacheEntry
-        Ok(CacheEntry { params_hash, data })
+        Ok(CacheEntry {
+            cache_type,
+            params_hash,
+            data,
+        })
     }
 
     /// 获取模型并转换为具体类型
     pub fn get<T: Send + Sync + 'static>(&self, key: &str) -> Result<CacheEntry<Arc<T>>, Error> {
-        let pool = self.pool.read().map_err(|e| {
-            error!("get cache read lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let pool = self.read()?;
         let cache = pool
             .get(key)
-            .and_then(|entry| {
+            .and_then(|cache| {
                 // 从 CacheEntry 中提取 data (Arc<dyn Any + Send + Sync>) 并下转为 Arc<T>
-                Arc::downcast::<T>(entry.data.clone())
+                Arc::downcast::<T>(cache.data.clone())
                     .ok()
                     .map(|typed_data| CacheEntry {
+                        cache_type: cache.cache_type.clone(),
+                        params_hash: cache.params_hash,
                         data: typed_data,
-                        params_hash: entry.params_hash,
                     })
             })
             .ok_or_else(|| {
@@ -198,24 +249,9 @@ impl CacheManager {
         hasher.finish()
     }
 
-    /// 删除模型
-    pub fn remove(
-        &self,
-        key: &str,
-    ) -> Result<Option<CacheEntry<Arc<dyn Any + Send + Sync>>>, Error> {
-        let mut pool = self.pool.write().map_err(|e| {
-            error!("get cache write lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
-        Ok(pool.remove(key))
-    }
-
     /// 获取数据并转换为具体类型
     pub fn get_data<T: Send + Sync + 'static>(&self, key: &str) -> Result<Option<Arc<T>>, Error> {
-        let pool = self.pool.read().map_err(|e| {
-            error!("get cache read lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let pool = self.read()?;
         let data = pool
             .get(key)
             .and_then(|arc_any| Arc::downcast::<T>(arc_any.data.clone()).ok());
@@ -225,54 +261,84 @@ impl CacheManager {
 
     /// 获取模型 hash 值
     pub fn get_params_hash(&self, key: &str) -> Option<u64> {
-        let pool = self
-            .pool
-            .read()
-            .map_err(|e| {
-                error!("get cache read lock error: {e:?}");
-                Error::LockError(e.to_string())
-            })
-            .ok()?;
+        let pool = self.read().ok()?;
         pool.get(key).map(|v| v.params_hash)
     }
 
     /// 获取所有的缓存 key
     pub fn get_keys(&self) -> Result<Vec<String>, Error> {
-        let pool = self.pool.read().map_err(|e| {
-            error!("get cache read lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let pool = self.read()?;
         Ok(pool.keys().cloned().collect())
+    }
+
+    /// 获取指定缓存类型的缓存 key
+    pub fn get_keys_by_type(&self, cache_type: CacheType) -> Result<Vec<String>, Error> {
+        let pool = self.read()?;
+
+        let mut keys = Vec::new();
+        for (key, cache) in pool.iter() {
+            if cache.cache_type == cache_type {
+                keys.push(key.clone());
+            }
+        }
+        Ok(keys)
+    }
+
+    /// 删除模型
+    pub fn remove(
+        &self,
+        key: &str,
+    ) -> Result<Option<CacheEntry<Arc<dyn Any + Send + Sync>>>, Error> {
+        let mut pool = self.write()?;
+        Ok(pool.remove(key))
+    }
+
+    /// 删除模型, 返回具体类型
+    pub fn remove2<T: Send + Sync + 'static>(
+        &self,
+        key: &str,
+    ) -> Result<Option<CacheEntry<Arc<T>>>, Error> {
+        let mut pool = self.write()?;
+
+        let cache = pool.remove(key).and_then(|cache| {
+            // 从 CacheEntry 中提取 data (Arc<dyn Any + Send + Sync>) 并下转为 Arc<T>
+            Arc::downcast::<T>(cache.data.clone())
+                .ok()
+                .map(|typed_data| CacheEntry {
+                    cache_type: cache.cache_type,
+                    params_hash: cache.params_hash,
+                    data: typed_data,
+                })
+        });
+
+        Ok(cache)
     }
 
     /// 清空所有模型
     pub fn clear(&self) -> Result<(), Error> {
-        self.pool
-            .write()
-            .map_err(|e| {
-                error!("get cache write lock error: {e:?}");
-                Error::LockError(e.to_string())
-            })?
-            .clear();
+        self.write()?.clear();
+
+        Ok(())
+    }
+
+    /// 指定缓存类型进行清除
+    pub fn clear_cache_type(&self, cache_type: CacheType) -> Result<(), Error> {
+        let mut pool = self.write()?;
+
+        pool.retain(|_, cache| cache.cache_type != cache_type);
 
         Ok(())
     }
 
     /// 获取缓存大小
     pub fn len(&self) -> Result<usize, Error> {
-        let pool = self.pool.read().map_err(|e| {
-            error!("get cache read lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let pool = self.read()?;
         Ok(pool.len())
     }
 
     /// 检查是否为空
     pub fn is_empty(&self) -> Result<bool, Error> {
-        let pool = self.pool.read().map_err(|e| {
-            error!("get cache read lock error: {e:?}");
-            Error::LockError(e.to_string())
-        })?;
+        let pool = self.read()?;
 
         Ok(pool.is_empty())
     }
@@ -306,7 +372,12 @@ mod tests {
         {
             let cache = CacheManager::global();
 
-            cache.insert("model1", &[1, 2, 3], Arc::new(MyModel { value: 42 }))?;
+            cache.insert(
+                "model1",
+                CacheType::Model,
+                &[1, 2, 3],
+                Arc::new(MyModel { value: 42 }),
+            )?;
             assert!(cache.get::<MyModel>("model1").is_ok());
         }
 
@@ -327,20 +398,35 @@ mod tests {
 
         // 测试插入
         {
-            cache.insert("model1", &[1, 2, 3], Arc::new(MyModel { value: 42 }))?;
+            cache.insert(
+                "model1",
+                CacheType::Model,
+                &[1, 2, 3],
+                Arc::new(MyModel { value: 42 }),
+            )?;
             assert!(cache.get::<MyModel>("model1").is_ok());
         }
 
         // 测试 hash 值未变化时不更新
         {
-            cache.insert("model1", &[1, 2, 3], Arc::new(MyModel { value: 100 }))?;
+            cache.insert(
+                "model1",
+                CacheType::Model,
+                &[1, 2, 3],
+                Arc::new(MyModel { value: 100 }),
+            )?;
             let model = cache.get::<MyModel>("model1").unwrap();
             assert_eq!(model.data.value, 42); // 仍然是旧值，因为 hash 未变化
         }
 
         // 测试 hash 值变化时更新
         {
-            cache.insert("model1", &[1, 2, 4], Arc::new(MyModel { value: 100 }))?;
+            cache.insert(
+                "model1",
+                CacheType::Model,
+                &[1, 2, 4],
+                Arc::new(MyModel { value: 100 }),
+            )?;
             let model = cache.get::<MyModel>("model1").unwrap();
             assert_eq!(model.data.value, 100); // 新值，因为 hash 变化了
         }
@@ -357,7 +443,9 @@ mod tests {
         // 第一次调用，初始化模型
         {
             let model = cache
-                .get_or_insert("model1", params, || Ok(Arc::new(MyModel { value: 42 })))
+                .get_or_insert("model1", CacheType::Model, params, || {
+                    Ok(Arc::new(MyModel { value: 42 }))
+                })
                 .unwrap();
             assert_eq!(model.data.value, 42);
         }
@@ -365,7 +453,7 @@ mod tests {
         // 第二次调用，hash 一致，返回现有模型
         {
             let model = cache
-                .get_or_insert("model1", params, || {
+                .get_or_insert("model1", CacheType::Model, params, || {
                     println!("This should not be printed!");
                     Ok(Arc::new(MyModel { value: 80 }))
                 })
@@ -376,7 +464,9 @@ mod tests {
         // 第三次调用，hash 不一致，更新模型
         {
             let model = cache
-                .get_or_insert("model1", params, || Ok(Arc::new(MyModel { value: 100 })))
+                .get_or_insert("model1", CacheType::Model, params, || {
+                    Ok(Arc::new(MyModel { value: 100 }))
+                })
                 .unwrap();
             assert_eq!(model.data.value, 100);
         }

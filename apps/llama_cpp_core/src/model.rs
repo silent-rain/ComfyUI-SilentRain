@@ -14,8 +14,8 @@ use llama_cpp_2::{
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::error::Error;
 use crate::{CacheManager, global_cache};
+use crate::{cache::CacheType, error::Error};
 
 /// 模型参数配置
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -301,6 +301,7 @@ impl Model {
         // 缓存模型
         self.cache.insert(
             &self.cache_model_key,
+            CacheType::Model,
             &params,
             model.clone() as Arc<dyn std::any::Any + Send + Sync>,
         )?;
@@ -382,6 +383,7 @@ impl Model {
         // 缓存模型
         self.cache.insert(
             &self.cache_mmproj_key,
+            CacheType::Model,
             &params,
             sendable_ctx.clone() as Arc<dyn std::any::Any + Send + Sync>,
         )?;

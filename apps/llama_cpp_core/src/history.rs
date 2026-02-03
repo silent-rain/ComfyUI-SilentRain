@@ -6,7 +6,7 @@ use llama_cpp_2::model::LlamaChatMessage;
 use rand::TryRngCore;
 use tracing::error;
 
-use crate::{error::Error, global_cache, types::PromptMessageRole};
+use crate::{cache::CacheType, error::Error, global_cache, types::PromptMessageRole};
 
 #[derive(Debug, Default, Clone)]
 pub struct HistoryMessage {
@@ -104,7 +104,12 @@ impl HistoryMessage {
         let random = rand::rng().try_next_u32().unwrap_or(0);
         let params = vec![random.to_string()];
 
-        cache.force_update(&cache_key, &params, Arc::new(self.megs.clone()))?;
+        cache.force_update(
+            &cache_key,
+            CacheType::MessageContext,
+            &params,
+            Arc::new(self.megs.clone()),
+        )?;
 
         if let Some(data) = cache.get_data::<Vec<LlamaChatMessage>>(&cache_key)? {
             self.megs = data.to_vec();
