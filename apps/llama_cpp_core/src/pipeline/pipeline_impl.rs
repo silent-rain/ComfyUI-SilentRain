@@ -71,7 +71,11 @@ impl Pipeline {
         request: &GenerateRequest,
         assistant_response: &str,
     ) -> Result<(), Error> {
-        let mut history = HistoryMessage::new();
+        // 尝试加载已有历史，如果不存在则创建新的
+        let mut history = match HistoryMessage::from_cache(session_id.to_string()) {
+            Ok(existing) => (*existing).clone(),
+            Err(_) => HistoryMessage::new(),
+        };
 
         // 添加用户消息
         history.add_user(&request.user_prompt)?;
@@ -81,7 +85,7 @@ impl Pipeline {
         // 保存到缓存
         history.force_update_cache(session_id.to_string())?;
 
-        info!("Session '{}' history saved", session_id);
+        info!("Session '{}' history saved ({} messages)", session_id, history.message_count());
         Ok(())
     }
 

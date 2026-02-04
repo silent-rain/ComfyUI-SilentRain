@@ -1,6 +1,12 @@
 //! 模型
 
-use std::{ffi::CString, pin::pin, sync::Arc};
+use std::{
+    collections::hash_map::DefaultHasher,
+    ffi::CString,
+    hash::{Hash, Hasher},
+    pin::pin,
+    sync::Arc,
+};
 
 use llama_cpp_2::{
     LlamaBackendDevice, list_llama_ggml_backend_devices,
@@ -16,6 +22,23 @@ use tracing::{error, info};
 
 use crate::{CacheManager, global_cache};
 use crate::{cache::CacheType, error::Error};
+
+/// 生成模型路径的唯一哈希键
+fn hash_model_key(path: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    format!("model:{:016x}", hasher.finish())
+}
+
+/// 生成 mmproj 路径的唯一哈希键
+fn hash_mmproj_key(path: &str) -> String {
+    if path.is_empty() {
+        return String::new();
+    }
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    format!("mmproj:{:016x}", hasher.finish())
+}
 
 /// 模型参数配置
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -160,6 +183,11 @@ impl Model {
         let cache = global_cache().clone();
         let model_path = model_path.into();
         let mmproj_path = mmproj_path.into().unwrap_or_default();
+
+        // 基于路径生成唯一缓存键，确保不同模型不会互相覆盖
+        let cache_model_key = hash_model_key(&model_path);
+        let cache_mmproj_key = hash_mmproj_key(&mmproj_path);
+
         Self {
             config: ModelConfig {
                 model_path: model_path.clone(),
@@ -167,18 +195,23 @@ impl Model {
                 ..ModelConfig::default()
             },
             cache,
-            cache_model_key: "cache_model_key".to_string(),
-            cache_mmproj_key: "cache_mmproj_key".to_string(),
+            cache_model_key,
+            cache_mmproj_key,
         }
     }
 
     pub fn from_config(config: ModelConfig) -> Self {
         let cache = global_cache().clone();
+
+        // 基于路径生成唯一缓存键
+        let cache_model_key = hash_model_key(&config.model_path);
+        let cache_mmproj_key = hash_mmproj_key(&config.mmproj_path);
+
         Self {
             config: config.clone(),
             cache,
-            cache_model_key: "cache_model_key".to_string(),
-            cache_mmproj_key: "cache_mmproj_key".to_string(),
+            cache_model_key,
+            cache_mmproj_key,
         }
     }
 
@@ -303,7 +336,7 @@ impl Model {
         ];
 
         // 缓存模型
-        self.cache.insert(
+        self.cache.insert_or_update(
             &self.cache_model_key,
             CacheType::Model,
             &params,
@@ -385,7 +418,7 @@ impl Model {
         ];
 
         // 缓存模型
-        self.cache.insert(
+        self.cache.insert_or_update(
             &self.cache_mmproj_key,
             CacheType::Model,
             &params,

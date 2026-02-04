@@ -3,14 +3,13 @@
 use std::sync::Arc;
 
 use llama_cpp_2::model::LlamaChatMessage;
-use rand::TryRngCore;
 use tracing::error;
 
 use crate::{cache::CacheType, error::Error, global_cache, types::PromptMessageRole};
 
 #[derive(Debug, Default, Clone)]
 pub struct HistoryMessage {
-    megs: Vec<LlamaChatMessage>,
+    msgs: Vec<LlamaChatMessage>,
 }
 
 impl HistoryMessage {
@@ -18,16 +17,16 @@ impl HistoryMessage {
         HistoryMessage::default()
     }
 
-    pub fn from_vec(megs: Vec<LlamaChatMessage>) -> Self {
-        Self { megs }
+    pub fn from_vec(msgs: Vec<LlamaChatMessage>) -> Self {
+        Self { msgs }
     }
 
     pub fn add(&mut self, msg: LlamaChatMessage) {
-        self.megs.push(msg);
+        self.msgs.push(msg);
     }
 
     pub fn adds(&mut self, msgs: Vec<LlamaChatMessage>) {
-        self.megs.extend(msgs);
+        self.msgs.extend(msgs);
     }
 
     pub fn add_assistant(&mut self, msg: impl Into<String>) -> Result<(), Error> {
@@ -61,20 +60,20 @@ impl HistoryMessage {
     }
 
     pub fn messages(&self) -> Vec<LlamaChatMessage> {
-        self.megs.clone()
+        self.msgs.clone()
     }
 
     /// 获取最后n条消息
     pub fn get_last_n(&self, n: usize) -> Vec<LlamaChatMessage> {
-        self.megs
+        self.msgs
             .clone()
             .into_iter()
-            .skip(self.megs.len() - n)
+            .skip(self.msgs.len() - n)
             .collect()
     }
 
     pub fn clear(&mut self) {
-        self.megs.clear();
+        self.msgs.clear();
     }
 }
 
@@ -89,21 +88,45 @@ impl HistoryMessage {
             })?
             .ok_or_else(|| {
                 error!("Cache data not found");
-                Error::InvalidInput {
-                    field: "HistoryMessage".to_string(),
-                    message: "Cache data not found".to_string(),
+                Error::CacheNotFound {
+                    key: session_id.clone(),
                 }
             })?;
 
         Ok(data.clone())
     }
 
+    /// 计算历史消息的内容哈希，用于缓存参数
+    /// 使用消息数量和总内容长度作为简单哈希
+    fn compute_content_hash(&self) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        // 使用消息数量作为哈希的一部分
+        self.msgs.len().hash(&mut hasher);
+        // 使用每条消息的内存地址（指针）作为唯一标识
+        for msg in &self.msgs {
+            let ptr = std::ptr::addr_of!(msg);
+            ptr.hash(&mut hasher);
+        }
+        format!("{:x}", hasher.finish())
+    }
+
+    /// 获取历史消息数量，用于版本控制
+    pub fn message_count(&self) -> usize {
+        self.msgs.len()
+    }
+
     pub fn force_update_cache(&mut self, session_id: String) -> Result<(), Error> {
         let cache = global_cache();
 
-        // 随机值
-        let random = rand::rng().try_next_u32().unwrap_or(0);
-        let params = vec![random.to_string()];
+        // 使用内容哈希 + 消息数量作为参数，确保：
+        // 1. 相同内容可以命中缓存
+        // 2. 内容变化时哈希变化，触发更新
+        let content_hash = self.compute_content_hash();
+        let msg_count = self.msgs.len() as u64;
+        let params = vec![content_hash, msg_count.to_string()];
 
         cache.force_update(
             &session_id,

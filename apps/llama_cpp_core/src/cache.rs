@@ -114,7 +114,7 @@ impl CacheManager {
     }
 
     /// 添加或更新模型（仅当 hash 值变化时更新）
-    pub fn insert<T>(
+    pub fn insert_or_update<T>(
         &self,
         key: &str,
         cache_type: CacheType,
@@ -372,7 +372,7 @@ mod tests {
         {
             let cache = CacheManager::global();
 
-            cache.insert(
+            cache.insert_or_update(
                 "model1",
                 CacheType::Model,
                 &[1, 2, 3],
@@ -398,7 +398,7 @@ mod tests {
 
         // 测试插入
         {
-            cache.insert(
+            cache.insert_or_update(
                 "model1",
                 CacheType::Model,
                 &[1, 2, 3],
@@ -409,7 +409,7 @@ mod tests {
 
         // 测试 hash 值未变化时不更新
         {
-            cache.insert(
+            cache.insert_or_update(
                 "model1",
                 CacheType::Model,
                 &[1, 2, 3],
@@ -421,7 +421,7 @@ mod tests {
 
         // 测试 hash 值变化时更新
         {
-            cache.insert(
+            cache.insert_or_update(
                 "model1",
                 CacheType::Model,
                 &[1, 2, 4],
