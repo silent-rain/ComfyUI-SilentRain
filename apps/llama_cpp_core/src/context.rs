@@ -11,10 +11,7 @@ use std::{io::Write, num::NonZero, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
 use llama_cpp_2::{
-    context::{
-        LlamaContext,
-        params::{LlamaContextParams, LlamaPoolingType},
-    },
+    context::{LlamaContext, params::LlamaContextParams},
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
@@ -66,7 +63,7 @@ pub struct ContexParams {
     /// Pooling type for embeddings.
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
-    pub pooling_type: String,
+    pub pooling_type: PoolingTypeMode,
 
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
@@ -99,7 +96,7 @@ impl Default for ContexParams {
             n_ctx: 4096,
             n_predict: 2048,
 
-            pooling_type: PoolingTypeMode::Unspecified.to_string(),
+            pooling_type: PoolingTypeMode::Unspecified,
 
             chat_template: None,
 
@@ -145,19 +142,6 @@ impl ContextWrapper {
         backend: &LlamaBackend,
         contex_params: &ContexParams,
     ) -> Result<LlamaContext<'static>, Error> {
-        let pooling_type = match contex_params.pooling_type.as_str() {
-            "None" => LlamaPoolingType::None,
-            "Mean" => LlamaPoolingType::Mean,
-            "Cls" => LlamaPoolingType::Cls,
-            "Last" => LlamaPoolingType::Last,
-            "Rank" => LlamaPoolingType::Rank,
-            "Unspecified" => LlamaPoolingType::Unspecified,
-            _ => {
-                info!("Unknown pooling type: {}", contex_params.pooling_type);
-                LlamaPoolingType::Unspecified
-            }
-        };
-
         let context_params = LlamaContextParams::default()
             .with_n_threads(contex_params.n_threads)
             .with_n_threads_batch(contex_params.n_threads_batch)
@@ -165,7 +149,7 @@ impl ContextWrapper {
             .with_n_ubatch(contex_params.n_ubatch)
             .with_n_ctx(NonZero::new(contex_params.n_ctx))
             // .with_embeddings(true)
-            .with_pooling_type(pooling_type);
+            .with_pooling_type(contex_params.pooling_type.into());
 
         // Create context
         let context = model.new_context(backend, context_params)?;

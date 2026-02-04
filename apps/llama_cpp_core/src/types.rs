@@ -2,24 +2,19 @@
 //!
 //! 此模块集中定义所有公共类型，避免分散在多个文件中
 
+use llama_cpp_2::context::params::LlamaPoolingType;
 use serde::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
 
 /// 对话消息角色枚举
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumString)]
-#[strum(serialize_all = "kebab-case")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PromptMessageRole {
     /// 系统角色（用于初始化或系统级指令）
-    #[strum(to_string = "System")]
     System,
     /// 用户角色（人类用户输入）
-    #[strum(to_string = "User")]
     User,
     /// AI 助手角色（模型生成的回复）
-    #[strum(to_string = "Assistant")]
     Assistant,
     /// 可选：自定义角色（如多AI代理场景）
-    #[strum(transparent)]
     Custom(String),
 }
 
@@ -41,32 +36,47 @@ impl PromptMessageRole {
 }
 
 /// 处理模式枚举
-#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
-#[strum(serialize_all = "kebab-case")]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PoolingTypeMode {
     /// 无模式
-    #[strum(to_string = "None")]
     None,
-
     /// 均值模式
-    #[strum(to_string = "Mean")]
     Mean,
-
     /// 分类模式
-    #[strum(to_string = "Cls")]
     Cls,
-
     /// 最后模式
-    #[strum(to_string = "Last")]
     Last,
-
     /// 排序模式
-    #[strum(to_string = "Rank")]
     Rank,
-
     /// 未指定模式
-    #[strum(to_string = "Unspecified")]
+    #[default]
     Unspecified,
+}
+
+impl std::fmt::Display for PoolingTypeMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PoolingTypeMode::None => write!(f, "None"),
+            PoolingTypeMode::Mean => write!(f, "Mean"),
+            PoolingTypeMode::Cls => write!(f, "Cls"),
+            PoolingTypeMode::Last => write!(f, "Last"),
+            PoolingTypeMode::Rank => write!(f, "Rank"),
+            PoolingTypeMode::Unspecified => write!(f, "Unspecified"),
+        }
+    }
+}
+
+impl From<PoolingTypeMode> for LlamaPoolingType {
+    fn from(value: PoolingTypeMode) -> Self {
+        match value {
+            PoolingTypeMode::None => LlamaPoolingType::None,
+            PoolingTypeMode::Mean => LlamaPoolingType::Mean,
+            PoolingTypeMode::Cls => LlamaPoolingType::Cls,
+            PoolingTypeMode::Last => LlamaPoolingType::Last,
+            PoolingTypeMode::Rank => LlamaPoolingType::Rank,
+            PoolingTypeMode::Unspecified => LlamaPoolingType::Unspecified,
+        }
+    }
 }
 
 /// 媒体类型枚举

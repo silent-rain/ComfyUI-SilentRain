@@ -136,7 +136,7 @@ pub struct PipelineConfig {
     /// Pooling type for embeddings.
     /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
     #[serde(default)]
-    pub pooling_type: String,
+    pub pooling_type: PoolingTypeMode,
 
     /// Chat template to use, default template if not provided
     // #[arg(long = "chat-template", value_name = "TEMPLATE")]
@@ -205,7 +205,7 @@ impl Default for PipelineConfig {
             penalty_present: 0.0, // 存在惩罚系数
 
             // 池化类型（默认未指定）
-            pooling_type: PoolingTypeMode::Unspecified.to_string(),
+            pooling_type: PoolingTypeMode::Unspecified,
 
             chat_template: None, // 默认聊天模板
 
@@ -314,7 +314,7 @@ impl From<PipelineConfig> for ContexParams {
             n_ubatch: pipeline_config.n_ubatch,
             n_predict: pipeline_config.n_predict,
             n_ctx: pipeline_config.n_ctx,
-            pooling_type: pipeline_config.pooling_type.clone(),
+            pooling_type: pipeline_config.pooling_type,
             chat_template: pipeline_config.chat_template.clone(),
             verbose: pipeline_config.verbose,
         }
