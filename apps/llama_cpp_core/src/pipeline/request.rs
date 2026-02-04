@@ -1,12 +1,13 @@
 //! Request processing module for pipeline operations
 use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
+use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::{HistoryMessage, MediaData, PromptMessageRole, error::Error, utils::image::Image};
 
 /// 生成请求结构体
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerateRequest {
     /// 会话ID（可选）
     /// 用于在 Pipeline 内部自动管理历史上下文，实现并发隔离
@@ -207,12 +208,12 @@ impl GenerateRequest {
         // 添加历史消息（如果有）
         if let Some(history) = &self.history {
             // 外部历史
-            messages.extend(history.messages());
+            messages.extend(history.to_llama_message()?);
         }
         if !self.session_id.clone().is_empty() {
             // 内部历史
             let history = HistoryMessage::from_cache(self.session_id.clone())?;
-            messages.extend(history.messages());
+            messages.extend(history.to_llama_message()?);
         }
 
         // 用户消息：多模态时添加媒体标记

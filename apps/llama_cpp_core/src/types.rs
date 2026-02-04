@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 /// 对话消息角色枚举
-#[derive(Debug, Clone, PartialEq, EnumString)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumString)]
 #[strum(serialize_all = "kebab-case")]
 pub enum PromptMessageRole {
     /// 系统角色（用于初始化或系统级指令）
