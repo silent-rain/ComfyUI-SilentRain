@@ -4,9 +4,14 @@ use std::sync::Arc;
 
 use llama_cpp_2::model::LlamaChatMessage;
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{cache::CacheType, error::Error, global_cache, types::PromptMessageRole};
+
+/// 默认最大历史消息数（保留最近100条）
+const DEFAULT_MAX_HISTORY_MESSAGES: usize = 100;
+/// 警告阈值，超过此值会触发日志警告
+const WARN_HISTORY_THRESHOLD: usize = 80;
 
 /// 内部消息条目，支持序列化
 /// 用于存储历史消息，可持久化到 SQLite 或缓存
@@ -37,9 +42,20 @@ impl MessageEntry {
 
 /// 历史消息管理器
 /// 内部使用可序列化的 MessageEntry 存储，仅在导出时转换为 LlamaChatMessage
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryMessage {
     entries: Vec<MessageEntry>,
+    /// 最大消息数限制
+    max_entries: usize,
+}
+
+impl Default for HistoryMessage {
+    fn default() -> Self {
+        Self {
+            entries: Vec::new(),
+            max_entries: DEFAULT_MAX_HISTORY_MESSAGES,
+        }
+    }
 }
 
 impl HistoryMessage {
@@ -47,9 +63,54 @@ impl HistoryMessage {
         HistoryMessage::default()
     }
 
+    /// 创建指定大小的历史消息管理器
+    pub fn with_capacity(max_entries: usize) -> Self {
+        Self {
+            entries: Vec::new(),
+            max_entries,
+        }
+    }
+
     /// 添加内部消息条目
+    /// 当超过最大限制时，移除最旧的消息（保留系统消息）
     fn add_entry(&mut self, entry: MessageEntry) {
+        // 检查是否需要淘汰旧消息
+        if self.entries.len() >= self.max_entries {
+            self.truncate_oldest();
+        }
+
+        // 警告检查
+        if self.entries.len() >= WARN_HISTORY_THRESHOLD && self.entries.len() < self.max_entries {
+            info!(
+                "History message count ({}) approaching limit ({})",
+                self.entries.len(),
+                self.max_entries
+            );
+        }
+
         self.entries.push(entry);
+    }
+
+    /// 淘汰最旧的消息（保留系统消息）
+    fn truncate_oldest(&mut self) {
+        // 找到第一个非系统消息的索引
+        let first_non_system = self
+            .entries
+            .iter()
+            .position(|e| e.role != PromptMessageRole::System)
+            .unwrap_or(0);
+
+        if first_non_system < self.entries.len() {
+            // 移除最旧的非系统消息（或如果全是系统消息，移除最旧的）
+            self.entries.remove(first_non_system);
+            info!(
+                "History truncated: removed oldest message (count: {})",
+                self.entries.len()
+            );
+        } else {
+            // 如果只有系统消息，移除最旧的
+            self.entries.remove(0);
+        }
     }
 
     pub fn add_assistant(&mut self, msg: impl Into<String>) -> Result<(), Error> {
@@ -96,11 +157,26 @@ impl HistoryMessage {
 
     /// 获取最后n条消息
     pub fn get_last_n(&self, n: usize) -> Result<Vec<LlamaChatMessage>, Error> {
+        let n = n.min(self.entries.len()); // 确保不越界
         let start = self.entries.len().saturating_sub(n);
         self.entries[start..]
             .iter()
             .map(|entry| entry.to_llama_message())
             .collect()
+    }
+
+    /// 获取当前最大消息数限制
+    pub fn max_entries(&self) -> usize {
+        self.max_entries
+    }
+
+    /// 设置最大消息数限制
+    pub fn set_max_entries(&mut self, max_entries: usize) {
+        self.max_entries = max_entries;
+        // 如果当前消息数超过新限制，立即截断
+        while self.entries.len() > self.max_entries {
+            self.truncate_oldest();
+        }
     }
 
     pub fn clear(&mut self) {

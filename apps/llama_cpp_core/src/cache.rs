@@ -13,6 +13,9 @@ use crate::error::Error;
 
 static GLOBAL_CACHE: OnceLock<Arc<CacheManager>> = OnceLock::new();
 
+/// 默认缓存最大条目数
+const DEFAULT_MAX_CACHE_ENTRIES: usize = 100;
+
 /// 缓存类型
 #[derive(Clone, PartialEq)]
 pub enum CacheType {
@@ -37,6 +40,8 @@ pub struct CacheEntry<T: Any + Send + Sync> {
     pub cache_type: CacheType,
     pub params_hash: u64,
     pub data: T,
+    /// 最后访问时间（用于 LRU 淘汰）
+    pub last_accessed: std::time::Instant,
 }
 
 /// Debug 展示
@@ -71,12 +76,25 @@ pub type CachePool = HashMap<String, CacheEntry<Arc<dyn Any + Send + Sync>>>;
 /// 全局单例的模型缓存
 pub struct CacheManager {
     pool: RwLock<CachePool>,
+    /// 最大缓存条目数
+    max_entries: usize,
 }
 
 impl Default for CacheManager {
     fn default() -> Self {
         Self {
             pool: RwLock::new(HashMap::new()),
+            max_entries: DEFAULT_MAX_CACHE_ENTRIES,
+        }
+    }
+}
+
+impl CacheManager {
+    /// 创建指定大小的缓存管理器
+    pub fn with_capacity(max_entries: usize) -> Self {
+        Self {
+            pool: RwLock::new(HashMap::new()),
+            max_entries,
         }
     }
 }
@@ -130,19 +148,37 @@ impl CacheManager {
         if let Some(cache) = pool.get(key)
             && cache.params_hash == params_hash
         {
-            // hash 值未变化，不更新
+            // hash 值未变化，只更新访问时间
             return Ok(());
         }
+
+        // 检查是否需要淘汰旧条目
+        if pool.len() >= self.max_entries {
+            Self::evict_lru(&mut pool);
+        }
+
         pool.insert(
             key.to_string(),
             CacheEntry {
                 cache_type,
                 params_hash,
                 data,
+                last_accessed: std::time::Instant::now(),
             },
         );
 
         Ok(())
+    }
+
+    /// LRU 淘汰策略：移除最久未访问的条目
+    fn evict_lru(pool: &mut CachePool) {
+        if let Some(oldest_key) = pool
+            .iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(k, _)| k.clone())
+        {
+            pool.remove(&oldest_key);
+        }
     }
 
     /// 强制更新模型（无论 hash 值是否变化）
@@ -158,12 +194,19 @@ impl CacheManager {
     {
         let params_hash = Self::compute_hash(params);
         let mut pool = self.write()?;
+
+        // 检查是否需要淘汰旧条目（仅当 key 不存在时）
+        if !pool.contains_key(key) && pool.len() >= self.max_entries {
+            Self::evict_lru(&mut pool);
+        }
+
         pool.insert(
             key.to_string(),
             CacheEntry {
                 cache_type,
                 params_hash,
                 data,
+                last_accessed: std::time::Instant::now(),
             },
         );
 
@@ -202,12 +245,20 @@ impl CacheManager {
             error!("get cache data error: {:?}", e);
             e
         })?;
+
+        let mut pool = self.write()?;
+
+        // 检查是否需要淘汰旧条目
+        if !pool.contains_key(key) && pool.len() >= self.max_entries {
+            Self::evict_lru(&mut pool);
+        }
+
         let cache = CacheEntry {
             cache_type: cache_type.clone(),
             params_hash,
             data: data.clone() as Arc<dyn Any + Send + Sync>,
+            last_accessed: std::time::Instant::now(),
         };
-        let mut pool = self.write()?;
         pool.insert(key.to_string(), cache.clone());
 
         // 返回正确类型的 CacheEntry
@@ -215,15 +266,19 @@ impl CacheManager {
             cache_type,
             params_hash,
             data,
+            last_accessed: std::time::Instant::now(),
         })
     }
 
-    /// 获取模型并转换为具体类型
+    /// 获取模型并转换为具体类型（同时更新访问时间）
     pub fn get<T: Send + Sync + 'static>(&self, key: &str) -> Result<CacheEntry<Arc<T>>, Error> {
-        let pool = self.read()?;
+        // 使用写锁来更新访问时间
+        let mut pool = self.write()?;
         let cache = pool
-            .get(key)
+            .get_mut(key)
             .and_then(|cache| {
+                // 更新访问时间
+                cache.last_accessed = std::time::Instant::now();
                 // 从 CacheEntry 中提取 data (Arc<dyn Any + Send + Sync>) 并下转为 Arc<T>
                 Arc::downcast::<T>(cache.data.clone())
                     .ok()
@@ -231,6 +286,7 @@ impl CacheManager {
                         cache_type: cache.cache_type.clone(),
                         params_hash: cache.params_hash,
                         data: typed_data,
+                        last_accessed: cache.last_accessed,
                     })
             })
             .ok_or_else(|| {
@@ -249,12 +305,16 @@ impl CacheManager {
         hasher.finish()
     }
 
-    /// 获取数据并转换为具体类型
+    /// 获取数据并转换为具体类型（同时更新访问时间）
     pub fn get_data<T: Send + Sync + 'static>(&self, key: &str) -> Result<Option<Arc<T>>, Error> {
-        let pool = self.read()?;
+        let mut pool = self.write()?;
         let data = pool
-            .get(key)
-            .and_then(|arc_any| Arc::downcast::<T>(arc_any.data.clone()).ok());
+            .get_mut(key)
+            .and_then(|cache| {
+                // 更新访问时间
+                cache.last_accessed = std::time::Instant::now();
+                Arc::downcast::<T>(cache.data.clone()).ok()
+            });
 
         Ok(data)
     }
@@ -308,6 +368,7 @@ impl CacheManager {
                     cache_type: cache.cache_type,
                     params_hash: cache.params_hash,
                     data: typed_data,
+                    last_accessed: cache.last_accessed,
                 })
         });
 

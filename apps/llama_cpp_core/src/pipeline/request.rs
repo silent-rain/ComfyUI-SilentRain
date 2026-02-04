@@ -205,15 +205,16 @@ impl GenerateRequest {
             )?);
         }
 
-        // 添加历史消息（如果有）
+        // 添加历史消息（外部历史和内部缓存历史二选一，优先外部历史）
         if let Some(history) = &self.history {
-            // 外部历史
+            // 使用外部传入的历史
             messages.extend(history.to_llama_message()?);
-        }
-        if !self.session_id.clone().is_empty() {
-            // 内部历史
-            let history = HistoryMessage::from_cache(self.session_id.clone())?;
-            messages.extend(history.to_llama_message()?);
+        } else if !self.session_id.is_empty() {
+            // 从缓存加载历史
+            match HistoryMessage::from_cache(self.session_id.clone()) {
+                Ok(history) => messages.extend(history.to_llama_message()?),
+                Err(e) => info!("No cached history for session '{}': {}", self.session_id, e),
+            }
         }
 
         // 用户消息：多模态时添加媒体标记
