@@ -312,7 +312,6 @@ impl Model {
         // 缓存参数
         let params = vec![
             self.config.model_path.clone(),
-            (self.config.n_gpu_layers == 0).to_string(),
             self.config.main_gpu.to_string(),
             self.config.n_gpu_layers.to_string(),
             self.config.cmoe.to_string(),
