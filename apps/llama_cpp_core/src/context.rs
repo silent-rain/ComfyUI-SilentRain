@@ -36,20 +36,10 @@ pub struct ContexParams {
     #[serde(default)]
     pub n_threads: i32,
 
-    /// Number of threads to use during batch and prompt processing.
-    /// Useful for optimizing multi-threaded workloads.
-    #[serde(default)]
-    pub n_threads_batch: i32,
-
     /// Batch size for prompt processing.
     /// Larger values may improve throughput but increase memory usage.
     #[serde(default)]
     pub n_batch: u32,
-
-    /// Micro batch size for prompt processing.
-    /// For vision models, should be >= image tokens.
-    #[serde(default)]
-    pub n_ubatch: u32,
 
     /// Number of tokens to predict (-1 for unlimited)
     #[serde(default)]
@@ -75,6 +65,51 @@ pub struct ContexParams {
     pub verbose: bool,
 }
 
+// 生成便捷方法
+impl ContexParams {
+    /// 设置线程数
+    pub fn with_n_threads(mut self, n_threads: i32) -> Self {
+        self.n_threads = n_threads;
+        self
+    }
+
+    /// 设置批处理大小
+    pub fn with_n_batch(mut self, n_batch: u32) -> Self {
+        self.n_batch = n_batch;
+        self
+    }
+
+    /// 设置最大生成 token 数
+    pub fn with_max_tokens(mut self, tokens: i32) -> Self {
+        self.n_predict = tokens;
+        self
+    }
+
+    /// 设置上下文窗口大小
+    pub fn with_n_ctx(mut self, n_ctx: u32) -> Self {
+        self.n_ctx = n_ctx;
+        self
+    }
+
+    /// 设置池化类型
+    pub fn with_pooling_type(mut self, pooling_type: PoolingTypeMode) -> Self {
+        self.pooling_type = pooling_type;
+        self
+    }
+
+    /// 设置聊天模板
+    pub fn with_chat_template(mut self, chat_template: String) -> Self {
+        self.chat_template = Some(chat_template);
+        self
+    }
+
+    /// 设置是否打印日志
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
+}
+
 impl ContexParams {
     pub fn max_predict(&self) -> i32 {
         if self.n_predict < 0 {
@@ -90,9 +125,7 @@ impl Default for ContexParams {
         Self {
             // 线程和批处理参数
             n_threads: 0,
-            n_threads_batch: 0,
             n_batch: 512,
-            n_ubatch: 1024, // 视觉模型需要较大的微批处理大小
             n_ctx: 4096,
             n_predict: 2048,
 
@@ -144,9 +177,8 @@ impl ContextWrapper {
     ) -> Result<LlamaContext<'static>, Error> {
         let context_params = LlamaContextParams::default()
             .with_n_threads(contex_params.n_threads)
-            .with_n_threads_batch(contex_params.n_threads_batch)
             .with_n_batch(contex_params.n_batch)
-            .with_n_ubatch(contex_params.n_ubatch)
+            // .with_n_ubatch(contex_params.n_ubatch)
             .with_n_ctx(NonZero::new(contex_params.n_ctx))
             // .with_embeddings(true)
             .with_pooling_type(contex_params.pooling_type.into());

@@ -1,358 +1,169 @@
 //! 流水线配置
+//!
+//! 使用组合模式，直接包含子配置模块
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    context::ContexParams, model::ModelConfig, sampler::SamplerConfig, types::PoolingTypeMode,
-};
+use crate::{context::ContexParams as ContextConfig, model::ModelConfig, sampler::SamplerConfig};
 
 /// 流水线配置
-#[derive(Debug, Clone, Deserialize, Serialize)]
+///
+/// 使用组合模式，直接包含三个子配置：
+/// - `model`: 模型加载相关配置（路径、GPU、线程等）
+/// - `context`: 上下文相关配置（批大小、窗口大小等）
+/// - `sampling`: 采样相关配置（温度、top-k/p 等）
+///
+/// # Example
+/// ```rust
+/// use llama_cpp_core::PipelineConfig;
+///
+/// let config = PipelineConfig::new("model.gguf")
+///     .with_gpu_layers(10)
+///     .with_context_size(8192);
+/// ```
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct PipelineConfig {
-    /// Path to the model file (e.g., "ggml-model.bin")
+    /// 模型配置
     #[serde(default)]
-    pub model_path: String,
+    pub model: ModelConfig,
 
-    /// Path to the multimodal projection file (e.g., "mmproj-model.bin")
-    /// Required for models with multimodal capabilities (e.g., vision or audio).
+    /// 上下文配置
     #[serde(default)]
-    pub mmproj_path: String,
+    pub context: ContextConfig,
 
-    /// Controls diversity via top-k sampling.
-    /// Higher values mean more diverse outputs.
+    /// 采样配置
     #[serde(default)]
-    pub top_k: i32,
-
-    /// Controls diversity via nucleus sampling.
-    /// Lower values mean more focused outputs.
-    #[serde(default)]
-    pub top_p: f32,
-
-    /// Controls randomness.
-    /// Higher values mean more random outputs.
-    #[serde(default)]
-    pub temperature: f32,
-
-    /// Min-p 采样阈值
-    pub min_p: f32,
-
-    /// Seed for random number generation.
-    /// Set to a fixed value for reproducible outputs.
-    #[serde(default)]
-    pub seed: i32,
-
-    /// Number of threads to use during generation.
-    /// Set to a specific value to limit CPU usage.
-    #[serde(default)]
-    pub n_threads: i32,
-
-    /// Number of threads to use during batch and prompt processing.
-    /// Useful for optimizing multi-threaded workloads.
-    #[serde(default)]
-    pub n_threads_batch: i32,
-
-    /// Batch size for prompt processing.
-    /// Larger values may improve throughput but increase memory usage.
-    #[serde(default)]
-    pub n_batch: u32,
-
-    /// Micro batch size for prompt processing.
-    /// For vision models, should be >= image tokens. Default: 1024
-    #[serde(default)]
-    pub n_ubatch: u32,
-
-    /// Size of the prompt context window.
-    /// Defines the maximum context length the model can handle.
-    #[serde(default)]
-    pub n_ctx: u32,
-
-    /// Number of tokens to predict (-1 for unlimited)
-    #[serde(default)]
-    pub n_predict: i32,
-
-    /// Disable offloading layers to the gpu
-    #[serde(default)]
-    pub disable_gpu: bool,
-
-    /// Index of the main GPU to use.
-    /// Relevant for multi-GPU systems.
-    #[serde(default)]
-    pub main_gpu: i32,
-
-    /// 设备索引列表
-    /// This option overrides `main-gpu` and enables multi-GPU.
-    /// Set devices to use by index, separated by commas (e.g. --devices 0,1,2). Overrides main-gpu and enables multi-GPU.
-    #[serde(default)]
-    pub devices: Vec<usize>,
-
-    /// Number of GPU layers to offload.
-    /// Higher values offload more work to the GPU.
-    #[serde(default)]
-    pub n_gpu_layers: u32,
-
-    /// Keep MoE layers on CPU
-    #[serde(default)]
-    pub cmoe: bool,
-
-    /// Force system to keep model in RAM (use mlock)
-    #[serde(default)]
-    pub use_mlock: bool,
-
-    /// If set to `true`, disables GPU offloading for the multimodal projection (mmproj) .
-    /// This forces mmproj computations to run on CPU, even if the main model runs on GPU.
-    // #[serde(default)]
-    // pub no_mmproj_offload: bool,
-
-    // TODO 尚未实现
-    /// Enables flash attention for faster inference.
-    /// Requires compatible hardware and model support.
-    #[serde(default)]
-    pub flash_attention: bool,
-
-    /// Whether to cache model between requests
-    #[serde(default)]
-    pub cache_model: bool,
-
-    /// Size of the sliding window for repeat penalty
-    /// Specifies how many most recent tokens to consider for repeat penalty
-    #[serde(default)]
-    pub penalty_last_n: i32,
-
-    /// Repeat penalty coefficient
-    /// Penalizes repeated tokens - higher values enforce more diversity
-    #[serde(default)]
-    pub penalty_repeat: f32,
-
-    /// Frequency penalty coefficient
-    /// Penalizes tokens based on their frequency in the text
-    #[serde(default)]
-    pub penalty_freq: f32,
-
-    /// Presence penalty coefficient
-    /// Penalizes tokens already present in the context
-    #[serde(default)]
-    pub penalty_present: f32,
-
-    /// Pooling type for embeddings.
-    /// Options: "None", "Mean", "Cls", "Last", "Rank", "Unspecified".
-    #[serde(default)]
-    pub pooling_type: PoolingTypeMode,
-
-    /// Chat template to use, default template if not provided
-    // #[arg(long = "chat-template", value_name = "TEMPLATE")]
-    #[serde(default)]
-    pub chat_template: Option<String>,
-
-    // *************************
-    /// Whether to normalise the produced embeddings
-    #[serde(default)]
-    pub normalise: bool,
-
-    /// The documents to embed and compare against
-    #[serde(default)]
-    pub documents: Vec<String>,
-
-    /// override some parameters of the model
-    // #[arg(short = 'o', value_parser = parse_key_val)]
-    // key_value_overrides: Vec<(String, ParamOverrideValue)>,
+    pub sampling: SamplerConfig,
 
     /// Enables verbose logging from llama.cpp.
-    /// Useful for debugging and performance analysis.
     #[serde(default)]
     pub verbose: bool,
 }
 
-impl Default for PipelineConfig {
-    fn default() -> Self {
-        Self {
-            // 模型文件路径（需用户指定，默认留空）
-            model_path: String::new(),
-            // 多模态投影文件路径（需用户指定，默认留空）
-            mmproj_path: String::new(),
+impl PipelineConfig {
+    /// 创建新的流水线配置
+    ///
+    /// # Arguments
+    /// * `model_path` - 模型文件路径
+    ///
+    /// # Example
+    /// ```rust
+    /// let config = PipelineConfig::new("model.gguf");
+    /// ```
+    pub fn new(model_path: impl Into<String>) -> Self {
+        let mut config = Self::default();
+        config.model.model_path = model_path.into();
+        config
+    }
 
-            // 采样参数
-            top_k: 40,        // 默认 top-k 采样值
-            top_p: 0.95,      // 默认 top-p 采样值
-            temperature: 0.6, // 默认温度值
-            min_p: 0.0,       // 最小概率阈值
-            seed: -1,         // 默认随机种子（-1 表示随机）
+    /// 创建带 mmproj 的配置（多模态）
+    ///
+    /// # Example
+    /// ```rust
+    /// let config = PipelineConfig::new_with_mmproj("model.gguf", "mmproj.gguf");
+    /// ```
+    pub fn new_with_mmproj(model_path: impl Into<String>, mmproj_path: impl Into<String>) -> Self {
+        let mut config = Self::new(model_path);
+        config.model.mmproj_path = mmproj_path.into();
+        config
+    }
+}
 
-            // 线程和批处理参数
-            n_threads: 0,       // 0 表示自动使用所有可用线程
-            n_threads_batch: 0, // 0 表示自动使用所有可用线程
-            n_batch: 512,       // 默认批处理大小
-            n_ubatch: 1024,     // 默认微批处理大小（视觉模型需要较大值）
-            n_ctx: 4096,        // 默认上下文窗口大小
-            n_predict: 2048,    // 要预测的Token数量， -1 表示无限生成
+/// Builder 风格的便捷方法
+impl PipelineConfig {
+    /// 设置模型路径
+    pub fn with_model_path(mut self, model_path: impl Into<String>) -> Self {
+        self.model.model_path = model_path.into();
+        self
+    }
 
-            // GPU 相关参数
-            disable_gpu: true,
-            main_gpu: 0,     // 默认主 GPU 索引
-            n_gpu_layers: 0, // 默认不启用 GPU 卸载
-            // no_mmproj_offload: false, // 默认启用 mmproj 的 GPU 卸载
-            flash_attention: false, // 默认禁用 Flash Attention
+    /// 设置 mmproj 路径（多模态）
+    pub fn with_mmproj_path(mut self, mmproj_path: impl Into<String>) -> Self {
+        self.model.mmproj_path = mmproj_path.into();
+        self
+    }
 
-            cmoe: false,
-            use_mlock: false,
-            devices: Vec::new(),
+    /// 设置 GPU 层数（0 = CPU 模式）
+    pub fn with_n_gpu_layers(mut self, n_gpu_layers: u32) -> Self {
+        self.model.n_gpu_layers = n_gpu_layers;
+        self
+    }
 
-            cache_model: false, // 缓存模型（默认禁用）
+    /// 设置主 GPU
+    pub fn with_main_gpu(mut self, main_gpu: i32) -> Self {
+        self.model.main_gpu = main_gpu;
+        self
+    }
 
-            // Penalizes tokens for being present in the context.
-            penalty_last_n: 64,   // 重复惩罚的窗口大小
-            penalty_repeat: 1.2,  // 重复惩罚系数
-            penalty_freq: 1.1,    // 重复频率惩罚系数
-            penalty_present: 0.0, // 存在惩罚系数
+    /// 设置温度
+    pub fn with_temperature(mut self, temperature: f32) -> Self {
+        self.sampling.temperature = temperature;
+        self
+    }
 
-            // 池化类型（默认未指定）
-            pooling_type: PoolingTypeMode::Unspecified,
+    /// 设置 top_k
+    pub fn with_top_k(mut self, top_k: i32) -> Self {
+        self.sampling.top_k = top_k;
+        self
+    }
 
-            chat_template: None, // 默认聊天模板
+    /// 设置 top_p
+    pub fn with_top_p(mut self, top_p: f32) -> Self {
+        self.sampling.top_p = top_p;
+        self
+    }
 
-            // 日志和调试
-            verbose: false, // 默认禁用详细日志
+    /// 设置随机种子
+    pub fn with_seed(mut self, seed: i32) -> Self {
+        self.sampling.seed = seed;
+        self
+    }
 
-            normalise: false, // 默认禁用输入归一化
+    /// 设置线程数
+    pub fn with_threads(mut self, n_threads: i32) -> Self {
+        self.model.n_threads = n_threads;
+        self.context.n_threads = n_threads;
+        self
+    }
 
-            // 检索增强生成（RAG）参数
-            documents: Vec::new(),
-        }
+    /// 是否缓存模型
+    pub fn with_cache_model(mut self, cache: bool) -> Self {
+        self.model.cache_model = cache;
+        self
+    }
+
+    /// 是否启用详细日志
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self.model.verbose = verbose;
+        self.context.verbose = verbose;
+        self
     }
 }
 
 impl PipelineConfig {
-    pub fn new(model_path: String, mmproj_path: Option<String>) -> Self {
-        Self {
-            model_path,
-            mmproj_path: mmproj_path.unwrap_or_default(),
-            ..Default::default()
-        }
-    }
-
-    pub fn with_model_path(mut self, model_path: impl Into<String>) -> Self {
-        self.model_path = model_path.into();
+    /// 设置上下文配置
+    pub fn with_context(mut self, context: ContextConfig) -> Self {
+        self.context = context;
         self
     }
 
-    pub fn with_mmproj_path(mut self, mmproj_path: impl Into<String>) -> Self {
-        self.mmproj_path = mmproj_path.into();
-        self
-    }
-
-    pub fn with_n_threads(mut self, n_threads: u32) -> Self {
-        self.n_threads = n_threads as i32;
-        self
-    }
-
-    pub fn with_n_threads_batch(mut self, n_threads_batch: u32) -> Self {
-        self.n_threads_batch = n_threads_batch as i32;
-        self
-    }
-
-    pub fn with_n_batch(mut self, n_batch: u32) -> Self {
-        self.n_batch = n_batch;
-        self
-    }
-
-    pub fn with_n_ubatch(mut self, n_ubatch: u32) -> Self {
-        self.n_ubatch = n_ubatch;
-        self
-    }
-
+    /// 设置上下文窗口大小
     pub fn with_n_ctx(mut self, n_ctx: u32) -> Self {
-        self.n_ctx = n_ctx;
+        self.context.n_ctx = n_ctx;
         self
     }
 
-    pub fn with_n_predict(mut self, n_predict: i32) -> Self {
-        self.n_predict = n_predict;
+    /// 设置批处理大小
+    pub fn with_n_batch(mut self, n_batch: u32) -> Self {
+        self.context.n_batch = n_batch;
         self
     }
 
-    pub fn with_main_gpu(mut self, main_gpu: i32) -> Self {
-        self.main_gpu = main_gpu;
+    /// 设置最大生成 token 数
+    pub fn with_max_tokens(mut self, tokens: i32) -> Self {
+        self.context.n_predict = tokens;
         self
-    }
-
-    pub fn with_disable_gpu(mut self, disable_gpu: bool) -> Self {
-        self.disable_gpu = disable_gpu;
-        self
-    }
-
-    pub fn with_n_gpu_layers(mut self, n_gpu_layers: u32) -> Self {
-        self.n_gpu_layers = n_gpu_layers;
-        self
-    }
-
-    pub fn with_cmoe(mut self, cmoe: bool) -> Self {
-        self.cmoe = cmoe;
-        self
-    }
-
-    pub fn with_use_mlock(mut self, use_mlock: bool) -> Self {
-        self.use_mlock = use_mlock;
-        self
-    }
-
-    pub fn with_cache_model(mut self, cache_model: bool) -> Self {
-        self.cache_model = cache_model;
-        self
-    }
-
-    pub fn with_verbose(mut self, verbose: bool) -> Self {
-        self.verbose = verbose;
-        self
-    }
-}
-
-impl From<PipelineConfig> for ContexParams {
-    fn from(pipeline_config: PipelineConfig) -> Self {
-        ContexParams {
-            n_threads: pipeline_config.n_threads,
-            n_threads_batch: pipeline_config.n_threads_batch,
-            n_batch: pipeline_config.n_batch,
-            n_ubatch: pipeline_config.n_ubatch,
-            n_predict: pipeline_config.n_predict,
-            n_ctx: pipeline_config.n_ctx,
-            pooling_type: pipeline_config.pooling_type,
-            chat_template: pipeline_config.chat_template.clone(),
-            verbose: pipeline_config.verbose,
-        }
-    }
-}
-
-impl From<PipelineConfig> for ModelConfig {
-    fn from(pipeline_config: PipelineConfig) -> Self {
-        ModelConfig {
-            model_path: pipeline_config.model_path.clone(),
-            mmproj_path: pipeline_config.mmproj_path.clone(),
-            disable_gpu: pipeline_config.disable_gpu,
-            main_gpu: pipeline_config.main_gpu,
-            devices: pipeline_config.devices,
-            n_gpu_layers: pipeline_config.n_gpu_layers,
-            cmoe: pipeline_config.cmoe,
-            use_mlock: pipeline_config.use_mlock,
-            n_threads: pipeline_config.n_threads,
-            cache_model: pipeline_config.cache_model,
-            verbose: pipeline_config.verbose,
-            ..Default::default()
-        }
-    }
-}
-
-impl From<PipelineConfig> for SamplerConfig {
-    fn from(pipeline_config: PipelineConfig) -> Self {
-        SamplerConfig {
-            top_k: pipeline_config.top_k,
-            top_p: pipeline_config.top_p,
-            temperature: pipeline_config.temperature,
-            min_p: pipeline_config.min_p,
-            seed: pipeline_config.seed,
-            penalty_last_n: pipeline_config.penalty_last_n,
-            penalty_repeat: pipeline_config.penalty_repeat,
-            penalty_freq: pipeline_config.penalty_freq,
-            penalty_present: pipeline_config.penalty_present,
-        }
     }
 }
 
@@ -361,20 +172,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_simple() -> anyhow::Result<()> {
-        let pipeline_config = PipelineConfig::default();
+    fn test_default_config() {
+        let config = PipelineConfig::default();
+        assert!(config.model.model_path.is_empty());
+        assert_eq!(config.context.n_ctx, 4096);
+        assert_eq!(config.sampling.temperature, 0.6);
+    }
 
-        let s = serde_json::to_string(&pipeline_config)?;
-        println!("{s:?}\n\n");
+    #[test]
+    fn test_new_config() {
+        let config = PipelineConfig::new("test.gguf");
+        assert_eq!(config.model.model_path, "test.gguf");
+    }
 
-        let model_config: ModelConfig = serde_json::from_str(&s)?;
-        println!("{model_config:#?}\n\n");
+    #[test]
+    fn test_builder_style() {
+        let config = PipelineConfig::new("test.gguf")
+            .with_n_gpu_layers(10)
+            .with_n_ctx(8192)
+            .with_temperature(0.8)
+            .with_top_k(50);
 
-        let sampler_config: SamplerConfig = serde_json::from_str(&s)?;
-        println!("{sampler_config:#?}\n\n");
+        assert_eq!(config.model.n_gpu_layers, 10);
+        assert!(config.model.n_gpu_layers > 0);
+        assert_eq!(config.context.n_ctx, 8192);
+        assert_eq!(config.sampling.temperature, 0.8);
+        assert_eq!(config.sampling.top_k, 50);
+    }
 
-        let contex_params: ContexParams = serde_json::from_str(&s)?;
-        println!("{contex_params:#?}\n\n");
-        Ok(())
+    #[test]
+    fn test_serde_roundtrip() {
+        let config = PipelineConfig::new("test.gguf")
+            .with_n_gpu_layers(10)
+            .with_n_ctx(8192);
+
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: PipelineConfig = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.model.model_path, config.model.model_path);
+        assert_eq!(restored.model.n_gpu_layers, config.model.n_gpu_layers);
+        assert_eq!(restored.context.n_ctx, config.context.n_ctx);
     }
 }

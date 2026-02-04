@@ -13,14 +13,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mmproj_path =
         "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf".to_string();
 
-    let pipeline_config = PipelineConfig::new(model_path, Some(mmproj_path))
-        .with_disable_gpu(false) // GPU 配置 - 启用 GPU 加速
+    let pipeline_config = PipelineConfig::new_with_mmproj(model_path, mmproj_path)
         .with_n_gpu_layers(10) // GPU 层数配置 - 影响 GPU 加速
         // .with_n_threads(8) // 线程配置 - 影响 mmproj 编码速度
-        // .with_n_threads_batch(8) // 批处理线程配置 - 影响处理速度
         .with_n_batch(1024) // 批处理配置 - 影响图像解码
-        .with_n_ubatch(2048) // 对于大图像需要较大的 n_ubatch
-        // .with_use_mlock(true)  // 内存锁定配置 - 影响处理速度
         .with_cache_model(true) // 模型缓存配置
         .with_verbose(true);
 

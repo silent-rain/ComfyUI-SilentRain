@@ -7,19 +7,18 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
-    utils::log::init_logger,
+    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig, utils::log::init_logger,
 };
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     init_logger();
 
-    let model_path = std::env::var("MODEL_PATH")
-        .unwrap_or_else(|_| "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string());
+    let model_path = std::env::var("MODEL_PATH").unwrap_or_else(|_| {
+        "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string()
+    });
 
-    let pipeline_config = PipelineConfig::new(model_path, None)
-        .with_cache_model(true);
+    let pipeline_config = PipelineConfig::new(model_path).with_cache_model(true);
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -33,8 +32,8 @@ async fn main() -> anyhow::Result<()> {
 
         // 第一轮
         println!("[User] 你好，我叫小明");
-        let request = GenerateRequest::text("你好，我叫小明")
-            .with_system("你是一个 helpful 的助手");
+        let request =
+            GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let result = pipeline.generate(&request).await?;
         println!("[Assistant] {}\n", result.text);
 

@@ -52,9 +52,6 @@ pub struct ModelConfig {
     #[serde(default)]
     pub mmproj_path: String,
 
-    /// Disable offloading layers to the gpu
-    #[serde(default)]
-    pub disable_gpu: bool,
     /// Index of the main GPU to use.
     /// Relevant for multi-GPU systems.
     #[serde(default)]
@@ -65,17 +62,13 @@ pub struct ModelConfig {
     #[serde(default)]
     pub devices: Vec<usize>,
     /// Number of GPU layers to offload.
-    /// Higher values offload more work to the GPU.
+    /// 0 = CPU only mode, >0 = GPU mode with specified layers
     #[serde(default)]
     pub n_gpu_layers: u32,
 
     /// Keep MoE layers on CPU
     #[serde(default)]
     pub cmoe: bool,
-
-    /// Force system to keep model in RAM (use mlock)
-    #[serde(default)]
-    pub use_mlock: bool,
 
     /// Number of threads to use during generation.
     /// Set to a specific value to limit CPU usage.
@@ -99,11 +92,9 @@ impl Default for ModelConfig {
         Self {
             model_path: String::new(),
             mmproj_path: String::new(),
-            disable_gpu: true,
             main_gpu: 0,
-            n_gpu_layers: 0,
+            n_gpu_layers: 0, // 0 = CPU only mode
             cmoe: false,
-            use_mlock: false,
             devices: Vec::new(),
             media_marker: Some("<__media__>".to_string()), // 默认媒体标记
             n_threads: 4,
@@ -119,11 +110,6 @@ impl ModelConfig {
         self
     }
 
-    pub fn with_disable_gpu(mut self, disable_gpu: bool) -> Self {
-        self.disable_gpu = disable_gpu;
-        self
-    }
-
     pub fn with_cmoe(mut self, cmoe: bool) -> Self {
         self.cmoe = cmoe;
         self
@@ -134,14 +120,16 @@ impl ModelConfig {
         self
     }
 
-    pub fn with_n_gpu_layers(mut self, layers: u32) -> Self {
+    /// 设置 GPU 层数（0 = CPU 模式）
+    pub fn with_gpu_layers(mut self, layers: u32) -> Self {
         self.n_gpu_layers = layers;
         self
     }
 
-    pub fn with_use_mlock(mut self, use_mlock: bool) -> Self {
-        self.use_mlock = use_mlock;
-        self
+    /// 检查是否使用 GPU
+    /// n_gpu_layers > 0 表示启用 GPU
+    pub fn use_gpu(&self) -> bool {
+        self.n_gpu_layers > 0
     }
 
     pub fn with_media_marker(mut self, media_marker: impl Into<String>) -> Self {
@@ -269,15 +257,17 @@ impl Model {
                     error!("Failed to set devices: {:?}", e);
                     e
                 })?;
-        } else if !self.config.disable_gpu {
+        } else if self.config.n_gpu_layers > 0 {
             // 单 GPU 模式
             model_params = model_params.with_main_gpu(self.config.main_gpu);
             // Enable single GPU mode
             model_params = model_params.with_split_mode(LlamaSplitMode::None);
-            model_params = model_params.with_n_gpu_layers(self.config.n_gpu_layers);
+        }
 
+        if self.config.n_gpu_layers > 0 {
+            model_params = model_params.with_n_gpu_layers(self.config.n_gpu_layers);
             // 设置 use_mlock
-            model_params = model_params.with_use_mlock(self.config.use_mlock);
+            // model_params = model_params.with_use_mlock(self.config.use_mlock);
         }
 
         let mut model_params = pin!(model_params);
@@ -287,7 +277,7 @@ impl Model {
         //     model_params.as_mut().append_kv_override(k.as_c_str(), *v);
         // }
 
-        if !self.config.disable_gpu && self.config.cmoe {
+        if self.config.cmoe {
             model_params.as_mut().add_cpu_moe_override();
         }
 
@@ -322,10 +312,9 @@ impl Model {
         // 缓存参数
         let params = vec![
             self.config.model_path.clone(),
-            self.config.disable_gpu.to_string(),
+            (self.config.n_gpu_layers == 0).to_string(),
             self.config.main_gpu.to_string(),
             self.config.n_gpu_layers.to_string(),
-            self.config.use_mlock.to_string(),
             self.config.cmoe.to_string(),
             self.config
                 .devices
@@ -348,7 +337,7 @@ impl Model {
 
     /// Load MTMD context
     pub fn load_mtmd_mtmd_context(&self, model: Arc<LlamaModel>) -> Result<MtmdContext, Error> {
-        let use_gpu = !self.config.disable_gpu;
+        let use_gpu = self.config.n_gpu_layers > 0;
 
         // Create media marker CString
         let media_marker = CString::new(
@@ -411,7 +400,7 @@ impl Model {
         // 缓存参数
         let params = vec![
             self.config.mmproj_path.clone(),
-            self.config.disable_gpu.to_string(),
+            (self.config.n_gpu_layers == 0).to_string(),
             self.config.media_marker.clone().unwrap_or_default(),
             self.config.n_threads.to_string(),
             self.config.verbose.to_string(),

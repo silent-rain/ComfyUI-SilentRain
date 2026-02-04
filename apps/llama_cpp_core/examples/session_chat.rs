@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
         "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string()
     });
 
-    let pipeline_config = PipelineConfig::new(model_path, None)
+    let pipeline_config = PipelineConfig::new(model_path)
         .with_cache_model(true)
         .with_verbose(true);
 

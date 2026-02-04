@@ -85,7 +85,11 @@ impl Pipeline {
         // 保存到缓存
         history.force_update_cache(session_id.to_string())?;
 
-        info!("Session '{}' history saved ({} messages)", session_id, history.message_count());
+        info!(
+            "Session '{}' history saved ({} messages)",
+            session_id,
+            history.message_count()
+        );
         Ok(())
     }
 
@@ -190,7 +194,7 @@ impl Pipeline {
         let msgs = request.to_messages()?;
 
         // Load model
-        let llama_model = Model::from_config(self.config.clone().into())
+        let llama_model = Model::from_config(self.config.model.clone())
             .load_cache_llama_model(&self.backend)
             .map_err(|e| {
                 error!("Failed to load model: {}", e);
@@ -198,13 +202,13 @@ impl Pipeline {
             })?;
 
         // Load sampler
-        let mut sampler = Sampler::load_sampler(&self.config.clone().into()).map_err(|e| {
+        let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
             error!("Failed to load sampler: {}", e);
             e
         })?;
 
         // 创建上下文
-        let contex_params: ContexParams = self.config.clone().into();
+        let contex_params: ContexParams = self.config.context.clone();
         let mut ctx = ContextWrapper::try_new(llama_model.clone(), &self.backend, &contex_params)
             .map_err(|e| {
             error!("Failed to create context: {}", e);
@@ -230,7 +234,7 @@ impl Pipeline {
 
         // Load model
         let model_config = {
-            let model_config: ModelConfig = self.config.clone().into();
+            let model_config: ModelConfig = self.config.model.clone();
 
             // 设置媒体标记
             let media_marker = request.media_marker.clone().ok_or_else(|| {
@@ -256,13 +260,13 @@ impl Pipeline {
             })?;
 
         // Load sampler
-        let mut sampler = Sampler::load_sampler(&self.config.clone().into()).map_err(|e| {
+        let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
             error!("Failed to load sampler: {}", e);
             e
         })?;
 
         // 上下文
-        let contex_params: ContexParams = self.config.clone().into();
+        let contex_params: ContexParams = self.config.context.clone();
         let ctx = ContextWrapper::try_new(llama_model.clone(), &self.backend, &contex_params)
             .map_err(|e| {
                 error!("Failed to create context: {}", e);
@@ -309,9 +313,7 @@ mod tests {
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
 
-        let pipeline_config = PipelineConfig::new(model_path, None)
-            .with_disable_gpu(true)
-            .with_verbose(true);
+        let pipeline_config = PipelineConfig::new(model_path).with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
@@ -332,9 +334,8 @@ mod tests {
             "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf"
                 .to_string();
 
-        let pipeline_config = PipelineConfig::new(model_path, Some(mmproj_path))
-            .with_disable_gpu(true)
-            .with_verbose(true);
+        let pipeline_config =
+            PipelineConfig::new_with_mmproj(model_path, mmproj_path).with_verbose(true);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
@@ -354,7 +355,7 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
+        let pipeline_config = PipelineConfig::new(model_path).with_cache_model(true);
 
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -393,7 +394,7 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None);
+        let pipeline_config = PipelineConfig::new(model_path);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
@@ -433,7 +434,7 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
+        let pipeline_config = PipelineConfig::new(model_path).with_cache_model(true);
 
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -500,7 +501,7 @@ mod tests {
 
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-        let pipeline_config = PipelineConfig::new(model_path, None).with_cache_model(true);
+        let pipeline_config = PipelineConfig::new(model_path).with_cache_model(true);
 
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
