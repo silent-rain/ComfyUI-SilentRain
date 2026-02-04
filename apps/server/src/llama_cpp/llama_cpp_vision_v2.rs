@@ -16,9 +16,7 @@ use pyo3::{
 use std::{path::PathBuf, sync::Arc};
 
 use llama_cpp_core::{
-    CacheManager, Pipeline, InferenceRequest,
-    config::SamplerConfig,
-    types::MediaData,
+    CacheManager, GenerateRequest, Pipeline, sampler::SamplerConfig, types::MediaData,
 };
 
 use crate::{
@@ -35,13 +33,13 @@ use crate::{
 
 /// LlamaCpp Vision v2
 ///
-//! ### 版本差异
-//! - **v1**: 独立加载模型，单图处理
-//! - **v2**:
-//!   - 复用 LlamaCppModelv2 加载的模型
-//!   - 支持图像批处理和进度条
-//!   - 使用 llama_cpp_core 的高性能 Pipeline
-//!   - 支持 keep_context 保持视觉对话上下文
+/// ### 版本差异
+/// - **v1**: 独立加载模型，单图处理
+/// - **v2**:
+///   - 复用 LlamaCppModelv2 加载的模型
+///   - 支持图像批处理和进度条
+///   - 使用 llama_cpp_core 的高性能 Pipeline
+///   - 支持 keep_context 保持视觉对话上下文
 #[pyclass(subclass)]
 pub struct LlamaCppVisionv2 {
     cache: Arc<CacheManager>,
@@ -55,8 +53,9 @@ impl LlamaCppVisionv2 {
     #[new]
     fn new() -> PyResult<Self> {
         let cache = CacheManager::global();
-        let pipeline = Pipeline::with_cache(cache.clone())
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("Failed to create pipeline: {}", e)))?;
+        let pipeline = Pipeline::with_cache(cache.clone()).map_err(|e| {
+            PyErr::new::<PyRuntimeError, _>(format!("Failed to create pipeline: {}", e))
+        })?;
 
         Ok(Self {
             cache,
@@ -73,7 +72,7 @@ impl LlamaCppVisionv2 {
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
     fn return_types() -> (&'static str, &'static str, &'static str) {
-        (NODE_IMAGE, NODE_STRING, NODE_STRING)  // (images, captions, context_key)
+        (NODE_IMAGE, NODE_STRING, NODE_STRING) // (images, captions, context_key)
     }
 
     #[classattr]
@@ -301,8 +300,7 @@ impl LlamaCppVisionv2 {
             .call_method1("ProgressBar", (batch_size,))?;
 
         // 构建采样配置
-        let sampler_config = SamplerConfig::default()
-            .seed(seed);
+        let sampler_config = SamplerConfig::default().seed(seed);
 
         let mut captions = Vec::with_capacity(batch_size);
 
@@ -311,24 +309,17 @@ impl LlamaCppVisionv2 {
             info!("Processing image {}/{}", idx + 1, batch_size);
 
             // 构建视觉推理请求
-            let mut request = InferenceRequest::new(&model_path)
-                .with_system_prompt(&system_prompt)
-                .with_user_prompt(&user_prompt)
-                .with_mmproj(&mmproj_full_path)
-                .with_sampler(sampler_config)
-                .with_model_config(model_config)
-                .with_cache_model(true)
+            let request = GenerateRequest::text(&user_prompt)
+                .with_system(&system_prompt)
+                .with_media(MediaData::new_image(image_data))
                 .with_keep_context(keep_context);
-
-            // 添加图像
-            request.input.media.push(MediaData::new_image(image_data));
 
             // 执行推理
             let response = tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    self.pipeline.generate(request).await
-                })
-            }).map_err(|e| Error::InvalidInput(format!("Generation failed: {}", e)))?;
+                tokio::runtime::Handle::current()
+                    .block_on(async { self.pipeline.generate(&request).await })
+            })
+            .map_err(|e| Error::InvalidInput(format!("Generation failed: {}", e)))?;
 
             captions.push(response.text);
             pbar.call_method1("update", (1,))?;
@@ -336,19 +327,34 @@ impl LlamaCppVisionv2 {
 
         // 生成上下文 key（用于多图对话）
         let context_key = if keep_context && !captions.is_empty() {
-            format!("vision_ctx:{}", uuid::Uuid::new_v4())
+            format!(
+                "vision_ctx:{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            )
         } else {
             String::new()
         };
 
-        info!("Vision inference complete, generated {} captions", captions.len());
+        info!(
+            "Vision inference complete, generated {} captions",
+            captions.len()
+        );
 
         Ok((images, captions, context_key))
     }
 
     /// 解析模型句柄
-    fn resolve_model_handle(&self, handle: &str) -> Result<(PathBuf, llama_cpp_core::config::ModelConfig), Error> {
-        if let Some((model_path, config)) = self.cache.get_data::<(String, llama_cpp_core::config::ModelConfig)>(handle)? {
+    fn resolve_model_handle(
+        &self,
+        handle: &str,
+    ) -> Result<(PathBuf, llama_cpp_core::model::ModelConfig), Error> {
+        if let Some((model_path, config)) = self
+            .cache
+            .get_data::<(String, llama_cpp_core::model::ModelConfig)>(handle)?
+        {
             let base_models_dir = FolderPaths::default().model_path();
             let full_path = base_models_dir.join("LLM").join(&model_path);
             return Ok((full_path, *config));
@@ -358,7 +364,7 @@ impl LlamaCppVisionv2 {
         let full_path = base_models_dir.join("LLM").join(handle);
 
         if full_path.exists() {
-            Ok((full_path, llama_cpp_core::config::ModelConfig::default()))
+            Ok((full_path, llama_cpp_core::model::ModelConfig::default()))
         } else {
             Err(Error::FileNotFound(handle.to_string()))
         }

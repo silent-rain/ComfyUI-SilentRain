@@ -111,6 +111,7 @@ impl LlamaCppPurgeVramv2 {
                 "clear_contexts",
                 InputType::bool().tooltip("Clear all conversation contexts"),
             )
+            .with_required("clear_all", InputType::bool().tooltip("Clear all caches"))
             .build()
     }
 
@@ -121,8 +122,9 @@ impl LlamaCppPurgeVramv2 {
         trigger: Bound<'py, PyAny>,
         clear_models: bool,
         clear_contexts: bool,
+        clear_all: bool,
     ) -> PyResult<(String,)> {
-        let result = self.purge_vram(py, trigger, clear_models, clear_contexts);
+        let result = self.purge_vram(py, trigger, clear_models, clear_contexts, clear_all);
 
         match result {
             Ok(report) => Ok((report,)),
@@ -147,6 +149,7 @@ impl LlamaCppPurgeVramv2 {
         _trigger: Bound<'py, PyAny>,
         clear_models: bool,
         clear_contexts: bool,
+        clear_all: bool,
     ) -> Result<String, Error> {
         let mut report = PurgeReport::default();
 
@@ -182,6 +185,14 @@ impl LlamaCppPurgeVramv2 {
             report.contexts_cleared = context_keys.len();
 
             info!("Cleared {} context caches", report.contexts_cleared);
+        }
+
+        // 清理所有
+        if clear_all {
+            let all_keys = self.cache.get_keys()?;
+            self.cache.clear()?;
+
+            info!("Cleared {} caches", all_keys.len());
         }
 
         // 获取清理后的缓存状态

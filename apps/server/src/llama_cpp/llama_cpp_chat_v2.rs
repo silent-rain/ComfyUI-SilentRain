@@ -10,15 +10,15 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyType},
+    types::{PyAnyMethods, PyDict, PyType},
 };
 use std::{path::PathBuf, sync::Arc};
 
 use llama_cpp_core::{
     CacheManager, Pipeline, PipelineConfig,
-    config::{ModelConfig, SamplerConfig},
     history::HistoryMessage,
-    types::PromptMessageRole,
+    model::ModelConfig,
+    sampler::SamplerConfig,
 };
 
 use crate::{
@@ -230,7 +230,7 @@ impl LlamaCppChatv2 {
         };
 
         // 添加系统提示（仅在首次对话时）
-        if history.messages().is_empty() && !system_prompt.is_empty() {
+        if history.to_llama_message().is_empty() && !system_prompt.is_empty() {
             history.add_system(system_prompt.clone())?;
         }
 
@@ -243,15 +243,11 @@ impl LlamaCppChatv2 {
             .seed(seed);
 
         // 构建 Pipeline 配置
-        let pipeline_config = PipelineConfig::new(model_path.to_string_lossy().to_string(), None)
-            .with_system_prompt(system_prompt)
-            .with_user_prompt(user_prompt)
+        let pipeline_config = PipelineConfig::new(model_path.to_string_lossy().to_string())
             .with_n_ctx(n_ctx)
-            .with_n_predict(n_predict)
-            .with_disable_gpu(model_config.disable_gpu)
+            .with_max_tokens(n_predict)
             .with_n_gpu_layers(model_config.n_gpu_layers)
             .with_main_gpu(model_config.main_gpu)
-            .with_keep_context(keep_context)
             .with_cache_model(true);
 
         // 创建 Pipeline
@@ -267,7 +263,10 @@ impl LlamaCppChatv2 {
 
         // 生成新的上下文 key
         let new_context_key = if keep_context {
-            let key = format!("chat_ctx:{}", uuid::Uuid::new_v4());
+            let key = format!("chat_ctx:{}", std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis());
             self.save_history(&key, &pipeline.history_message())?;
             key
         } else {
