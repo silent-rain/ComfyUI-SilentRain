@@ -1,7 +1,7 @@
 //! Request processing module for pipeline operations
 use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{HistoryMessage, MediaData, PromptMessageRole, error::Error, utils::image::Image};
@@ -181,8 +181,13 @@ impl GenerateRequest {
         channels: usize,
     ) -> Result<MediaData, Error> {
         let mut img = Image::from_tensor(data, height, width, channels)?;
+        let mut image_max_resolution = self.image_max_resolution;
+        if image_max_resolution < 64 {
+            image_max_resolution = 64;
+            warn!("image_max_resolution is too small, set to 64");
+        }
 
-        let max_resolution = img.longest().min(self.image_max_resolution);
+        let max_resolution = img.longest().min(image_max_resolution);
         img = img.resize_to_longest(max_resolution)?;
 
         let data = img.to_vec()?;

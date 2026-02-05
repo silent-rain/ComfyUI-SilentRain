@@ -331,7 +331,10 @@ impl LlamaCppImageCaptionv2 {
             sampling: sampler_config,
             verbose,
         };
-        let generate_request: GenerateRequest = depythonize(&kwargs)?;
+        let mut generate_request: GenerateRequest = depythonize(&kwargs)?;
+
+        // 设置图片最大分辨率
+        generate_request = generate_request.with_image_max_resolution(768);
 
         info!("pipeline_config: {pipeline_config:#?}");
         info!("generate_request: {generate_request:#?}");
@@ -377,16 +380,13 @@ impl LlamaCppImageCaptionv2 {
             let pipeline_clone = pipeline.clone();
 
             {
-                let generate_request_clone = generate_request.clone();
+                let generate_request_clone = generate_request.clone().with_media(media);
                 async move {
                     let _permit = semaphore.acquire().await.map_err(|e| {
                         error!("获取Semaphore许可失败, err: {:#?}", e);
                         Error::AcquireError(e.to_string())
                     })?;
 
-                    let generate_request_clone = generate_request_clone
-                        .with_media(media)
-                        .with_image_max_resolution(768);
                     let output = pipeline_clone.generate(&generate_request_clone).await?;
 
                     info!("iamge {i} prcessing completed");

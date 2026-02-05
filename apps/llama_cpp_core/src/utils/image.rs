@@ -2,7 +2,7 @@
 use std::io::Cursor;
 
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage, imageops::FilterType};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::error::Error;
 
@@ -33,13 +33,19 @@ impl Image {
         // 根据通道数创建图像
         let img = match channels {
             3 => {
-                let img =
-                    RgbImage::from_raw(width, height, data).ok_or_else(|| Error::ImageBuffer)?;
+                info!("Creating RGB image from {} bytes", data.len());
+                let img = RgbImage::from_raw(width, height, data).ok_or_else(|| {
+                    error!("Failed to create RGB image from raw data");
+                    Error::ImageBuffer
+                })?;
                 DynamicImage::ImageRgb8(img)
             }
             4 => {
-                let img =
-                    RgbaImage::from_raw(width, height, data).ok_or_else(|| Error::ImageBuffer)?;
+                info!("Creating RGBA image from {} bytes", data.len());
+                let img = RgbaImage::from_raw(width, height, data).ok_or_else(|| {
+                    error!("Failed to create RGBA image from raw data");
+                    Error::ImageBuffer
+                })?;
                 DynamicImage::ImageRgba8(img)
             }
             _ => {
@@ -51,6 +57,11 @@ impl Image {
             }
         };
 
+        info!(
+            "Image created successfully: {}x{}",
+            img.width(),
+            img.height()
+        );
         Ok(Image { img })
     }
 
@@ -106,6 +117,12 @@ impl Image {
             .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)?;
 
         Ok(buffer)
+    }
+
+    /// 保存图像
+    pub fn save(&self, path: &str) -> Result<(), Error> {
+        self.img.save(path)?;
+        Ok(())
     }
 
     /// 宽度

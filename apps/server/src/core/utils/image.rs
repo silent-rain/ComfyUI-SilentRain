@@ -365,6 +365,10 @@ pub fn tensor_to_image_tensor_buffer<'py>(
     let width = images_shape[2];
     let channels = images_shape[3];
 
+    if batch == 0 {
+        return Ok(Vec::new());
+    }
+
     let mut raw_data_list = Vec::new();
 
     // 遍历 images 对象中的每个图像
