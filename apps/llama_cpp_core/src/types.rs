@@ -149,6 +149,11 @@ impl GenerationOutput {
         }
     }
 
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.text = text.into();
+        self
+    }
+
     pub fn with_tokens(mut self, tokens: usize) -> Self {
         self.tokens_generated = tokens;
         self

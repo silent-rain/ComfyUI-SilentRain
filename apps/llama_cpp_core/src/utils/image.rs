@@ -26,8 +26,8 @@ impl Image {
     /// 从tensor加载图像
     pub fn from_tensor(
         data: &[u8],
-        width: u32,
         height: u32,
+        width: u32,
         channels: usize,
     ) -> Result<Self, Error> {
         // 根据通道数创建图像

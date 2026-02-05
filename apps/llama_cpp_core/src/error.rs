@@ -129,6 +129,8 @@ pub enum Error {
     // ==================== 外部错误 ====================
     #[error("Unsupported feature: {feature}")]
     UnsupportedFeature { feature: String },
+    #[error("Failed to create tokio runtime: {0}")]
+    RuntimeError(String),
 }
 
 /// 错误类别

@@ -164,6 +164,24 @@ impl GenerateRequest {
         Ok(self)
     }
 
+    /// 添加图片 tensor 缓存
+    pub fn load_image_tensor_buffer(
+        &self,
+        data: Vec<u8>,
+        height: u32,
+        width: u32,
+        channels: usize,
+    ) -> Result<MediaData, Error> {
+        let mut img = Image::from_tensor(&data, height, width, channels)?;
+
+        let max_resolution = img.longest().min(self.image_max_resolution);
+        img = img.resize_to_longest(max_resolution)?;
+
+        let data = img.to_vec()?;
+        let media_data = MediaData::new_image(data);
+        Ok(media_data)
+    }
+
     /// Load image from the specified file path
     pub fn load_image_file(&self, path: &str) -> Result<MediaData, Error> {
         let mut img = Image::from_file(path)?;

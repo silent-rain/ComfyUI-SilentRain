@@ -15,7 +15,7 @@ use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing}
 use tracing::{error, info};
 
 use crate::{
-    Backend, GenerateRequest, HistoryMessage, Model, PipelineConfig, Sampler,
+    Backend, FinishReason, GenerateRequest, HistoryMessage, Model, PipelineConfig, Sampler,
     cache::{CacheType, global_cache},
     context::{ContexParams, ContextWrapper},
     error::Error,
@@ -132,6 +132,23 @@ impl Pipeline {
 }
 
 impl Pipeline {
+    /// 同步推理包装
+    pub fn generate_block(&self, request: &GenerateRequest) -> Result<GenerationOutput, Error> {
+        // 创建 tokio 运行时用于执行异步逻辑
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            error!("Failed to create tokio runtime: {}", e);
+            Error::RuntimeError(e.to_string())
+        })?;
+
+        let pipeline = Arc::new(self);
+
+        // 在运行时中阻塞执行生成任务
+        rt.block_on(async {
+            let output = pipeline.generate(request).await?;
+            Ok(output)
+        })
+    }
+
     /// 执行推理
     ///
     /// # Arguments
@@ -150,18 +167,28 @@ impl Pipeline {
         };
 
         let mut full_text = String::new();
+        let mut output = GenerationOutput::default();
         while let Some(token) = rx.recv().await {
             match token {
-                StreamToken::Content(text) => full_text.push_str(&text),
-                StreamToken::Finish(reason) => full_text.push_str(&reason.to_string()),
-                StreamToken::Error(msg) => return Ok(GenerationOutput::new(msg)),
+                StreamToken::Content(text) => {
+                    full_text.push_str(&text);
+                }
+                StreamToken::Finish(reason) => {
+                    output = output.with_finish_reason(reason);
+                }
+                StreamToken::Error(msg) => {
+                    output = output.with_finish_reason(FinishReason::Error);
+                    full_text.push_str(&msg)
+                }
             }
         }
+
+        output = output.with_text(full_text.clone());
 
         // 如果有 session_id，保存或清除会话历史
         self.save_or_clear_session_history(request, &full_text)?;
 
-        Ok(GenerationOutput::new(full_text))
+        Ok(output)
     }
 
     /// 执行流式推理
