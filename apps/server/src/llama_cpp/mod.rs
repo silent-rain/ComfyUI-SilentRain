@@ -35,14 +35,16 @@ mod llama_cpp_purge_vram;
 pub use llama_cpp_purge_vram::LlamaCppPurgeVram;
 
 // v2 版本节点
+mod llama_cpp_options_v2;
+pub use llama_cpp_options_v2::LlamaCppOptionsv2;
 mod llama_cpp_model_v2;
 pub use llama_cpp_model_v2::LlamaCppModelv2;
 
-mod llama_cpp_chat_v2;
-pub use llama_cpp_chat_v2::LlamaCppChatv2;
+// mod llama_cpp_chat_v2;
+// pub use llama_cpp_chat_v2::LlamaCppChatv2;
 
-mod llama_cpp_vision_v2;
-pub use llama_cpp_vision_v2::LlamaCppVisionv2;
+// mod llama_cpp_vision_v2;
+// pub use llama_cpp_vision_v2::LlamaCppVisionv2;
 
 mod llama_cpp_purge_vram_v2;
 pub use llama_cpp_purge_vram_v2::LlamaCppPurgeVramv2;
@@ -57,8 +59,8 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<LlamaCppPurgeVram>()?;
     // v2 节点
     submodule.add_class::<LlamaCppModelv2>()?;
-    submodule.add_class::<LlamaCppChatv2>()?;
-    submodule.add_class::<LlamaCppVisionv2>()?;
+    // submodule.add_class::<LlamaCppChatv2>()?;
+    // submodule.add_class::<LlamaCppVisionv2>()?;
     submodule.add_class::<LlamaCppPurgeVramv2>()?;
     Ok(submodule)
 }
@@ -93,16 +95,16 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<LlamaCppModelv2>(),
             "Sr Llama Cpp Model v2",
         ),
-        NodeRegister(
-            "LlamaCppChatv2",
-            py.get_type::<LlamaCppChatv2>(),
-            "Sr Llama Cpp Chat v2",
-        ),
-        NodeRegister(
-            "LlamaCppVisionv2",
-            py.get_type::<LlamaCppVisionv2>(),
-            "Sr Llama Cpp Vision v2",
-        ),
+        // NodeRegister(
+        //     "LlamaCppChatv2",
+        //     py.get_type::<LlamaCppChatv2>(),
+        //     "Sr Llama Cpp Chat v2",
+        // ),
+        // NodeRegister(
+        //     "LlamaCppVisionv2",
+        //     py.get_type::<LlamaCppVisionv2>(),
+        //     "Sr Llama Cpp Vision v2",
+        // ),
         NodeRegister(
             "LlamaCppPurgeVramv2",
             py.get_type::<LlamaCppPurgeVramv2>(),

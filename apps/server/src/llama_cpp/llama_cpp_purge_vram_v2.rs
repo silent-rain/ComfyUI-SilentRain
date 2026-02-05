@@ -213,8 +213,7 @@ impl LlamaCppPurgeVramv2 {
         );
 
         // 生成 JSON 报告
-        let json_report =
-            serde_json::to_string_pretty(&report).map_err(|e| Error::SerdeJsonError(e))?;
+        let json_report = serde_json::to_string_pretty(&report).map_err(Error::SerdeJsonError)?;
 
         Ok(json_report)
     }

@@ -19,6 +19,7 @@ pub use llama_cpp_2::model::LlamaChatMessage;
 
 pub use backend::Backend;
 pub use cache::{CacheManager, global_cache};
+pub use context::ContexParams;
 pub use history::HistoryMessage;
 pub use model::Model;
 pub use pipeline::{GenerateRequest, Pipeline, PipelineConfig};

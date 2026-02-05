@@ -308,13 +308,11 @@ impl CacheManager {
     /// 获取数据并转换为具体类型（同时更新访问时间）
     pub fn get_data<T: Send + Sync + 'static>(&self, key: &str) -> Result<Option<Arc<T>>, Error> {
         let mut pool = self.write()?;
-        let data = pool
-            .get_mut(key)
-            .and_then(|cache| {
-                // 更新访问时间
-                cache.last_accessed = std::time::Instant::now();
-                Arc::downcast::<T>(cache.data.clone()).ok()
-            });
+        let data = pool.get_mut(key).and_then(|cache| {
+            // 更新访问时间
+            cache.last_accessed = std::time::Instant::now();
+            Arc::downcast::<T>(cache.data.clone()).ok()
+        });
 
         Ok(data)
     }

@@ -30,9 +30,9 @@ pub struct SamplerConfig {
 
     /// Seed for random number generation.
     /// Set to a fixed value for reproducible outputs.
-    /// -1 表示随机
+    /// 0 表示随机
     #[serde(default)]
-    pub seed: i32,
+    pub seed: u32,
 
     /// Size of the sliding window for repeat penalty
     /// Specifies how many most recent tokens to consider for repeat penalty
@@ -96,7 +96,7 @@ impl SamplerConfig {
         self
     }
 
-    pub fn with_seed(mut self, seed: i32) -> Self {
+    pub fn with_seed(mut self, seed: u32) -> Self {
         self.seed = seed;
         self
     }
@@ -123,10 +123,10 @@ impl SamplerConfig {
 
     pub fn seed(&self) -> u32 {
         // 随机值
-        if self.seed == -1 {
+        if self.seed == 0 {
             rand::rng().try_next_u32().unwrap_or(0)
         } else {
-            self.seed as u32
+            self.seed
         }
     }
 }

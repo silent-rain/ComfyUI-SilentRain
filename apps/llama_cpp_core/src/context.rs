@@ -41,7 +41,7 @@ pub struct ContexParams {
     #[serde(default)]
     pub n_batch: u32,
 
-    /// Number of tokens to predict (-1 for unlimited)
+    /// Number of tokens to predict (0 for unlimited)
     #[serde(default)]
     pub n_predict: i32,
 
@@ -63,6 +63,24 @@ pub struct ContexParams {
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
     pub verbose: bool,
+}
+
+impl Default for ContexParams {
+    fn default() -> Self {
+        Self {
+            // 线程和批处理参数
+            n_threads: 0,
+            n_batch: 512,
+            n_ctx: 4096,
+            n_predict: 2048,
+
+            pooling_type: PoolingTypeMode::Unspecified,
+
+            chat_template: None,
+
+            verbose: false,
+        }
+    }
 }
 
 // 生成便捷方法
@@ -112,28 +130,10 @@ impl ContexParams {
 
 impl ContexParams {
     pub fn max_predict(&self) -> i32 {
-        if self.n_predict < 0 {
+        if self.n_predict == 0 {
             i32::MAX
         } else {
             self.n_predict
-        }
-    }
-}
-
-impl Default for ContexParams {
-    fn default() -> Self {
-        Self {
-            // 线程和批处理参数
-            n_threads: 0,
-            n_batch: 512,
-            n_ctx: 4096,
-            n_predict: 2048,
-
-            pooling_type: PoolingTypeMode::Unspecified,
-
-            chat_template: None,
-
-            verbose: false,
         }
     }
 }

@@ -135,7 +135,7 @@ enum InputKind {
 
 /// 参数值
 #[derive(Debug, Clone)]
-enum ParamValue {
+pub enum ParamValue {
     String(String),
     Int(i64),
     Float(f64),
@@ -350,7 +350,7 @@ impl InputType {
     ///
     /// 列表类型：(options_list, params_dict)
     /// 其他类型：(type_name, params_dict)
-    fn to_py_tuple<'py>(self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    fn to_py_tuple<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let type_str = match &self.kind {
             InputKind::None => {
                 return Ok(PyDict::new(py).into_any());
@@ -368,7 +368,7 @@ impl InputType {
             InputKind::List => {
                 // 列表类型：返回 (options_list, params_dict)
                 let params_dict = self.params.to_py_dict(py)?;
-                return Ok((self.list_options, params_dict)
+                return Ok((self.list_options.clone(), params_dict)
                     .into_pyobject(py)?
                     .into_any());
             }
@@ -432,6 +432,12 @@ impl From<i32> for ParamValue {
     }
 }
 
+impl From<u32> for ParamValue {
+    fn from(i: u32) -> Self {
+        ParamValue::Int(i as i64)
+    }
+}
+
 impl From<usize> for ParamValue {
     fn from(i: usize) -> Self {
         ParamValue::Int(i as i64)
@@ -457,7 +463,7 @@ impl From<bool> for ParamValue {
 }
 
 /// 输出规范
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct OutputSpec {
     pub types: Vec<&'static str>,
     pub names: Vec<&'static str>,
@@ -466,8 +472,7 @@ pub struct OutputSpec {
 impl OutputSpec {
     pub fn new() -> Self {
         Self {
-            types: Vec::new(),
-            names: Vec::new(),
+            ..Default::default()
         }
     }
 

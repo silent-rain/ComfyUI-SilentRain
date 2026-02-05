@@ -114,7 +114,7 @@ impl PipelineConfig {
     }
 
     /// 设置随机种子
-    pub fn with_seed(mut self, seed: i32) -> Self {
+    pub fn with_seed(mut self, seed: u32) -> Self {
         self.sampling.seed = seed;
         self
     }

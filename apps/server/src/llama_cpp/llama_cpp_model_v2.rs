@@ -1,6 +1,6 @@
 //! llama.cpp Model Loader v2
 
-use llama_cpp_core::{CacheManager, model::ModelConfig};
+use llama_cpp_core::model::ModelConfig;
 use log::error;
 use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
@@ -8,7 +8,7 @@ use pyo3::{
     pyclass, pymethods,
     types::{PyDict, PyType},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
     core::{
@@ -24,9 +24,7 @@ use crate::{
 
 /// LlamaCpp Model Loader v2
 #[pyclass(subclass)]
-pub struct LlamaCppModelv2 {
-    cache: Arc<CacheManager>,
-}
+pub struct LlamaCppModelv2 {}
 
 impl PromptServer for LlamaCppModelv2 {}
 
@@ -34,9 +32,7 @@ impl PromptServer for LlamaCppModelv2 {}
 impl LlamaCppModelv2 {
     #[new]
     fn new() -> Self {
-        Self {
-            cache: CacheManager::global(),
-        }
+        Self {}
     }
 
     #[classattr]
@@ -93,68 +89,12 @@ impl LlamaCppModelv2 {
                 "mmproj_path",
                 InputType::list(model_list).tooltip("Path to the GGUF model file"),
             )
-            // // GPU 配置
-            // .with_required(
-            //     "main_gpu",
-            //     InputType::int()
-            //         .default(config.main_gpu)
-            //         .min(0)
-            //         .step_int(1)
-            //         .tooltip("Main GPU index"),
-            // )
-            // .with_required(
-            //     "n_gpu_layers",
-            //     InputType::int()
-            //         .default(config.n_gpu_layers as i64)
-            //         .min(0)
-            //         .max_int(10000)
-            //         .step_int(1)
-            //         .tooltip("Number of layers to offload to GPU (0 = CPU only)"),
-            // )
-            // // 多 GPU 设备
-            // .with_optional(
-            //     "devices",
-            //     InputType::string().default(config.devices_str()).tooltip(
-            //         "GPU devices to use (comma-separated, e.g., 0,1,2). Overrides main_gpu",
-            //     ),
-            // )
-            // .with_required(
-            //     "media_marker",
-            //     InputType::string()
-            //         .default(config.media_marker.unwrap_or_default())
-            //         .tooltip("Media marker. If not provided, the default marker will be used."),
-            // )
-            // .with_required(
-            //     "n_threads",
-            //     InputType::string().default(config.n_threads).tooltip("Number of threads to use during generation. Set to a specific value to limit CPU usage."),
-            // )
-            // // MoE 配置
-            // .with_optional(
-            //     "cmoe",
-            //     InputType::bool()
-            //         .default(config.cmoe)
-            //         .tooltip("Keep MoE layers on CPU"),
-            // )
-            // // 内存锁定
-            // .with_optional(
-            //     "use_mlock",
-            //     InputType::bool()
-            //         .default(config.use_mlock)
-            //         .tooltip("Force system to keep model in RAM (use mlock)"),
-            // )
             .with_required(
                 "cache_model",
                 InputType::bool()
                     .default(config.cache_model)
                     .tooltip("Cache model in memory for reuse"),
             )
-            // 详细信息
-            // .with_optional(
-            //     "verbose",
-            //     InputType::bool()
-            //         .default(config.verbose)
-            //         .tooltip("Print detailed information about model loading"),
-            // )
             .build()
     }
 
@@ -201,8 +141,17 @@ impl LlamaCppModelv2 {
             )));
         }
 
-        let cache_model_key = "comfyui:model";
-        let cache_mmproj_key = "comfyui:mmproj";
+        let cache_model_key = format!(
+            "comfyui:model:{}",
+            model_path.file_name().unwrap_or_default().to_string_lossy()
+        );
+        let cache_mmproj_key = format!(
+            "comfyui:mmproj:{}",
+            mmproj_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+        );
 
         Ok((HashMap::from([
             (
@@ -214,8 +163,8 @@ impl LlamaCppModelv2 {
                 mmproj_path.to_string_lossy().to_string(),
             ),
             ("cache_model".to_string(), cache_model.to_string()),
-            ("cache_model_key".to_string(), cache_model_key.to_string()),
-            ("cache_mmproj_key".to_string(), cache_mmproj_key.to_string()),
+            ("cache_model_key".to_string(), cache_model_key),
+            ("cache_mmproj_key".to_string(), cache_mmproj_key),
         ]),))
     }
 
