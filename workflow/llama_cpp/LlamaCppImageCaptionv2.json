@@ -1,0 +1,794 @@
+{
+  "id": "ec995a3b-72bb-4ee7-b00a-9e9287798046",
+  "revision": 0,
+  "last_node_id": 16,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 4,
+      "type": "easy showAnything",
+      "pos": [
+        3870,
+        -190
+      ],
+      "size": [
+        370,
+        300
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.5",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": [
+        "<think>\n嗯，用户问“你是什么小助手”。首先，我需要确定用户对我的身份有什么疑问。作为一个AI助手，我应该清楚地说明我的功能和特点。可能用户想知道我的功能范围，或者想了解我的服务对象。我需要保持友好和专业的态度，同时确保回答准确无误。\n\n接下来，我应该考虑用户可能的深层需求。他们可能是在使用我的服务时遇到了问题，或者想确认我的功能是否符合他们的预期。这时候，我需要提供明确的信息，并鼓励他们提出更多问题，以便更好地满足他们的需求。\n\n另外，还要注意用户的身份和使用场景。用户可能是学生、工作人士或普通用户，不同的人可能对我的功能有不同的理解。需要确保回答覆盖这些可能性，同时保持简洁明了。\n\n最后，要确保回答符合平台的规定和用户隐私保护的原则，避免任何可能引起误解的信息。通过友好和专业的态度，用户会更愿意与我交流，解决问题。\n</think>\n\n我是你的智能助手，专注于帮助你解决问题和获取信息。我能够处理各种任务，从日常查询到专业解答，随时待命。如果你有任何问题或需要帮助，请随时告诉我！"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "LlamaCppModelv2",
+      "pos": [
+        3190,
+        -200
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "model_path",
+          "name": "model_path",
+          "type": "COMBO",
+          "widget": {
+            "name": "model_path"
+          },
+          "link": null
+        },
+        {
+          "label": "mmproj_path",
+          "name": "mmproj_path",
+          "type": "COMBO",
+          "widget": {
+            "name": "mmproj_path"
+          },
+          "link": null
+        },
+        {
+          "label": "cache_model",
+          "name": "cache_model",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "cache_model"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "model",
+          "name": "model",
+          "type": "LlamaCppModelv2",
+          "links": [
+            1,
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppModelv2"
+      },
+      "widgets_values": [
+        "llama-joycaption-beta-one-hf-llava/llama-joycaption-beta-one-hf-llava.i1-IQ1_S.gguf",
+        "llama-joycaption-beta-one-hf-llava/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf",
+        true
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LlamaCppPromptHelperv2",
+      "pos": [
+        3510,
+        -200
+      ],
+      "size": [
+        308.6626953125,
+        474
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "model",
+          "name": "model",
+          "type": "LlamaCppModelv2",
+          "link": 1
+        },
+        {
+          "label": "options",
+          "name": "options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptionsV2",
+          "link": 2
+        },
+        {
+          "label": "system_prompt",
+          "name": "system_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "system_prompt"
+          },
+          "link": null
+        },
+        {
+          "label": "user_prompt",
+          "name": "user_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "user_prompt"
+          },
+          "link": null
+        },
+        {
+          "label": "main_gpu",
+          "name": "main_gpu",
+          "type": "INT",
+          "widget": {
+            "name": "main_gpu"
+          },
+          "link": null
+        },
+        {
+          "label": "devices",
+          "name": "devices",
+          "type": "STRING",
+          "widget": {
+            "name": "devices"
+          },
+          "link": null
+        },
+        {
+          "label": "n_gpu_layers",
+          "name": "n_gpu_layers",
+          "type": "INT",
+          "widget": {
+            "name": "n_gpu_layers"
+          },
+          "link": null
+        },
+        {
+          "label": "n_ctx",
+          "name": "n_ctx",
+          "type": "INT",
+          "widget": {
+            "name": "n_ctx"
+          },
+          "link": null
+        },
+        {
+          "label": "n_predict",
+          "name": "n_predict",
+          "type": "INT",
+          "widget": {
+            "name": "n_predict"
+          },
+          "link": null
+        },
+        {
+          "label": "temperature",
+          "name": "temperature",
+          "type": "FLOAT",
+          "widget": {
+            "name": "temperature"
+          },
+          "link": null
+        },
+        {
+          "label": "top_k",
+          "name": "top_k",
+          "type": "INT",
+          "widget": {
+            "name": "top_k"
+          },
+          "link": null
+        },
+        {
+          "label": "top_p",
+          "name": "top_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "top_p"
+          },
+          "link": null
+        },
+        {
+          "label": "min_p",
+          "name": "min_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "min_p"
+          },
+          "link": null
+        },
+        {
+          "label": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "label": "session_id",
+          "name": "session_id",
+          "type": "STRING",
+          "widget": {
+            "name": "session_id"
+          },
+          "link": null
+        },
+        {
+          "label": "keep_context",
+          "name": "keep_context",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_context"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "response",
+          "name": "response",
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppPromptHelperv2"
+      },
+      "widgets_values": [
+        "任务：根据提供的单张人物图片，生成结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致\n\n### 提示词生成规则\n获取图片内容，按照整体规则生成合适的提示词；\n\n按以下模板生成不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  \n\n【修改指令】\n\n##修改表情：\n\n示例：\n\n如：魅惑地笑/捂嘴偷笑/平静地笑容等\n要求每个图像都有不同的表情\n\n##修改姿势：\n\n示例：\n\n如：双手叉腰，比心的手势等\n要求每个图像都有不同的动作，动作变化幅度不应很小\n\n\n##修改拍摄景别：\n\n示例\n\n如：特写，中景等\n要求每个图像根据不同动作有合适的拍摄景别\n\n##修改拍摄角度\n\n示例\n\n如：微俯拍30度，正面拍摄等\n要求每个图像根据不同动作有合适的拍摄角度\n\n\n写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  \n\n\n### 输出要求  \n仅返回指定条数的提示词，每条独立成段，用换行分隔，无其他内容。  \n输出格式：【prompt_1】,【prompt_2】,【prompt_3】...\n\n\n### 示例如下：\n\n【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K\n\n...（共9条）",
+        "生成3个提示词",
+        0,
+        "",
+        0,
+        4096,
+        2048,
+        0.6000000238418579,
+        40,
+        0.949999988079071,
+        0,
+        1337,
+        "randomize",
+        "eec9ebbd-bf19-43c6-9c6f-4489eddeecca",
+        false
+      ]
+    },
+    {
+      "id": 3,
+      "type": "LlamaCppOptionsv2",
+      "pos": [
+        3190,
+        -40
+      ],
+      "size": [
+        270,
+        298
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "penalty_last_n",
+          "name": "penalty_last_n",
+          "type": "INT",
+          "widget": {
+            "name": "penalty_last_n"
+          },
+          "link": null
+        },
+        {
+          "label": "penalty_repeat",
+          "name": "penalty_repeat",
+          "type": "FLOAT",
+          "widget": {
+            "name": "penalty_repeat"
+          },
+          "link": null
+        },
+        {
+          "label": "penalty_freq",
+          "name": "penalty_freq",
+          "type": "FLOAT",
+          "widget": {
+            "name": "penalty_freq"
+          },
+          "link": null
+        },
+        {
+          "label": "penalty_present",
+          "name": "penalty_present",
+          "type": "FLOAT",
+          "widget": {
+            "name": "penalty_present"
+          },
+          "link": null
+        },
+        {
+          "label": "n_threads",
+          "name": "n_threads",
+          "type": "INT",
+          "widget": {
+            "name": "n_threads"
+          },
+          "link": null
+        },
+        {
+          "label": "n_batch",
+          "name": "n_batch",
+          "type": "INT",
+          "widget": {
+            "name": "n_batch"
+          },
+          "link": null
+        },
+        {
+          "label": "pooling_type",
+          "name": "pooling_type",
+          "type": "COMBO",
+          "widget": {
+            "name": "pooling_type"
+          },
+          "link": null
+        },
+        {
+          "label": "verbose",
+          "name": "verbose",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "verbose"
+          },
+          "link": null
+        },
+        {
+          "label": "media_marker",
+          "name": "media_marker",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "media_marker"
+          },
+          "link": null
+        },
+        {
+          "label": "chat_template",
+          "name": "chat_template",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "chat_template"
+          },
+          "link": null
+        },
+        {
+          "label": "cmoe",
+          "name": "cmoe",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "cmoe"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "options",
+          "name": "options",
+          "type": "LlamaCppExtraOptionsV2",
+          "links": [
+            2,
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppOptionsv2"
+      },
+      "widgets_values": [
+        64,
+        1,
+        0,
+        0,
+        4,
+        512,
+        "Unspecified",
+        true,
+        "<start_of_image>",
+        "",
+        true
+      ]
+    },
+    {
+      "id": 6,
+      "type": "LoadImage",
+      "pos": [
+        3190,
+        330
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.7.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LlamaCppImageCaptionv2",
+      "pos": [
+        3510,
+        330
+      ],
+      "size": [
+        308.8404296875,
+        518
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "model",
+          "name": "model",
+          "type": "LlamaCppModelv2",
+          "link": 4
+        },
+        {
+          "label": "options",
+          "name": "options",
+          "shape": 7,
+          "type": "LlamaCppExtraOptionsV2",
+          "link": 5
+        },
+        {
+          "label": "images",
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 8
+        },
+        {
+          "label": "system_prompt",
+          "name": "system_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "system_prompt"
+          },
+          "link": null
+        },
+        {
+          "label": "user_prompt",
+          "name": "user_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "user_prompt"
+          },
+          "link": null
+        },
+        {
+          "label": "main_gpu",
+          "name": "main_gpu",
+          "type": "INT",
+          "widget": {
+            "name": "main_gpu"
+          },
+          "link": null
+        },
+        {
+          "label": "devices",
+          "name": "devices",
+          "type": "STRING",
+          "widget": {
+            "name": "devices"
+          },
+          "link": null
+        },
+        {
+          "label": "n_gpu_layers",
+          "name": "n_gpu_layers",
+          "type": "INT",
+          "widget": {
+            "name": "n_gpu_layers"
+          },
+          "link": null
+        },
+        {
+          "label": "n_ctx",
+          "name": "n_ctx",
+          "type": "INT",
+          "widget": {
+            "name": "n_ctx"
+          },
+          "link": null
+        },
+        {
+          "label": "n_predict",
+          "name": "n_predict",
+          "type": "INT",
+          "widget": {
+            "name": "n_predict"
+          },
+          "link": null
+        },
+        {
+          "label": "temperature",
+          "name": "temperature",
+          "type": "FLOAT",
+          "widget": {
+            "name": "temperature"
+          },
+          "link": null
+        },
+        {
+          "label": "top_k",
+          "name": "top_k",
+          "type": "INT",
+          "widget": {
+            "name": "top_k"
+          },
+          "link": null
+        },
+        {
+          "label": "top_p",
+          "name": "top_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "top_p"
+          },
+          "link": null
+        },
+        {
+          "label": "min_p",
+          "name": "min_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "min_p"
+          },
+          "link": null
+        },
+        {
+          "label": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "label": "concurrency_limit",
+          "name": "concurrency_limit",
+          "type": "INT",
+          "widget": {
+            "name": "concurrency_limit"
+          },
+          "link": null
+        },
+        {
+          "label": "session_id",
+          "name": "session_id",
+          "type": "STRING",
+          "widget": {
+            "name": "session_id"
+          },
+          "link": null
+        },
+        {
+          "label": "keep_context",
+          "name": "keep_context",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_context"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "response",
+          "name": "response",
+          "type": "STRING",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaCppImageCaptionv2"
+      },
+      "widgets_values": [
+        "",
+        "描述这张图片",
+        0,
+        "",
+        0,
+        4096,
+        2048,
+        0.6000000238418579,
+        40,
+        0.949999988079071,
+        0,
+        364,
+        "randomize",
+        1,
+        "237d7c34-40a6-45b2-9686-73ad3a0de813",
+        false
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy showAnything",
+      "pos": [
+        3900,
+        330
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.5",
+        "Node name for S&R": "easy showAnything"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "LlamaCppModelv2"
+    ],
+    [
+      2,
+      3,
+      0,
+      2,
+      1,
+      "LlamaCppExtraOptionsV2"
+    ],
+    [
+      3,
+      2,
+      0,
+      4,
+      0,
+      "STRING"
+    ],
+    [
+      4,
+      1,
+      0,
+      5,
+      0,
+      "LlamaCppModelv2"
+    ],
+    [
+      5,
+      3,
+      0,
+      5,
+      1,
+      "LlamaCppExtraOptionsV2"
+    ],
+    [
+      7,
+      5,
+      0,
+      7,
+      0,
+      "STRING"
+    ],
+    [
+      8,
+      6,
+      0,
+      5,
+      2,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -3077.619132413116,
+        441.300917019085
+      ]
+    },
+    "frontendVersion": "1.35.9"
+  },
+  "version": 0.4
+}
