@@ -1,48 +1,9 @@
 {
   "id": "ec995a3b-72bb-4ee7-b00a-9e9287798046",
   "revision": 0,
-  "last_node_id": 16,
-  "last_link_id": 9,
+  "last_node_id": 28,
+  "last_link_id": 32,
   "nodes": [
-    {
-      "id": 4,
-      "type": "easy showAnything",
-      "pos": [
-        3870,
-        -190
-      ],
-      "size": [
-        370,
-        300
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 4,
-      "inputs": [
-        {
-          "label": "输入任何",
-          "name": "anything",
-          "shape": 7,
-          "type": "*",
-          "link": 3
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-easy-use",
-        "ver": "1.3.5",
-        "Node name for S&R": "easy showAnything"
-      },
-      "widgets_values": [
-        "<think>\n嗯，用户问“你是什么小助手”。首先，我需要确定用户对我的身份有什么疑问。作为一个AI助手，我应该清楚地说明我的功能和特点。可能用户想知道我的功能范围，或者想了解我的服务对象。我需要保持友好和专业的态度，同时确保回答准确无误。\n\n接下来，我应该考虑用户可能的深层需求。他们可能是在使用我的服务时遇到了问题，或者想确认我的功能是否符合他们的预期。这时候，我需要提供明确的信息，并鼓励他们提出更多问题，以便更好地满足他们的需求。\n\n另外，还要注意用户的身份和使用场景。用户可能是学生、工作人士或普通用户，不同的人可能对我的功能有不同的理解。需要确保回答覆盖这些可能性，同时保持简洁明了。\n\n最后，要确保回答符合平台的规定和用户隐私保护的原则，避免任何可能引起误解的信息。通过友好和专业的态度，用户会更愿意与我交流，解决问题。\n</think>\n\n我是你的智能助手，专注于帮助你解决问题和获取信息。我能够处理各种任务，从日常查询到专业解答，随时待命。如果你有任何问题或需要帮助，请随时告诉我！"
-      ]
-    },
     {
       "id": 1,
       "type": "LlamaCppModelv2",
@@ -55,7 +16,7 @@
         106
       ],
       "flags": {},
-      "order": 0,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -98,11 +59,20 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "LlamaCppModelv2"
+        "Node name for S&R": "LlamaCppModelv2",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "model_path": true,
+            "mmproj_path": true,
+            "cache_model": true
+          },
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
       "widgets_values": [
-        "llama-joycaption-beta-one-hf-llava/llama-joycaption-beta-one-hf-llava.i1-IQ1_S.gguf",
-        "llama-joycaption-beta-one-hf-llava/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf",
+        "GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf",
+        "GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf",
         true
       ]
     },
@@ -118,7 +88,7 @@
         474
       ],
       "flags": {},
-      "order": 3,
+      "order": 9,
       "mode": 4,
       "inputs": [
         {
@@ -150,7 +120,7 @@
           "widget": {
             "name": "user_prompt"
           },
-          "link": null
+          "link": 18
         },
         {
           "label": "main_gpu",
@@ -272,11 +242,31 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "LlamaCppPromptHelperv2"
+        "Node name for S&R": "LlamaCppPromptHelperv2",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "system_prompt": true,
+            "user_prompt": true,
+            "main_gpu": true,
+            "devices": true,
+            "n_gpu_layers": true,
+            "n_ctx": true,
+            "n_predict": true,
+            "temperature": true,
+            "top_k": true,
+            "top_p": true,
+            "min_p": true,
+            "seed": true,
+            "session_id": true,
+            "keep_context": true
+          },
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
       "widgets_values": [
-        "任务：根据提供的单张人物图片，生成结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致\n\n### 提示词生成规则\n获取图片内容，按照整体规则生成合适的提示词；\n\n按以下模板生成不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  \n\n【修改指令】\n\n##修改表情：\n\n示例：\n\n如：魅惑地笑/捂嘴偷笑/平静地笑容等\n要求每个图像都有不同的表情\n\n##修改姿势：\n\n示例：\n\n如：双手叉腰，比心的手势等\n要求每个图像都有不同的动作，动作变化幅度不应很小\n\n\n##修改拍摄景别：\n\n示例\n\n如：特写，中景等\n要求每个图像根据不同动作有合适的拍摄景别\n\n##修改拍摄角度\n\n示例\n\n如：微俯拍30度，正面拍摄等\n要求每个图像根据不同动作有合适的拍摄角度\n\n\n写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  \n\n\n### 输出要求  \n仅返回指定条数的提示词，每条独立成段，用换行分隔，无其他内容。  \n输出格式：【prompt_1】,【prompt_2】,【prompt_3】...\n\n\n### 示例如下：\n\n【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K\n\n...（共9条）",
-        "生成3个提示词",
+        "",
+        "",
         0,
         "",
         0,
@@ -286,8 +276,8 @@
         40,
         0.949999988079071,
         0,
-        1337,
-        "randomize",
+        1263,
+        "fixed",
         "eec9ebbd-bf19-43c6-9c6f-4489eddeecca",
         false
       ]
@@ -304,7 +294,7 @@
         298
       ],
       "flags": {},
-      "order": 1,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
@@ -371,15 +361,6 @@
           "link": null
         },
         {
-          "label": "verbose",
-          "name": "verbose",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "verbose"
-          },
-          "link": null
-        },
-        {
           "label": "media_marker",
           "name": "media_marker",
           "shape": 7,
@@ -408,6 +389,16 @@
             "name": "cmoe"
           },
           "link": null
+        },
+        {
+          "label": "verbose",
+          "name": "verbose",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "verbose"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -422,7 +413,24 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "LlamaCppOptionsv2"
+        "Node name for S&R": "LlamaCppOptionsv2",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "penalty_last_n": true,
+            "penalty_repeat": true,
+            "penalty_freq": true,
+            "penalty_present": true,
+            "n_threads": true,
+            "n_batch": true,
+            "pooling_type": true,
+            "verbose": true,
+            "media_marker": true,
+            "chat_template": true,
+            "cmoe": true
+          },
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
       "widgets_values": [
         64,
@@ -432,51 +440,54 @@
         4,
         512,
         "Unspecified",
-        true,
         "<start_of_image>",
         "",
-        true
+        "",
+        false
       ]
     },
     {
-      "id": 6,
-      "type": "LoadImage",
+      "id": 4,
+      "type": "easy showAnything",
       "pos": [
-        3190,
-        330
+        3840,
+        -200
       ],
       "size": [
-        270,
-        314
+        370,
+        300
       ],
       "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
+      "order": 11,
+      "mode": 4,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 3
+        }
+      ],
       "outputs": [
         {
-          "label": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            8
-          ]
-        },
-        {
-          "label": "遮罩",
-          "name": "MASK",
-          "type": "MASK",
+          "name": "output",
+          "type": "*",
           "links": null
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.7.0",
-        "Node name for S&R": "LoadImage"
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.5",
+        "Node name for S&R": "easy showAnything",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
       "widgets_values": [
-        "example.png",
-        "image"
+        "【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K  \n\n【prompt_2】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+平静地微笑+嘴角微扬+双手交叠+微俯拍30度，8K  \n\n【prompt_3】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+侧脸凝视+眼神专注+单手插腰+微俯拍30度，8K"
       ]
     },
     {
@@ -491,7 +502,7 @@
         518
       ],
       "flags": {},
-      "order": 4,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -512,7 +523,7 @@
           "name": "images",
           "shape": 7,
           "type": "IMAGE",
-          "link": 8
+          "link": 27
         },
         {
           "label": "system_prompt",
@@ -661,40 +672,107 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "LlamaCppImageCaptionv2"
+        "Node name for S&R": "LlamaCppImageCaptionv2",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "system_prompt": true,
+            "user_prompt": true,
+            "main_gpu": true,
+            "devices": true,
+            "n_gpu_layers": true,
+            "n_ctx": true,
+            "n_predict": true,
+            "temperature": true,
+            "top_k": true,
+            "top_p": true,
+            "min_p": true,
+            "seed": true,
+            "concurrency_limit": true,
+            "session_id": true,
+            "keep_context": true
+          },
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
       "widgets_values": [
         "",
-        "描述这张图片",
+        "请描述这张图片的内容",
         0,
         "",
-        0,
+        5,
         4096,
         2048,
         0.6000000238418579,
         40,
         0.949999988079071,
         0,
-        364,
+        1112,
         "randomize",
-        1,
+        2,
         "237d7c34-40a6-45b2-9686-73ad3a0de813",
         false
+      ]
+    },
+    {
+      "id": 6,
+      "type": "LoadImage",
+      "pos": [
+        3190,
+        330
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            32
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.7.0",
+        "Node name for S&R": "LoadImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "fe47d78d-a6a7-4d8f-861b-465652480cf0.jpeg",
+        "image"
       ]
     },
     {
       "id": 7,
       "type": "easy showAnything",
       "pos": [
-        3900,
+        3840,
         330
       ],
       "size": [
-        140,
-        26
+        440,
+        550
       ],
       "flags": {},
-      "order": 6,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -715,9 +793,308 @@
       "properties": {
         "cnr_id": "comfyui-easy-use",
         "ver": "1.3.5",
-        "Node name for S&R": "easy showAnything"
+        "Node name for S&R": "easy showAnything",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
       },
-      "widgets_values": []
+      "widgets_values": [
+        "好的，这是一张描绘年轻女性的肖像照。\n\n- **主体**：图片的中心是一位年轻的东亚女性，她正侧身对着镜头，目光温柔地注视着观者。\n- **外貌**：她拥有一头深棕色的长发，发丝柔顺地垂在肩上，发丝中夹杂着几缕微卷的发丝。她的脸庞轮廓清晰，皮肤白皙细腻，脸颊上带着淡淡的红晕，显得十分甜美。\n- **妆容**：她的妆容精致，眼妆自然，唇色是柔和的粉红色。\n- **服饰**：她穿着一件白色的吊带衫，肩带上带有细小的珠饰或蕾丝，为整体造型增添了一丝优雅。\n- **姿态与动作**：她微微侧身，右手轻轻搭在自己的右肩上，手指自然地伸展，似乎在轻轻抚摸或整理发丝。她的手臂和肩膀线条优美。\n- **背景与光线**：背景是纯净的灰色，使得人物主体更加突出。光线柔和，从正面偏左侧打来，均匀地照亮了她的脸庞和身体，营造出一种温暖、宁静的氛围。\n\n总而言之，这是一张充满温柔气质和清新美感的女性肖像照。",
+        "好的，这是一张描绘了宁静古典意境的图片，以下是对其内容的详细描述：\n\n这张图片描绘了一位身着古装的女子，她立于一片开阔的草地上，背景是柔和的黄昏或黎明时分的天空。\n\n- **人物与着装**：画面中央是一位年轻女子，她身穿一件浅色（可能是米白或淡青色）的宽袖长袍，袍子的材质看起来轻盈而有垂感。她腰间系着一条同色系的腰带，发髻高挽，乌黑的长发在脑后盘起，发间点缀着几支精致的发饰。她的妆容清丽，唇色为柔和的红棕色，眼神温柔地望向镜头，神情恬静。\n\n- **环境与背景**：女子所处的环境是一片被芦苇或类似的高草覆盖的田野。草叶在微风中轻轻摇曳，许多草穗在画面中飘动，显得生机盎然。背景是渐变的天空，从地平线附近的暖黄色、橙色逐渐过渡到上方的淡蓝色，一轮夕阳（或朝阳）在地平线附近散发着柔和的光芒，为整个画面增添了温暖而宁静的氛围。\n\n- **整体氛围**：整幅画面构图和谐，色调柔和，光影柔和而富有层次感，营造出一种清新、恬静、诗意的氛围。人物的姿态和环境共同构成了一幅充满东方古典美感的静谧图景。\n\n总而言之，这是一幅描绘一位身着素雅古装的女子，立于夕阳余晖下的芦苇田中，姿态优雅，神情宁静，整体画面意境悠远，充满了诗意与美感。",
+        "好的，这是一张关于图片内容的描述：\n\n这张图片展示了一位年轻女性的半身肖像，她正坐在室内。\n\n- **人物**：画面中心是一位有着棕色长发和齐刘海的年轻女性。她的眼睛大而明亮，正凝视着镜头，表情显得温柔而恬静。\n- **着装**：她穿着一件浅蓝色的吊带睡衣或连衣裙，领口处有精致的荷叶边装饰，材质看起来轻盈透气。\n- **姿态与动作**：她坐在床上，双腿弯曲，一只手轻轻搭在脸颊旁，姿态显得放松而优雅。\n- **环境**：背景是卧室的场景。她身后是浅色的床头板，床头板上似乎放着一个毛绒玩具。她的左后方可以看到一个深色的柜子或门框。床单是粉色的，上面还散落着一些白色的小物件，可能是袜子或小饰品。\n\n总的来说，这是一张充满温柔、宁静氛围的室内肖像照，捕捉了人物在舒适环境中的自然状态。",
+        "好的，这是一张描绘女性肌肤的特写照片。\n\n- **主体与姿态**：画面中心是一位年轻的东亚女性，她微微侧着脸，目光向下，神情宁静。\n- **肌肤状态**：她的皮肤非常光滑、细腻，呈现出一种水润的光泽，仿佛被一层透明的油或精华液包裹着。这种质感使她的脸庞显得饱满而富有弹性。\n- **光影与色调**：光线从左上方柔和地照射下来，形成了自然的光影过渡。她脸部的右侧和颈部被照亮，而左侧则处于柔和的阴影中，营造出立体感。整体色调以柔和的白色和浅灰色为主，突显了肌肤的洁净感。\n- **细节**：她的黑色长发被随意地向后梳理，几缕发丝垂落在脸颊旁，增添了几分柔美。她穿着一件白色的上衣，领口简洁。\n- **氛围**：整张图片给人一种清新、纯净、健康的感觉，仿佛她正在享受一个宁静的护肤时刻。\n\n总而言之，这张图片通过柔和的光线和水润的质感，生动地展现了女性肌肤的柔滑、饱满与健康。",
+        "好的，这是一张漫画页面，描绘了主角在厨房里烹饪一道菜肴的过程。\n\n- **第一格**：画面中，一个留着短发、穿着围裙的小女孩正在用一个大锅（看起来像炒锅）烹饪食物。她正在用锅铲搅拌锅里的食物，锅边有“ZAP!”和“SIZLE!”的拟声词，表示锅里有水汽或食物在翻滚。\n- **第二格**：小女孩用锅铲将锅里的食物翻动，锅中冒出“FWOOSH!”的拟声词，表示食物在锅里翻滚、沸腾，锅里的食物看起来像是汤或炖菜。\n- **第三格**：画面展示了烹饪完成后的成品。锅里的菜肴看起来像是一道汤或炖菜，里面有丸子、蔬菜和汤汁。锅被放在一个圆形的盘子里，盘子上写着“DING!”，表示烹饪结束。\n- **第四格**：小女孩开心地端着一大碗这道菜，她和一只独角兽正在一起吃。独角兽在她旁边，脸上带着微笑，似乎很喜欢这道菜。\n\n总的来说，这是一张描绘主角烹饪并享用一道美味菜肴的漫画页面。"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "Text Multiline",
+      "pos": [
+        3220,
+        -620
+      ],
+      "size": [
+        270,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "pr-was-node-suite-comfyui-47064894",
+        "ver": "ea935d1044ae5a26efa54ebeb18fe9020af49a45",
+        "Node name for S&R": "Text Multiline",
+        "ue_properties": {
+          "version": "7.5.2",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "任务：根据提供的单张人物图片，生成结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致\n\n### 提示词生成规则\n获取图片内容，按照整体规则生成合适的提示词；\n\n按以下模板生成不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  \n\n【修改指令】\n\n##修改表情：\n\n示例：\n\n如：魅惑地笑/捂嘴偷笑/平静地笑容等\n要求每个图像都有不同的表情\n\n##修改姿势：\n\n示例：\n\n如：双手叉腰，比心的手势等\n要求每个图像都有不同的动作，动作变化幅度不应很小\n\n\n##修改拍摄景别：\n\n示例\n\n如：特写，中景等\n要求每个图像根据不同动作有合适的拍摄景别\n\n##修改拍摄角度\n\n示例\n\n如：微俯拍30度，正面拍摄等\n要求每个图像根据不同动作有合适的拍摄角度\n\n\n写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  \n\n\n### 输出要求  \n仅返回[个数]条提示词，每条独立成段，用换行分隔，无其他内容。  \n输出格式：【prompt_1】,【prompt_2】,【prompt_3】...\n\n\n### 示例如下：\n\n【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K\n\n...（共9条）"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 20,
+      "type": "String to Text",
+      "pos": [
+        3220,
+        -370
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "字符串",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "pr-was-node-suite-comfyui-47064894",
+        "ver": "ea935d1044ae5a26efa54ebeb18fe9020af49a45",
+        "Node name for S&R": "String to Text",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.2"
+        }
+      },
+      "widgets_values": [
+        "3"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 21,
+      "type": "easy promptReplace",
+      "pos": [
+        3510,
+        -620
+      ],
+      "size": [
+        210,
+        178
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "link": 13
+        },
+        {
+          "name": "replace1",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "replace1"
+          },
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "label": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            17,
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.4",
+        "Node name for S&R": "easy promptReplace",
+        "ue_properties": {
+          "version": "7.5.2",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "[个数]",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 22,
+      "type": "easy showAnything",
+      "pos": [
+        3740,
+        -620
+      ],
+      "size": [
+        240,
+        270
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.5",
+        "Node name for S&R": "easy showAnything",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "任务：根据提供的单张人物图片，生成结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致\n\n获取图片内容，按照整体规则生成合适的提示词；\n\n按以下模板生成不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  \n\n【修改指令】\n\n\n示例：\n\n如：魅惑地笑/捂嘴偷笑/平静地笑容等\n要求每个图像都有不同的表情\n\n\n示例：\n\n如：双手叉腰，比心的手势等\n要求每个图像都有不同的动作，动作变化幅度不应很小\n\n\n\n示例\n\n如：特写，中景等\n要求每个图像根据不同动作有合适的拍摄景别\n\n\n示例\n\n如：微俯拍30度，正面拍摄等\n要求每个图像根据不同动作有合适的拍摄角度\n\n\n写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  \n\n\n仅返回3条提示词，每条独立成段，用换行分隔，无其他内容。  \n输出格式：【prompt_1】,【prompt_2】,【prompt_3】...\n\n\n\n【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K\n\n...（共9条）"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "ImageBatchMulti",
+      "pos": [
+        3190,
+        690
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image_1",
+          "type": "IMAGE",
+          "link": 31
+        },
+        {
+          "name": "image_2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "fb9d5764d21d23a3f52186aeccbb259efac96f9c",
+        "Node name for S&R": "ImageBatchMulti",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.2"
+        }
+      },
+      "widgets_values": [
+        2,
+        null
+      ]
+    },
+    {
+      "id": 28,
+      "type": "LoadImage",
+      "pos": [
+        2890,
+        330
+      ],
+      "size": [
+        270,
+        314.00000000000006
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            31
+          ]
+        },
+        {
+          "label": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.7.0",
+        "Node name for S&R": "LoadImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "faeb082d8539493f89fe9ce8a07305ff~tplv-73owjymdk6-jj-mark-v1_0_0_0_0_5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5Ya05769_q752.webp",
+        "image"
+      ]
     }
   ],
   "links": [
@@ -770,25 +1147,93 @@
       "STRING"
     ],
     [
-      8,
-      6,
+      13,
+      19,
+      0,
+      21,
+      0,
+      "STRING"
+    ],
+    [
+      14,
+      20,
+      0,
+      21,
+      1,
+      "STRING"
+    ],
+    [
+      17,
+      21,
+      0,
+      22,
+      0,
+      "STRING"
+    ],
+    [
+      18,
+      21,
+      0,
+      2,
+      3,
+      "STRING"
+    ],
+    [
+      27,
+      25,
       0,
       5,
       2,
       "IMAGE"
+    ],
+    [
+      31,
+      28,
+      0,
+      25,
+      0,
+      "IMAGE"
+    ],
+    [
+      32,
+      6,
+      0,
+      25,
+      1,
+      "IMAGE"
     ]
   ],
-  "groups": [],
+  "groups": [
+    {
+      "id": 1,
+      "title": "提示词处理",
+      "bounding": [
+        3200,
+        -700,
+        800,
+        400
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 1,
+      "scale": 0.8769226950000163,
       "offset": [
-        -3077.619132413116,
-        441.300917019085
+        -2756.2078062931682,
+        86.57673433017385
       ]
     },
-    "frontendVersion": "1.35.9"
+    "frontendVersion": "1.38.13",
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
   },
   "version": 0.4
 }
