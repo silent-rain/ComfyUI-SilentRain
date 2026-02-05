@@ -333,6 +333,9 @@ impl LlamaCppImageCaptionv2 {
         };
         let generate_request: GenerateRequest = depythonize(&kwargs)?;
 
+        info!("pipeline_config: {pipeline_config:#?}");
+        info!("generate_request: {generate_request:#?}");
+
         // 图片资源处理
         let mut medias = Vec::new();
         if let Some(images) = images {
@@ -361,6 +364,10 @@ impl LlamaCppImageCaptionv2 {
         medias: Vec<MediaData>,
         concurrency_limit: u32,
     ) -> Result<(Vec<String>,), Error> {
+        if medias.is_empty() {
+            return Ok((Vec::new(),));
+        }
+
         let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 

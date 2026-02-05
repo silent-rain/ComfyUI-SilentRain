@@ -10,6 +10,7 @@ use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
 };
 use pythonize::depythonize;
+use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
@@ -302,6 +303,9 @@ impl LlamaCppPromptHelperv2 {
             verbose,
         };
         let generate_request: GenerateRequest = depythonize(&kwargs)?;
+
+        info!("pipeline_config: {pipeline_config:#?}");
+        info!("generate_request: {generate_request:#?}");
 
         Ok((pipeline_config, generate_request))
     }

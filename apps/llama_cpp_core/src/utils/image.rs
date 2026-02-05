@@ -25,7 +25,7 @@ impl Image {
 
     /// 从tensor加载图像
     pub fn from_tensor(
-        data: &[u8],
+        data: Vec<u8>,
         height: u32,
         width: u32,
         channels: usize,
@@ -33,13 +33,13 @@ impl Image {
         // 根据通道数创建图像
         let img = match channels {
             3 => {
-                let img = RgbImage::from_raw(width, height, data.to_vec())
-                    .ok_or_else(|| Error::ImageBuffer)?;
+                let img =
+                    RgbImage::from_raw(width, height, data).ok_or_else(|| Error::ImageBuffer)?;
                 DynamicImage::ImageRgb8(img)
             }
             4 => {
-                let img = RgbaImage::from_raw(width, height, data.to_vec())
-                    .ok_or_else(|| Error::ImageBuffer)?;
+                let img =
+                    RgbaImage::from_raw(width, height, data).ok_or_else(|| Error::ImageBuffer)?;
                 DynamicImage::ImageRgba8(img)
             }
             _ => {

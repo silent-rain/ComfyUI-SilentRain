@@ -180,7 +180,7 @@ impl GenerateRequest {
         width: u32,
         channels: usize,
     ) -> Result<MediaData, Error> {
-        let mut img = Image::from_tensor(&data, height, width, channels)?;
+        let mut img = Image::from_tensor(data, height, width, channels)?;
 
         let max_resolution = img.longest().min(self.image_max_resolution);
         img = img.resize_to_longest(max_resolution)?;
