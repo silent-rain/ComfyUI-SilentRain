@@ -124,6 +124,9 @@ pub enum Error {
     ModelNotInitialized(String),
     #[error("Model mtmd context is not initialized, {0}")]
     ModelMtmdContextNotInitialized(String),
+
+    #[error("Failed to obtain semaphore license, {0}")]
+    AcquireError(String),
 }
 
 impl From<std::io::Error> for Error {

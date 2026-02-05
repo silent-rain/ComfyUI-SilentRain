@@ -909,6 +909,7 @@ dependencies = [
  "chardet",
  "encoding",
  "encoding_rs",
+ "futures",
  "hf-hub",
  "image",
  "indexmap",
@@ -938,6 +939,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "walkdir",
 ]
 

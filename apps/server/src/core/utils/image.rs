@@ -346,3 +346,41 @@ pub fn tensor_to_raw_data<'py>(images: &Bound<'py, PyAny>) -> Result<Vec<Vec<u8>
 
     Ok(raw_data_list)
 }
+
+/// images: [batch, height, width, channels]
+#[allow(clippy::type_complexity)]
+pub fn tensor_to_image_tensor_buffer<'py>(
+    images: &Bound<'py, PyAny>,
+) -> Result<Vec<(Vec<u8>, usize, usize, usize)>, Error> {
+    // 校验形状
+    let images_shape = images.getattr("shape")?.extract::<Vec<usize>>()?;
+    if images_shape.len() != 4 {
+        return Err(Error::InvalidTensorShape(format!(
+            "Expected [batch, height, width, channels] tensor, images shape: {}",
+            images_shape.len()
+        )));
+    }
+    let batch = images_shape[0];
+    let height = images_shape[1];
+    let width = images_shape[2];
+    let channels = images_shape[3];
+
+    let mut raw_data_list = Vec::new();
+
+    // 遍历 images 对象中的每个图像
+    for i in 0..batch {
+        let numpy_array = images
+            .call_method1("select", (0, i))?
+            .call_method0("numpy")?
+            .call_method1("__mul__", (255,))?
+            .call_method1("astype", ("uint8",))?
+            .call_method0("tobytes")?;
+
+        // 转换为字节数组
+        let pixel_bytes = numpy_array.extract::<Vec<u8>>()?;
+
+        raw_data_list.push((pixel_bytes, height, width, channels));
+    }
+
+    Ok(raw_data_list)
+}

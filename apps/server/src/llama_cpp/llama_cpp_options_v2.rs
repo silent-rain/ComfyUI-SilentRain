@@ -8,7 +8,9 @@
 //!     - gguf model
 //!         - tokenizer.chat_template
 
-use llama_cpp_core::{ContexParams, sampler::SamplerConfig, types::PoolingTypeMode};
+use llama_cpp_core::{
+    ContexParams, model::ModelConfig, sampler::SamplerConfig, types::PoolingTypeMode,
+};
 use pyo3::{
     Bound, Py, PyResult, Python, pyclass, pymethods,
     types::{PyDict, PyType},
@@ -88,56 +90,11 @@ impl LlamaCppOptionsv2 {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
+        let model_config = ModelConfig::default();
         let sampler_config = SamplerConfig::default();
         let context_config = ContexParams::default();
 
         InputSpec::new()
-            // ===== 采样参数 =====
-            .with_required(
-                "temperature",
-                InputType::float()
-                    .default(sampler_config.temperature)
-                    .min_float(0.0)
-                    .max_float(2.0)
-                    .step_float(0.01)
-                    .tooltip(
-                        "Controls randomness. 0.0 means deterministic, higher means more random",
-                    ),
-            )
-            .with_required(
-                "top_k",
-                InputType::int()
-                    .default(sampler_config.top_k)
-                    .min(0)
-                    .step_int(1)
-                    .tooltip("Controls diversity via top-k sampling. Higher values mean more diverse outputs"),
-            )
-            .with_required(
-                "top_p",
-                InputType::float()
-                    .default(sampler_config.top_p)
-                    .min_float(0.0)
-                    .max_float(1.0)
-                    .step_float(0.01)
-                    .tooltip("Controls diversity via nucleus sampling. Lower values mean more focused outputs"),
-            )
-            .with_required(
-                "min_p",
-                InputType::float()
-                    .default(sampler_config.min_p)
-                    .min_float(0.0)
-                    .max_float(1.0)
-                    .step_float(0.01)
-                    .tooltip("Min-p sampling threshold"),
-            )
-            .with_required(
-                "seed",
-                InputType::int()
-                    .default(sampler_config.seed)
-                    .min(0)
-                    .step_int(1)
-                    .tooltip("Seed for random number generation. 0 means random"),
-            )
             // ===== 重复惩罚参数 =====
             .with_required(
                 "penalty_last_n",
@@ -186,22 +143,6 @@ impl LlamaCppOptionsv2 {
                     .step_int(1)
                     .tooltip("Batch size for prompt processing. Larger values may improve throughput but increase memory usage"),
             )
-            .with_required(
-                "n_ctx",
-                InputType::int()
-                    .default(context_config.n_ctx)
-                    .min(512)
-                    .step_int(1)
-                    .tooltip("Size of the prompt context window. Defines the maximum context length the model can handle"),
-            )
-            .with_required(
-                "n_predict",
-                InputType::int()
-                    .default(context_config.n_predict)
-                    .min(0)
-                    .step_int(1)
-                    .tooltip("Number of tokens to predict (-1 for unlimited)"),
-            )
             // ===== 嵌入池化类型 =====
             .with_required(
                 "pooling_type",
@@ -220,12 +161,12 @@ impl LlamaCppOptionsv2 {
             .with_optional(
                 "media_marker",
                 InputType::string()
+                    .default(model_config.media_marker.unwrap_or_default())
                     .tooltip("Media marker. If not provided, the default marker will be used"),
             )
             .with_optional(
                 "chat_template",
                 InputType::string()
-                    .default(context_config.chat_template.unwrap_or_default())
                     .tooltip("Chat template to use, default template if not provided"),
             )
             .with_optional(
@@ -236,7 +177,7 @@ impl LlamaCppOptionsv2 {
                     .label_off("No")
                     .tooltip("Keep MoE layers on CPU"),
             )
-            .with_required(
+            .with_optional(
                 "verbose",
                 InputType::bool()
                     .default(context_config.verbose)

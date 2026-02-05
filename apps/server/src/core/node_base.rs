@@ -131,6 +131,7 @@ enum InputKind {
     Conditioning,
     Vae,
     Latent,
+    Custom(String),
 }
 
 /// 参数值
@@ -234,6 +235,10 @@ impl InputType {
     /// Latent 类型
     pub fn latent() -> Self {
         Self::new(InputKind::Latent)
+    }
+
+    pub fn custom(custom_kind: impl Into<String>) -> Self {
+        Self::new(InputKind::Custom(custom_kind.into()))
     }
 }
 
@@ -380,6 +385,7 @@ impl InputType {
             InputKind::Conditioning => NODE_CONDITIONING,
             InputKind::Vae => NODE_VAE,
             InputKind::Latent => NODE_LATENT,
+            InputKind::Custom(custom) => custom,
         };
         let params_dict = self.params.to_py_dict(py)?;
         Ok((type_str, params_dict).into_pyobject(py)?.into_any())

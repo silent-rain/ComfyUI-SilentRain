@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { workspace = true, features = [
     "extension-module",
+    "experimental-async",
     # "auto-initialize",
     # "generate-import-lib", # 用于为 MinGW-w64 和 MSVC（交叉）编译目标生成 Python DLL 的导入库。
     # "multiple-pymethods",
@@ -46,6 +47,8 @@ tempfile = { workspace = true }
 image = { workspace = true }
 png = { workspace = true }
 indexmap = { workspace = true }
+futures = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }

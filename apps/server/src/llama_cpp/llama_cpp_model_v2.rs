@@ -6,9 +6,10 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyDict, PyType},
+    types::{PyAnyMethods, PyDict, PyType},
 };
-use std::collections::HashMap;
+use pythonize::pythonize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     core::{
@@ -21,6 +22,16 @@ use crate::{
         comfyui::{PromptServer, types::NODE_LLAMA_CPP_MODEL_V2},
     },
 };
+
+/// LlamaCpp模型参数结构体
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct LlamaCppModelParams {
+    pub model_path: String,
+    pub mmproj_path: String,
+    pub cache_model: String,
+    pub cache_model_key: String,
+    pub cache_mmproj_key: String,
+}
 
 /// LlamaCpp Model Loader v2
 #[pyclass(subclass)]
@@ -105,8 +116,8 @@ impl LlamaCppModelv2 {
         model_path: String,
         mmproj_path: String,
         cache_model: bool,
-    ) -> PyResult<(HashMap<String, String>,)> {
-        let result = self.load_model(model_path, mmproj_path, cache_model);
+    ) -> PyResult<(Bound<'py, PyDict>,)> {
+        let result = self.load_model(py, model_path, mmproj_path, cache_model);
 
         match result {
             Ok(v) => Ok(v),
@@ -123,12 +134,13 @@ impl LlamaCppModelv2 {
 
 impl LlamaCppModelv2 {
     /// 加载模型并返回缓存 key
-    fn load_model(
+    fn load_model<'py>(
         &self,
+        py: Python<'py>,
         model_path: String,
         mmproj_path: String,
         cache_model: bool,
-    ) -> Result<(HashMap<String, String>,), Error> {
+    ) -> Result<(Bound<'py, PyDict>,), Error> {
         // 解析完整路径
         let base_models_dir = FolderPaths::default().model_path();
         let model_path = base_models_dir.join("LLM").join(&model_path);
@@ -153,19 +165,21 @@ impl LlamaCppModelv2 {
                 .to_string_lossy()
         );
 
-        Ok((HashMap::from([
-            (
-                "model_path".to_string(),
-                model_path.to_string_lossy().to_string(),
-            ),
-            (
-                "mmproj_path".to_string(),
-                mmproj_path.to_string_lossy().to_string(),
-            ),
-            ("cache_model".to_string(), cache_model.to_string()),
-            ("cache_model_key".to_string(), cache_model_key),
-            ("cache_mmproj_key".to_string(), cache_mmproj_key),
-        ]),))
+        let llama_cpp_model_params = LlamaCppModelParams {
+            model_path: model_path.to_string_lossy().to_string(),
+            mmproj_path: mmproj_path.to_string_lossy().to_string(),
+            cache_model: cache_model.to_string(),
+            cache_model_key,
+            cache_mmproj_key,
+        };
+        let py_params = pythonize(py, &llama_cpp_model_params)?
+            .extract::<Bound<'py, PyDict>>()
+            .map_err(|e| {
+                error!("pythonize error, {e}");
+                Error::Pyo3CastError(e.to_string())
+            })?;
+
+        Ok((py_params,))
     }
 
     /// 获取模型列表
@@ -173,10 +187,13 @@ impl LlamaCppModelv2 {
         let llm_list = FolderPaths::default().get_filename_list("LLM");
         let text_encoders_list = FolderPaths::default().get_filename_list("text_encoders");
 
-        [llm_list, text_encoders_list]
+        let mut models: Vec<String> = [llm_list, text_encoders_list]
             .concat()
             .into_iter()
             .filter(|v| v.ends_with(".gguf"))
-            .collect()
+            .collect();
+
+        models.insert(0, "None".to_string());
+        models
     }
 }

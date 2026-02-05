@@ -22,9 +22,8 @@ pub const NODE_LATENT: &str = "LATENT";
 
 pub const NODE_STRING_LIST: &str = "STRING_LIST";
 pub const NODE_LLAMA_CPP_OPTIONS: &str = "LlamaCppExtraOptions";
-pub const NODE_LLAMA_CPP_OPTIONS_V2: &str = "LlamaCppExtraOptionsV2";
 pub const NODE_LLAMA_CPP_MODEL_V2: &str = "LlamaCppModelv2";
-pub const NODE_LLAMA_CPP_SAMPLER_V2: &str = "LlamaCppSamplerv2";
+pub const NODE_LLAMA_CPP_OPTIONS_V2: &str = "LlamaCppExtraOptionsV2";
 
 pub const NODE_INT_MAX: u64 = 0xffffffffffffffffu64;
 pub const NODE_SEED_MAX: u64 = 10000000;
