@@ -376,7 +376,9 @@ impl ContextWrapper {
         //     })?;
 
         // 优先使用自定义模板
-        if let Some(ref chat_template) = contex_params.chat_template {
+        if let Some(ref chat_template) = contex_params.chat_template
+            && !chat_template.is_empty()
+        {
             return LlamaChatTemplate::new(chat_template).map_err(|e| Error::InvalidInput {
                 field: "chat_template".into(),
                 message: e.to_string(),

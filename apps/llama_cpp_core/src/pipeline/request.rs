@@ -12,25 +12,33 @@ pub struct GenerateRequest {
     /// 会话ID（可选）
     /// 用于在 Pipeline 内部自动管理历史上下文，实现并发隔离
     /// 不同 session_id 的对话历史完全隔离
+    #[serde(default)]
     pub session_id: String,
 
     /// 历史消息
+    #[serde(default)]
     pub history: Option<HistoryMessage>,
 
     /// 系统提示词（可选）
+    #[serde(default)]
     pub system_prompt: Option<String>,
     /// 用户提示词
+    #[serde(default)]
     pub user_prompt: String,
     /// 媒体数据（多模态场景）
+    #[serde(default)]
     pub medias: Vec<MediaData>,
 
     /// Media marker. If not provided, the default marker will be used.
+    #[serde(default)]
     pub media_marker: Option<String>,
 
     /// Image max resolution, default is 768，防止图片过大导致编码失败
+    #[serde(default)]
     pub image_max_resolution: u32,
 
     /// Whether to keep context between requests
+    #[serde(default)]
     pub keep_context: bool,
 }
 
