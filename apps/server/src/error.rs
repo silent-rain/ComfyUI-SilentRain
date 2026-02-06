@@ -129,6 +129,8 @@ pub enum Error {
     AcquireError(String),
     #[error("task join error, {0}")]
     TaskJoinError(String),
+    #[error("progress channel send error, {0}")]
+    ProgressSendError(String),
 }
 
 impl From<std::io::Error> for Error {

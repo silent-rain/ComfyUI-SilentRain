@@ -259,10 +259,44 @@ impl LlamaCppImageCaptionv2 {
                 PyErr::new::<PyRuntimeError, _>(e.to_string())
             })?;
 
-        let futures = self.generate(pipeline_config, generate_request, medias, concurrency_limit);
+        let total_tasks = medias.len();
+        if total_tasks == 0 {
+            return Ok((Vec::new(),));
+        }
+
+        // 获取 comfy.utils.ProgressBar
+        let comfy = py.import("comfy")?;
+        let utils = comfy.getattr("utils")?;
+        // 创建 ProgressBar，总数为任务数
+        let pbar = utils.call_method1("ProgressBar", (total_tasks,))?;
+
+        // 创建进度通道
+        let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
+
+        // 将 Bound 转换为 PyObject，这样才能跨线程传递
+        // Py<PyAny> 是 Send + Sync，可以安全地跨线程
+        let pbar_py: Py<pyo3::PyAny> = pbar.unbind();
+        let progress_handle = std::thread::spawn(move || {
+            for _ in progress_rx {
+                // 获取 GIL 并更新 ProgressBar
+                Python::attach(|py| {
+                    if let Err(e) = pbar_py.bind(py).call_method1("update", (1,)) {
+                        error!("Failed to update progress bar: {e}");
+                    }
+                });
+            }
+        });
+
+        let futures = self.generate(
+            pipeline_config,
+            generate_request,
+            medias,
+            concurrency_limit,
+            progress_tx,
+        );
 
         // 使用 allow_threads 释放 GIL，然后在内部运行异步代码
-        py.detach(move || {
+        let result = py.detach(move || {
             let rt = tokio::runtime::Runtime::new().map_err(|e| {
                 error!("Failed to create tokio runtime: {e}");
                 PyErr::new::<PyRuntimeError, _>(format!("Failed to create tokio runtime: {e}"))
@@ -279,7 +313,14 @@ impl LlamaCppImageCaptionv2 {
                     }
                 }
             })
-        })
+        });
+
+        // 等待进度线程完成
+        if let Err(e) = progress_handle.join() {
+            error!("Progress thread panicked: {:?}", e);
+        }
+
+        result
     }
 }
 
@@ -365,11 +406,8 @@ impl LlamaCppImageCaptionv2 {
         generate_request: GenerateRequest,
         medias: Vec<MediaData>,
         concurrency_limit: u32,
+        progress_tx: std::sync::mpsc::Sender<()>,
     ) -> Result<(Vec<String>,), Error> {
-        if medias.is_empty() {
-            return Ok((Vec::new(),));
-        }
-
         let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -381,6 +419,7 @@ impl LlamaCppImageCaptionv2 {
                 let semaphore = Arc::clone(&semaphore);
                 let pipeline_clone = pipeline.clone();
                 let generate_request_clone = generate_request.clone().with_media(media);
+                let progress_tx_clone = progress_tx.clone();
 
                 tokio::spawn(async move {
                     let _permit = semaphore.acquire().await.map_err(|e| {
@@ -390,7 +429,12 @@ impl LlamaCppImageCaptionv2 {
 
                     let output = pipeline_clone.generate(&generate_request_clone).await?;
 
-                    info!("iamge {i} prcessing completed");
+                    // 任务完成，发送进度信号
+                    if let Err(e) = progress_tx_clone.send(()) {
+                        error!("发送进度信号失败: {e}");
+                    }
+
+                    info!("image {i} processing completed");
                     Ok::<_, Error>(output.text)
                 })
             })
@@ -406,6 +450,8 @@ impl LlamaCppImageCaptionv2 {
             .into_iter()
             .collect::<Result<Vec<String>, Error>>()?;
 
+        // 关闭通道
+        drop(progress_tx);
         Ok((results,))
     }
 }
