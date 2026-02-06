@@ -23,6 +23,10 @@ pub use batch_rename::BatchRename;
 mod console_debug;
 pub use console_debug::ConsoleDebug;
 
+// 测试节点
+mod progress_bar_test;
+pub use progress_bar_test::ProgressBarTest;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "utils")?;
@@ -31,6 +35,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<WorkflowInfo>()?;
     submodule.add_class::<BatchRename>()?;
     submodule.add_class::<ConsoleDebug>()?;
+    submodule.add_class::<ProgressBarTest>()?;
     Ok(submodule)
 }
 
@@ -61,6 +66,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ConsoleDebug",
             py.get_type::<ConsoleDebug>(),
             "Sr Console Debug",
+        ),
+        NodeRegister(
+            "ProgressBarTest",
+            py.get_type::<ProgressBarTest>(),
+            "Sr ProgressBar Test",
         ),
     ];
     Ok(nodes)
