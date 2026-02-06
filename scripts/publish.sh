@@ -27,8 +27,11 @@ source ./apps/server/.venv/bin/activate
 ./scripts/build.sh
 ./scripts/build_web.sh
 
+# 退出服务编译环境
+deactivate
 
 cd ${nodesDir}
+source .venv/bin/activate
 
 # publishing
 uv run comfy node publish

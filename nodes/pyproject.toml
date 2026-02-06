@@ -2,7 +2,7 @@
 name = "ComfyUI-SilentRain"
 description = "Ecological extension of comfyui using Rust language. only supports Linux."
 requires-python = ">=3.10"
-version = "1.0.13"
+version = "1.0.14"
 license = { file = "LICENSE" }
 dependencies = [
     "numpy>=2.2.6",
