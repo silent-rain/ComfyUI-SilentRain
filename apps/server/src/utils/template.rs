@@ -5,16 +5,16 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyType},
+    types::{PyDict, PyType},
 };
 
 use crate::{
-    core::category::CATEGORY_UTILS,
-    error::Error,
-    wrapper::comfyui::{
-        PromptServer,
-        types::{NODE_INT, NODE_STRING},
+    core::{
+        category::CATEGORY_UTILS,
+        node_base::{InputSpec, InputType},
     },
+    error::Error,
+    wrapper::comfyui::{PromptServer, types::NODE_STRING},
 };
 
 /// 基础模板
@@ -38,25 +38,25 @@ impl Template {
     }
 
     // 输出节点, 可选
-    // #[classattr]
-    // #[pyo3(name = "OUTPUT_NODE")]
-    // fn output_node() -> bool {
-    //     false
-    // }
+    #[classattr]
+    #[pyo3(name = "OUTPUT_NODE")]
+    fn output_node() -> bool {
+        false
+    }
 
     // 过时标记, 可选
-    // #[classattr]
-    // #[pyo3(name = "DEPRECATED")]
-    // fn deprecated() -> bool {
-    //     false
-    // }
+    #[classattr]
+    #[pyo3(name = "DEPRECATED")]
+    fn deprecated() -> bool {
+        false
+    }
 
     // 实验性的, 可选
-    // #[classattr]
-    // #[pyo3(name = "EXPERIMENTAL")]
-    // fn experimental() -> bool {
-    //     false
-    // }
+    #[classattr]
+    #[pyo3(name = "EXPERIMENTAL")]
+    fn experimental() -> bool {
+        false
+    }
 
     // 返回参数类型
     #[classattr]
@@ -105,42 +105,27 @@ impl Template {
     #[classmethod]
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
-        Python::attach(|py| {
-            let dict = PyDict::new(py);
-            dict.set_item("required", {
-                let required = PyDict::new(py);
-
-                required.set_item(
-                    "folder",
-                    (NODE_STRING, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", "")?;
-                        params.set_item("tooltip", "")?;
-                        params
-                    }),
-                )?;
-
-                required
-            })?;
-
-            dict.set_item("optional", {
-                let optional = PyDict::new(py);
-
-                optional.set_item(
-                    "start_index",
-                    (NODE_INT, {
-                        let params = PyDict::new(py);
-                        params.set_item("default", 0)?;
-                        params.set_item("min", 0)?;
-                        params.set_item("step", 0)?;
-                        params
-                    }),
-                )?;
-
-                optional
-            })?;
-            Ok(dict.into())
-        })
+        InputSpec::new()
+            // 必填参数
+            .with_required(
+                "folder",
+                InputType::string().default("input").tooltip("folder path"),
+            )
+            // 可选参数
+            .with_optional(
+                "start_index",
+                InputType::int()
+                    .default(0)
+                    .min(0)
+                    .step(0)
+                    .tooltip("start index"),
+            )
+            // 隐藏参数
+            // .with_hidden("prompt", InputType::custom("PROMPT"))
+            // .with_hidden("dynprompt", InputType::custom("DYNPROMPT"))
+            // .with_hidden("extra_pnginfo", InputType::custom("EXTRA_PNGINFO"))
+            // .with_hidden("unique_id", InputType::custom("UNIQUE_ID"))
+            .build()
     }
 
     #[allow(clippy::too_many_arguments)]
