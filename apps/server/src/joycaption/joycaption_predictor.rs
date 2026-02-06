@@ -19,7 +19,7 @@ use llama_cpp_2::{
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{
-        AddBos, LlamaChatMessage, LlamaModel, Special,
+        AddBos, LlamaChatMessage, LlamaModel,
         params::{LlamaModelParams, kv_overrides::ParamOverrideValue},
     },
     sampling::LlamaSampler,
@@ -151,10 +151,12 @@ impl JoyCaptionPredictorGGUF {
         }
 
         // print the prompt token-by-token
+        let mut decoder = encoding_rs::UTF_8.new_decoder();
         for token in &tokens_list {
             info!(
                 "{}",
-                self.ctx.model.token_to_str(*token, Special::Tokenize)?
+                self.model
+                    .token_to_piece(*token, &mut decoder, true, None)?
             );
         }
 
@@ -280,14 +282,10 @@ impl JoyCaptionPredictorGGUF {
                     break;
                 }
 
-                let output_bytes = self.ctx.model.token_to_bytes(token, Special::Tokenize)?;
-                // use `Decoder.decode_to_string()` to avoid the intermediate buffer
-                let mut output_string = String::with_capacity(32);
-                let _decode_result =
-                    decoder.decode_to_string(&output_bytes, &mut output_string, false);
+                let piece = self.model.token_to_piece(token, &mut decoder, true, None)?;
 
-                info!("{output_string}");
-                results.push_str(&output_string);
+                info!("{piece}");
+                results.push_str(&piece);
 
                 batch.clear();
                 batch.add(token, n_cur, &[0], true)?;

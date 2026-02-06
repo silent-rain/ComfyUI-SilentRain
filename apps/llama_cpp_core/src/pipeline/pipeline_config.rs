@@ -161,8 +161,8 @@ impl PipelineConfig {
     }
 
     /// 设置最大生成 token 数
-    pub fn with_max_tokens(mut self, tokens: i32) -> Self {
-        self.context.n_predict = tokens;
+    pub fn with_max_tokens(mut self, max_tokens: i32) -> Self {
+        self.context.n_predict = max_tokens;
         self
     }
 }

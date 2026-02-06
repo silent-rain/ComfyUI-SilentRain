@@ -15,7 +15,7 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel},
     sampling::LlamaSampler,
     timing::LlamaTimings,
     token::LlamaToken,
@@ -98,8 +98,8 @@ impl ContexParams {
     }
 
     /// 设置最大生成 token 数
-    pub fn with_max_tokens(mut self, tokens: i32) -> Self {
-        self.n_predict = tokens;
+    pub fn with_max_tokens(mut self, max_tokens: i32) -> Self {
+        self.n_predict = max_tokens;
         self
     }
 
@@ -130,7 +130,7 @@ impl ContexParams {
 
 impl ContexParams {
     pub fn max_predict(&self) -> i32 {
-        if self.n_predict == 0 {
+        if self.n_predict <= 0 {
             i32::MAX
         } else {
             self.n_predict
@@ -141,7 +141,7 @@ impl ContexParams {
 /// Llama Cpp Context
 #[derive(Debug)]
 pub struct ContextWrapper {
-    model: Arc<LlamaModel>,
+    llama_model: Arc<LlamaModel>,
     /// Context parameters
     contex_params: ContexParams,
     /// The context for multimodal processing.
@@ -153,16 +153,16 @@ pub struct ContextWrapper {
 impl ContextWrapper {
     /// Creates a new context
     pub fn try_new(
-        model: Arc<LlamaModel>,
+        llama_model: Arc<LlamaModel>,
         backend: &LlamaBackend,
         contex_params: &ContexParams,
     ) -> Result<Self, Error> {
-        let batch = LlamaBatch::new(contex_params.n_ctx as usize, 1);
+        let batch = LlamaBatch::new(contex_params.max_predict() as usize, 1);
 
-        let context = Self::load_context(model.clone(), backend, contex_params)?;
+        let context = Self::load_context(llama_model.clone(), backend, contex_params)?;
 
         Ok(Self {
-            model,
+            llama_model,
             contex_params: contex_params.clone(),
             context,
             batch,
@@ -195,10 +195,11 @@ impl ContextWrapper {
     /// Evaluates a chat message, tokenizing and processing it through the model
     pub fn eval_messages(&mut self, msgs: Vec<LlamaChatMessage>) -> Result<(), Error> {
         info!("eval messages ...");
-        let chat_template = ContextWrapper::chat_template(self.model.clone(), &self.contex_params)?;
+        let chat_template =
+            ContextWrapper::chat_template(self.llama_model.clone(), &self.contex_params)?;
 
         let (_formatted_chat_template, tokens) =
-            ContextWrapper::apply_chat_template(self.model.clone(), &chat_template, &msgs)?;
+            ContextWrapper::apply_chat_template(self.llama_model.clone(), &chat_template, &msgs)?;
 
         ContextWrapper::validate_tokens_size(
             tokens.len(),
@@ -206,7 +207,7 @@ impl ContextWrapper {
             self.contex_params.max_predict(),
         )?;
 
-        self.rest_batch(self.contex_params.n_batch)?;
+        self.rest_batch(self.contex_params.max_predict() as usize)?;
 
         self.process_user_tokens(tokens)?;
 
@@ -221,7 +222,7 @@ impl ContextWrapper {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
-        let eos_token = self.model.token_eos();
+        let eos_token = self.llama_model.token_eos();
         let verbose = self.contex_params.verbose;
         let t_main_start = ggml_time_us();
 
@@ -256,24 +257,25 @@ impl ContextWrapper {
             }
 
             // 将 token 转换为字符串
-            let output_bytes = match self.model.token_to_bytes(token, Special::Tokenize) {
+            let piece = match self
+                .llama_model
+                .token_to_piece(token, &mut decoder, true, None)
+            {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
                     break;
                 }
             };
-            let mut output_string = String::with_capacity(32);
-            let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
 
             if verbose {
-                let _ = std::io::stdout().write_all(output_string.as_bytes());
+                let _ = std::io::stdout().write_all(piece.as_bytes());
                 let _ = std::io::stdout().flush();
             }
 
             // 发送 token，如果接收端关闭则停止生成
-            results.push_str(&output_string);
-            if tx.send(StreamToken::content(output_string)).is_err() {
+            results.push_str(&piece);
+            if tx.send(StreamToken::content(piece)).is_err() {
                 break;
             }
 
@@ -317,8 +319,8 @@ impl ContextWrapper {
         Ok(())
     }
 
-    pub fn rest_batch(&mut self, n_batch: u32) -> Result<(), Error> {
-        let batch = LlamaBatch::new(n_batch as usize, 1);
+    pub fn rest_batch(&mut self, n_tokens: usize) -> Result<(), Error> {
+        let batch = LlamaBatch::new(n_tokens, 1);
         self.batch = batch;
         Ok(())
     }

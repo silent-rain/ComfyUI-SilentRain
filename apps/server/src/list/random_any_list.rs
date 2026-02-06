@@ -104,27 +104,23 @@ impl RandomAnyList {
         list: Vec<Bound<'py, PyAny>>,
         seed: Vec<u64>,
     ) -> PyResult<(Bound<'py, PyAny>, usize)> {
-        let (results, total) = self.shuffle(list, seed[0]);
-        Ok((results[0].clone(), total))
+        let (result, total) = self.pick_random(list, seed[0]);
+        Ok((result, total))
     }
 }
 
 impl RandomAnyList {
-    /// 使用 Fisher-Yates 算法重新洗牌数组中的元素顺序
-    /// 返回 (洗牌后的数组, 数组长度)
-    fn shuffle<T>(&self, mut list: Vec<T>, seed: u64) -> (Vec<T>, usize) {
-        // 获取向量的长度
+    /// 从列表中随机选择一个元素
+    /// 返回 (随机选择的元素, 列表元素总数)
+    fn pick_random<T>(&self, mut list: Vec<T>, seed: u64) -> (T, usize) {
         let len = list.len();
 
-        // 使用给定的种子创建一个随机数生成器
-        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        let index = rng.random_range(0..len);
 
-        // 实现 Fisher-Yates 洗牌算法[2,3,5](@ref)
-        for i in (1..len).rev() {
-            let j = rng.random_range(0..=i);
-            list.swap(i, j);
-        }
+        // swap_remove 是 O(1)，取出元素
+        let element = list.swap_remove(index);
 
-        (list, len)
+        (element, len)
     }
 }

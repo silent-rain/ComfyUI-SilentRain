@@ -14,7 +14,7 @@ use tokio::sync::mpsc;
 use llama_cpp_2::{
     ggml_time_us,
     llama_batch::LlamaBatch,
-    model::{LlamaChatMessage, LlamaModel, Special},
+    model::{LlamaChatMessage, LlamaModel},
     mtmd::{MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdInputText},
     sampling::LlamaSampler,
 };
@@ -55,7 +55,7 @@ impl MtmdContextWrapper {
         contex_params: &ContexParams,
     ) -> Result<Self, Error> {
         // Create batch for token processing
-        let batch = LlamaBatch::new(contex_params.n_ctx as usize, 1);
+        let batch = LlamaBatch::new(contex_params.n_predict as usize, 1);
 
         Ok(Self {
             llama_model,
@@ -97,7 +97,7 @@ impl MtmdContextWrapper {
             self.contex_params.max_predict(),
         )?;
 
-        self.rest_batch(self.contex_params.n_batch as usize)?;
+        self.rest_batch(self.contex_params.n_predict as usize)?;
 
         self.process_multimodal_input(formatted_chat_template)?;
 
@@ -145,7 +145,10 @@ impl MtmdContextWrapper {
             }
 
             // 将 token 转换为字符串
-            let output_bytes = match self.llama_model.token_to_bytes(token, Special::Tokenize) {
+            let piece = match self
+                .llama_model
+                .token_to_piece(token, &mut decoder, true, None)
+            {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
@@ -153,17 +156,14 @@ impl MtmdContextWrapper {
                 }
             };
 
-            let mut output_string = String::with_capacity(32);
-            let _ = decoder.decode_to_string(&output_bytes, &mut output_string, false);
-
             if verbose {
-                let _ = std::io::stdout().write_all(output_string.as_bytes());
+                let _ = std::io::stdout().write_all(piece.as_bytes());
                 let _ = std::io::stdout().flush();
             }
 
             // 发送 token，如果接收端关闭则停止生成
-            results.push_str(&output_string);
-            if tx.send(StreamToken::content(output_string)).is_err() {
+            results.push_str(&piece);
+            if tx.send(StreamToken::content(piece)).is_err() {
                 break;
             }
 
@@ -196,8 +196,8 @@ impl MtmdContextWrapper {
 }
 
 impl MtmdContextWrapper {
-    pub fn rest_batch(&mut self, n_batch: usize) -> Result<(), Error> {
-        let batch = LlamaBatch::new(n_batch, 1);
+    pub fn rest_batch(&mut self, n_tokens: usize) -> Result<(), Error> {
+        let batch = LlamaBatch::new(n_tokens, 1);
         self.batch = batch;
         Ok(())
     }

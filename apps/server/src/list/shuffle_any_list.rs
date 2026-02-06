@@ -116,13 +116,12 @@ impl ShuffleAnyList {
     /// 使用 Fisher-Yates 算法重新洗牌数组中的元素顺序
     /// 返回 (洗牌后的数组, 数组长度)
     fn shuffle<T>(&self, mut list: Vec<T>, seed: u64) -> (Vec<T>, usize) {
-        // 获取向量的长度
         let len = list.len();
 
-        // 使用给定的种子创建一个随机数生成器
-        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+        // 使用 rand::rngs::StdRng 和 seed_from_u64
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
-        // 实现 Fisher-Yates 洗牌算法[2,3,5](@ref)
+        // Fisher-Yates 洗牌算法
         for i in (1..len).rev() {
             let j = rng.random_range(0..=i);
             list.swap(i, j);

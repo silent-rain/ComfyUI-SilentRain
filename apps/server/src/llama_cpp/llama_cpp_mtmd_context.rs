@@ -13,7 +13,7 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel, Special},
+    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel},
     mtmd::{
         MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdContextParams, MtmdInputText,
         mtmd_default_marker,
@@ -156,26 +156,16 @@ impl LlamaCppMtmdContext {
                 break;
             }
 
-            // Print token
-            // let output_string = self.model.token_to_str(token, Special::Tokenize)?;
-            // let output_string = self
-            //     .model
-            //     .tokens_to_str(&[token], Special::Tokenize)
-            //     .unwrap_or("口".to_string());
-
-            let output_bytes = self.model.token_to_bytes(token, Special::Tokenize)?;
-            // use `Decoder.decode_to_string()` to avoid the intermediate buffer
-            let mut output_string = String::with_capacity(32);
-            let _decode_result = decoder.decode_to_string(&output_bytes, &mut output_string, false);
+            let piece = self.model.token_to_piece(token, &mut decoder, true, None)?;
 
             if self.verbose {
                 // 打印解码后的字符串，不换行
-                print!("{output_string}");
+                print!("{piece}");
                 // 刷新标准输出，确保文本立即显示
                 std::io::stdout().flush()?;
             }
 
-            results.push_str(&output_string);
+            results.push_str(&piece);
 
             // Prepare next batch
             self.batch.clear();
