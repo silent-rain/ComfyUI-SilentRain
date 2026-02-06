@@ -24,3 +24,13 @@ pub use history::HistoryMessage;
 pub use model::Model;
 pub use pipeline::{GenerateRequest, Pipeline, PipelineConfig};
 pub use sampler::Sampler;
+
+// Re-export async-openai standard request types for OpenAI API compatibility
+pub use types::{
+    ChatCompletionRequestMessage,
+    ChatCompletionRequestUserMessage,
+    ChatCompletionRequestSystemMessage,
+    ChatCompletionRequestAssistantMessage,
+    ChatCompletionRequestToolMessage,
+    CreateChatCompletionRequest,
+};

@@ -11,6 +11,10 @@ pub use async_openai::types::chat::{
     ChatCompletionStreamResponseDelta, CompletionTokensDetails, CompletionUsage,
     CreateChatCompletionResponse, CreateChatCompletionStreamResponse, FinishReason,
     PromptTokensDetails, Role,
+    // Standard request types
+    CreateChatCompletionRequest, ChatCompletionRequestMessage,
+    ChatCompletionRequestUserMessage, ChatCompletionRequestSystemMessage,
+    ChatCompletionRequestAssistantMessage, ChatCompletionRequestToolMessage,
 };
 
 /// 对话消息角色枚举
