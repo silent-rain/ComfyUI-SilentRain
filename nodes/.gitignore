@@ -1,6 +1,10 @@
 # build
 node.zip
 .ruff_cache
-# !comfyui_silentrain
-# !comfyui_silentrain.libs
-# !comfyui_silentrain-*.dist-info
+
+# 发布时需要屏蔽
+comfyui_silentrain
+comfyui_silentrain.libs
+comfyui_silentrain-*.dist-info
+web/pkg
+
