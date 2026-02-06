@@ -25,7 +25,8 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    types::{FinishReason, PoolingTypeMode, StreamResponseBuilder},
+    pipeline::StreamResponseBuilder,
+    types::{FinishReason, PoolingTypeMode},
 };
 use async_openai::types::chat::CreateChatCompletionStreamResponse;
 

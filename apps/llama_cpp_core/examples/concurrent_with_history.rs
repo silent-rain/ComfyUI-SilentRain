@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use llama_cpp_core::{
     GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
-    types::{CreateChatCompletionResponse, chat_completion_response_extract_content},
+    pipeline::chat_completion_response_extract_content, types::CreateChatCompletionResponse,
     utils::log::init_logger,
 };
 

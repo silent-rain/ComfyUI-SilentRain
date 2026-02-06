@@ -20,9 +20,10 @@ use crate::{
     error::Error,
     model::ModelConfig,
     mtmd_context::MtmdContextWrapper,
+    pipeline::build_chat_completion_response_with_usage,
     types::{
         CompletionUsage, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
-        FinishReason, build_chat_completion_response_with_usage,
+        FinishReason,
     },
 };
 
@@ -354,7 +355,7 @@ impl Pipeline {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HistoryMessage, types::chat_completion_response_extract_content, utils::log::init_logger,
+        HistoryMessage, pipeline::chat_completion_response_extract_content, utils::log::init_logger,
     };
 
     use super::*;

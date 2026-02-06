@@ -23,7 +23,8 @@ use log::{error, info};
 use crate::{
     context::{ContexParams, ContextWrapper},
     error::Error,
-    types::{FinishReason, StreamResponseBuilder},
+    pipeline::StreamResponseBuilder,
+    types::FinishReason,
 };
 use async_openai::types::chat::CreateChatCompletionStreamResponse;
 
