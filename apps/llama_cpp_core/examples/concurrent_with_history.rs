@@ -4,12 +4,29 @@
 //! 1. 使用 Arc<Pipeline> 实现并发推理
 //! 2. 在外部管理历史消息，实现多轮对话
 //! 3. 不同请求使用不同的历史上下文
+//! 4. 获取 token 使用统计 (usage)
 
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig, utils::log::init_logger,
+    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
+    types::{CreateChatCompletionResponse, chat_completion_response_extract_content},
+    utils::log::init_logger,
 };
+
+/// 从响应中提取 usage 信息并格式化
+fn format_usage(response: &CreateChatCompletionResponse) -> String {
+    response
+        .usage
+        .as_ref()
+        .map(|u| {
+            format!(
+                "[prompt: {}, completion: {}, total: {}]",
+                u.prompt_tokens, u.completion_tokens, u.total_tokens
+            )
+        })
+        .unwrap_or_default()
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,11 +49,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let response1 = pipeline.generate(&request1).await?;
         println!("User: 你好，我叫小明");
-        println!("Assistant: {}", response1.text);
+        println!(
+            "Assistant: {} {}",
+            chat_completion_response_extract_content(&response1),
+            format_usage(&response1)
+        );
 
         // 更新历史（外部管理）
         history.add_user("你好，我叫小明")?;
-        history.add_assistant(response1.text.clone())?;
+        history.add_assistant(chat_completion_response_extract_content(&response1))?;
 
         // 第二轮（带历史）
         let request2 = GenerateRequest::text("我叫什么名字？")
@@ -44,17 +65,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_history(history.clone());
         let response2 = pipeline.generate(&request2).await?;
         println!("User: 我叫什么名字？");
-        println!("Assistant: {}", response2.text);
+        println!(
+            "Assistant: {} {}",
+            chat_completion_response_extract_content(&response2),
+            format_usage(&response2)
+        );
 
         // 更新历史
         history.add_user("我叫什么名字？")?;
-        history.add_assistant(response2.text.clone())?;
+        history.add_assistant(chat_completion_response_extract_content(&response2))?;
 
         // 第三轮（带完整历史）
         let request3 = GenerateRequest::text("我们刚才聊了什么？").with_history(history);
         let response3 = pipeline.generate(&request3).await?;
         println!("User: 我们刚才聊了什么？");
-        println!("Assistant: {}", response3.text);
+        println!(
+            "Assistant: {} {}",
+            chat_completion_response_extract_content(&response3),
+            format_usage(&response3)
+        );
     }
 
     // ========== 场景2：并发多用户（每个用户独立上下文） ==========
@@ -88,11 +117,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 获取结果
         let (result_a, result_b) = tokio::try_join!(task_a, task_b)?;
 
+        let response_a = result_a?;
+        let response_b = result_b?;
+
         println!("User A (喜欢Python) 问：我应该学习什么编程语言？");
-        println!("Assistant: {}", result_a?.text);
+        println!(
+            "Assistant: {} {}",
+            chat_completion_response_extract_content(&response_a),
+            format_usage(&response_a)
+        );
 
         println!("\nUser B (喜欢Rust) 问：我应该学习什么编程语言？");
-        println!("Assistant: {}", result_b?.text);
+        println!(
+            "Assistant: {} {}",
+            chat_completion_response_extract_content(&response_b),
+            format_usage(&response_b)
+        );
     }
 
     // ========== 场景3：批量处理（无历史，纯并发） ==========
@@ -119,7 +159,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let results = futures::future::try_join_all(tasks).await?;
         for (i, result) in results.iter().enumerate() {
             match result {
-                Ok(output) => println!("问题{}: {}", i + 1, output.text),
+                Ok(output) => println!(
+                    "问题{}: {} {}",
+                    i + 1,
+                    chat_completion_response_extract_content(output),
+                    format_usage(output)
+                ),
                 Err(e) => eprintln!("错误{}: {}", i + 1, e),
             }
         }

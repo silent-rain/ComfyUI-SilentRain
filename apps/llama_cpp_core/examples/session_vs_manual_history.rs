@@ -7,7 +7,8 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig, utils::log::init_logger,
+    GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
+    types::chat_completion_response_extract_content, utils::log::init_logger,
 };
 
 #[tokio::main]
@@ -35,11 +36,12 @@ async fn main() -> anyhow::Result<()> {
         let request =
             GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        let content = chat_completion_response_extract_content(&result);
+        println!("[Assistant] {}\n", content);
 
         // 手动更新历史
         history.add_user("你好，我叫小明")?;
-        history.add_assistant(&result.text)?;
+        history.add_assistant(&content)?;
 
         // 第二轮：需要手动传入 history
         println!("[User] 我叫什么名字？");
@@ -47,11 +49,12 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_history(history.clone()); // <-- 需要手动传入
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        let content = chat_completion_response_extract_content(&result);
+        println!("[Assistant] {}\n", content);
 
         // 再次手动更新历史
         history.add_user("我叫什么名字？")?;
-        history.add_assistant(&result.text)?;
+        history.add_assistant(&content)?;
 
         println!("✓ 特点：需要手动维护 history 变量\n");
     }
@@ -70,7 +73,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(session_id); // <-- 只需设置 session_id
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        println!(
+            "[Assistant] {}\n",
+            chat_completion_response_extract_content(&result)
+        );
 
         // 第二轮：自动加载历史，无需传入
         println!("[User] 我叫什么名字？");
@@ -78,7 +84,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(session_id); // <-- 只需 session_id，自动携带历史
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        println!(
+            "[Assistant] {}\n",
+            chat_completion_response_extract_content(&result)
+        );
 
         // 第三轮：继续自动累积历史
         println!("[User] 我喜欢吃西瓜");
@@ -86,7 +95,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(session_id);
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        println!(
+            "[Assistant] {}\n",
+            chat_completion_response_extract_content(&result)
+        );
 
         // 第四轮：验证长期记忆
         println!("[User] 我的名字和喜欢的水果是什么？");
@@ -94,7 +106,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(session_id);
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        println!(
+            "[Assistant] {}\n",
+            chat_completion_response_extract_content(&result)
+        );
 
         println!("✓ 特点：无需维护 history，Pipeline 自动管理\n");
     }
@@ -117,7 +132,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(*id);
         let result = pipeline.generate(&request).await?;
-        println!("[Assistant] {}\n", result.text);
+        println!(
+            "[Assistant] {}\n",
+            chat_completion_response_extract_content(&result)
+        );
     }
 
     // 验证每个用户的记忆是独立的
@@ -127,9 +145,10 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(*id);
         let result = pipeline.generate(&request).await?;
+        let content = chat_completion_response_extract_content(&result);
         println!("[{}] 我叫什么名字？", id);
-        println!("[Assistant] {}\n", result.text);
-        assert!(result.text.contains(*name), "应该记住名字 {}", name);
+        println!("[Assistant] {}\n", content);
+        assert!(content.contains(*name), "应该记住名字 {}", name);
     }
 
     println!("✓ 所有用户的记忆都是隔离的！\n");

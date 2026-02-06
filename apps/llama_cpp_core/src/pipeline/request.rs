@@ -4,7 +4,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::{HistoryMessage, MediaData, PromptMessageRole, error::Error, utils::image::Image};
+use crate::{
+    HistoryMessage,
+    error::Error,
+    types::{MediaData, PromptMessageRole},
+    utils::image::Image,
+};
 
 /// 生成请求结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]

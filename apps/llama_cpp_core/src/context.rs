@@ -25,8 +25,9 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    types::{FinishReason, PoolingTypeMode, StreamToken},
+    types::{FinishReason, PoolingTypeMode, StreamResponseBuilder},
 };
+use async_openai::types::chat::CreateChatCompletionStreamResponse;
 
 /// Context Params
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -214,11 +215,11 @@ impl ContextWrapper {
         Ok(())
     }
 
-    /// 流式生成响应，通过 channel 返回 token
+    /// 流式生成响应，通过 channel 返回标准 OpenAI 格式的响应
     pub fn generate_response(
         &mut self,
         sampler: &mut LlamaSampler,
-    ) -> mpsc::UnboundedReceiver<StreamToken> {
+    ) -> mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
@@ -226,9 +227,15 @@ impl ContextWrapper {
         let verbose = self.contex_params.verbose;
         let t_main_start = ggml_time_us();
 
+        // 记录 prompt tokens（已经处理的输入 token 数）
+        let prompt_tokens = self.batch.n_tokens() as u32;
         let mut n_cur = self.batch.n_tokens();
-        let mut tokens_generated = 0;
-        let mut results = String::new();
+        let mut tokens_generated: u32 = 0;
+        let model_name = "llama-model".to_string(); // 可以从配置中获取
+
+        // 生成唯一ID
+        let id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+        let builder = StreamResponseBuilder::new(&id, &model_name);
 
         // 循环生成 token，直到达到最大长度 max_tokens
         while n_cur < max_tokens {
@@ -252,7 +259,13 @@ impl ContextWrapper {
 
                     info!("{}", self.context.timings());
                 }
-                let _ = tx.send(StreamToken::finish(FinishReason::Stop));
+                // 发送带 usage 统计的结束响应
+                let response = builder.build_finish_with_usage(
+                    FinishReason::Stop,
+                    prompt_tokens,
+                    tokens_generated,
+                );
+                let _ = tx.send(response);
                 break;
             }
 
@@ -263,7 +276,10 @@ impl ContextWrapper {
             {
                 Ok(bytes) => bytes,
                 Err(e) => {
-                    let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
+                    error!("Token decode error: {}", e);
+                    // 发送错误响应给调用者
+                    let error_response = builder.build_error(format!("Token decode failed: {}", e));
+                    let _ = tx.send(error_response);
                     break;
                 }
             };
@@ -273,9 +289,9 @@ impl ContextWrapper {
                 let _ = std::io::stdout().flush();
             }
 
-            // 发送 token，如果接收端关闭则停止生成
-            results.push_str(&piece);
-            if tx.send(StreamToken::content(piece)).is_err() {
+            // 发送标准的 OpenAI 格式响应
+            let response = builder.build_content(piece);
+            if tx.send(response).is_err() {
                 break;
             }
 
@@ -284,13 +300,17 @@ impl ContextWrapper {
             // 添加新生成的 token 到批处理中
             // 参数：token值, 位置索引, 序列ID数组, 是否需要计算 logits (true)
             if let Err(e) = self.batch.add(token, n_cur, &[0], true) {
-                let _ = tx.send(StreamToken::error(format!("Batch add error: {}", e)));
+                error!("Batch add error: {}", e);
+                let error_response = builder.build_error(format!("Batch add failed: {}", e));
+                let _ = tx.send(error_response);
                 break;
             }
 
             // 解码
             if let Err(e) = self.context.decode(&mut self.batch) {
-                let _ = tx.send(StreamToken::error(format!("Decode error: {}", e)));
+                error!("Decode error: {}", e);
+                let error_response = builder.build_error(format!("Decode failed: {}", e));
+                let _ = tx.send(error_response);
                 break;
             }
 
@@ -299,7 +319,12 @@ impl ContextWrapper {
 
             // 检查是否达到最大 token 数
             if n_cur >= max_tokens {
-                let _ = tx.send(StreamToken::finish(FinishReason::Length));
+                let response = builder.build_finish_with_usage(
+                    FinishReason::Length,
+                    prompt_tokens,
+                    tokens_generated,
+                );
+                let _ = tx.send(response);
                 break;
             }
         }
@@ -467,7 +492,7 @@ impl ContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, PromptMessageRole, Sampler, sampler::SamplerConfig,
+        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::PromptMessageRole,
     };
 
     use super::*;
@@ -509,11 +534,11 @@ mod tests {
 
         // 接收响应
         let mut full_text = String::new();
-        while let Some(token) = rx.recv().await {
-            match token {
-                StreamToken::Content(text) => full_text.push_str(&text),
-                StreamToken::Finish(reason) => full_text.push_str(&reason.to_string()),
-                StreamToken::Error(msg) => return Err(anyhow::anyhow!(msg)),
+        while let Some(response) = rx.recv().await {
+            for choice in &response.choices {
+                if let Some(content) = &choice.delta.content {
+                    full_text.push_str(content);
+                }
             }
         }
 

@@ -9,19 +9,21 @@
 
 use std::sync::Arc;
 
-use tokio::sync::mpsc;
-
 use llama_cpp_2::{LogOptions, llama_backend::LlamaBackend, send_logs_to_tracing};
+use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
-    Backend, FinishReason, GenerateRequest, HistoryMessage, Model, PipelineConfig, Sampler,
+    Backend, GenerateRequest, HistoryMessage, Model, PipelineConfig, Sampler,
     cache::{CacheType, global_cache},
     context::{ContexParams, ContextWrapper},
     error::Error,
     model::ModelConfig,
     mtmd_context::MtmdContextWrapper,
-    types::{GenerationOutput, StreamToken},
+    types::{
+        CompletionUsage, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
+        FinishReason, build_chat_completion_response_with_usage,
+    },
 };
 
 /// 推理流水线
@@ -133,7 +135,10 @@ impl Pipeline {
 
 impl Pipeline {
     /// 同步推理包装
-    pub fn generate_block(&self, request: &GenerateRequest) -> Result<GenerationOutput, Error> {
+    pub fn generate_block(
+        &self,
+        request: &GenerateRequest,
+    ) -> Result<CreateChatCompletionResponse, Error> {
         // 创建 tokio 运行时用于执行异步逻辑
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             error!("Failed to create tokio runtime: {}", e);
@@ -159,7 +164,10 @@ impl Pipeline {
     /// let request = GenerateRequest::text("你好");
     /// let result = pipeline.generate(&request).await?;
     /// ```
-    pub async fn generate(&self, request: &GenerateRequest) -> Result<GenerationOutput, Error> {
+    pub async fn generate(
+        &self,
+        request: &GenerateRequest,
+    ) -> Result<CreateChatCompletionResponse, Error> {
         let mut rx = if !request.is_multimodal() {
             self.generate_text_stream(request)?
         } else {
@@ -167,28 +175,44 @@ impl Pipeline {
         };
 
         let mut full_text = String::new();
-        let mut output = GenerationOutput::default();
-        while let Some(token) = rx.recv().await {
-            match token {
-                StreamToken::Content(text) => {
-                    full_text.push_str(&text);
+        let mut finish_reason = FinishReason::Stop;
+        let mut usage_stats: Option<CompletionUsage> = None;
+        let mut id = String::new();
+        let mut model_name = String::new();
+
+        // 收集所有流式响应
+        while let Some(response) = rx.recv().await {
+            for choice in &response.choices {
+                // 收集内容
+                if let Some(content) = &choice.delta.content {
+                    full_text.push_str(content);
                 }
-                StreamToken::Finish(reason) => {
-                    output = output.with_finish_reason(reason);
-                }
-                StreamToken::Error(msg) => {
-                    output = output.with_finish_reason(FinishReason::Error);
-                    full_text.push_str(&msg)
+                // 检查是否完成
+                if let Some(reason) = choice.finish_reason {
+                    finish_reason = reason;
                 }
             }
+            // 收集 usage 统计（通常在最后的响应中）
+            if response.usage.is_some() {
+                usage_stats = response.usage;
+            }
+            id = response.id.clone();
+            model_name = response.model.clone();
         }
 
-        output = output.with_text(full_text.clone());
+        // 构建标准的 OpenAI 响应
+        let response = build_chat_completion_response_with_usage(
+            id,
+            model_name,
+            full_text.clone(),
+            finish_reason,
+            usage_stats,
+        );
 
         // 如果有 session_id，保存或清除会话历史
         self.save_or_clear_session_history(request, &full_text)?;
 
-        Ok(output)
+        Ok(response)
     }
 
     /// 执行流式推理
@@ -197,14 +221,14 @@ impl Pipeline {
     /// * `request` - 生成请求
     ///
     /// # Returns
-    /// 返回一个 receiver，每次生成一个 token 时会发送一个 StreamToken
+    /// 返回一个 receiver，每次生成一个 token 时会发送一个 CreateChatCompletionStreamResponse
     ///
     /// # Note
     /// 流式推理不会自动保存会话历史，如需保存请手动保存
     pub async fn generate_stream(
         &self,
         request: &GenerateRequest,
-    ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+    ) -> Result<mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let rx = if !request.is_multimodal() {
             self.generate_text_stream(request)?
         } else {
@@ -217,7 +241,7 @@ impl Pipeline {
     fn generate_text_stream(
         &self,
         request: &GenerateRequest,
-    ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+    ) -> Result<mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let msgs = request.to_messages()?;
 
         // Load model
@@ -256,7 +280,7 @@ impl Pipeline {
     fn generate_media_stream(
         &self,
         request: &GenerateRequest,
-    ) -> Result<mpsc::UnboundedReceiver<StreamToken>, Error> {
+    ) -> Result<mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let msgs = request.to_messages()?;
 
         // Load model
@@ -329,7 +353,9 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::{HistoryMessage, utils::log::init_logger};
+    use crate::{
+        HistoryMessage, types::chat_completion_response_extract_content, utils::log::init_logger,
+    };
 
     use super::*;
 
@@ -433,11 +459,12 @@ mod tests {
             let request1 =
                 GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
             let result1 = pipeline.generate(&request1).await?;
-            println!("Assistant: {}", result1.text);
+            let content1 = chat_completion_response_extract_content(&result1);
+            println!("Assistant: {}", content1);
 
             // 更新历史（外部管理）
             history.add_user("你好，我叫小明")?;
-            history.add_assistant(result1.text.clone())?;
+            history.add_assistant(content1)?;
         }
 
         // 第二轮对话（带历史）
@@ -446,10 +473,11 @@ mod tests {
                 .with_system("你是一个 helpful 的助手")
                 .with_history(history.clone());
             let result2 = pipeline.generate(&request2).await?;
-            println!("Assistant: {}", result2.text);
+            let content2 = chat_completion_response_extract_content(&result2);
+            println!("Assistant: {}", content2);
 
             // 验证模型是否记住了名字
-            assert!(result2.text.contains("小明"));
+            assert!(content2.contains("小明"));
         }
 
         Ok(())
@@ -472,15 +500,17 @@ mod tests {
                 .with_system("你是一个 helpful 的助手")
                 .with_session_id(session_a);
             let result = pipeline.generate(&request).await?;
-            println!("[Session A] Assistant: {}", result.text);
+            let content = chat_completion_response_extract_content(&result);
+            println!("[Session A] Assistant: {}", content);
 
             // 第二轮：验证能否记住名字
             let request = GenerateRequest::text("我叫什么名字？")
                 .with_system("你是一个 helpful 的助手")
                 .with_session_id(session_a);
             let result = pipeline.generate(&request).await?;
-            println!("[Session A] Assistant: {}", result.text);
-            assert!(result.text.contains("小明"));
+            let content = chat_completion_response_extract_content(&result);
+            println!("[Session A] Assistant: {}", content);
+            assert!(content.contains("小明"));
         }
 
         // 测试会话 B（用户 B 的对话）- 并发隔离
@@ -491,15 +521,17 @@ mod tests {
                 .with_system("你是一个 helpful 的助手")
                 .with_session_id(session_b);
             let result = pipeline.generate(&request).await?;
-            println!("[Session B] Assistant: {}", result.text);
+            let content = chat_completion_response_extract_content(&result);
+            println!("[Session B] Assistant: {}", content);
 
             // 验证用户 B 的历史独立于 A
             let request = GenerateRequest::text("我叫什么名字？")
                 .with_system("你是一个 helpful 的助手")
                 .with_session_id(session_b);
             let result = pipeline.generate(&request).await?;
-            println!("[Session B] Assistant: {}", result.text);
-            assert!(result.text.contains("小红"));
+            let content = chat_completion_response_extract_content(&result);
+            println!("[Session B] Assistant: {}", content);
+            assert!(content.contains("小红"));
         }
 
         // 验证会话 A 仍然是小明（没有被 B 覆盖）
@@ -508,8 +540,9 @@ mod tests {
                 .with_system("你是一个 helpful 的助手")
                 .with_session_id(session_a);
             let result = pipeline.generate(&request).await?;
-            println!("[Session A] Assistant: {}", result.text);
-            assert!(result.text.contains("小明"));
+            let content = chat_completion_response_extract_content(&result);
+            println!("[Session A] Assistant: {}", content);
+            assert!(content.contains("小明"));
         }
 
         // 测试清除会话
@@ -545,17 +578,19 @@ mod tests {
                     .with_system("你是一个 helpful 的助手")
                     .with_session_id(&session_id);
                 let result = pipeline.generate(&request).await?;
-                println!("[{}] Round 1: {}", session_id, result.text);
+                let content = chat_completion_response_extract_content(&result);
+                println!("[{}] Round 1: {}", session_id, content);
 
                 // 第二轮：验证记忆
                 let request = GenerateRequest::text("我叫什么名字？")
                     .with_system("你是一个 helpful 的助手")
                     .with_session_id(&session_id);
                 let result = pipeline.generate(&request).await?;
-                println!("[{}] Round 2: {}", session_id, result.text);
+                let content = chat_completion_response_extract_content(&result);
+                println!("[{}] Round 2: {}", session_id, content);
 
                 // 验证结果
-                if !result.text.contains(&name) {
+                if !content.contains(&name) {
                     return Err(anyhow::anyhow!(
                         "Session {} should remember name {}",
                         session_id,

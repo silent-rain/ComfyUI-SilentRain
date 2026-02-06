@@ -2,7 +2,10 @@
 
 use std::sync::Arc;
 
-use llama_cpp_core::{GenerateRequest, Pipeline, PipelineConfig, utils::log::init_logger};
+use llama_cpp_core::{
+    GenerateRequest, Pipeline, PipelineConfig, types::chat_completion_response_extract_content,
+    utils::log::init_logger,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -93,7 +96,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 执行第一个推理
     let results1 = pipeline.generate(&request1).await?;
-    println!("Response 1: {}", results1.text);
+    println!(
+        "Response 1: {}",
+        chat_completion_response_extract_content(&results1)
+    );
 
     println!("========================== 并发测试 ==========================");
 
@@ -110,12 +116,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (result1, result2) = tokio::try_join!(task1, task2)?;
 
     match result1 {
-        Ok(output) => println!("并发结果 1: {}", output.text),
+        Ok(output) => println!(
+            "并发结果 1: {}",
+            chat_completion_response_extract_content(&output)
+        ),
         Err(e) => eprintln!("并发错误 1: {}", e),
     }
 
     match result2 {
-        Ok(output) => println!("并发结果 2: {}", output.text),
+        Ok(output) => println!(
+            "并发结果 2: {}",
+            chat_completion_response_extract_content(&output)
+        ),
         Err(e) => eprintln!("并发错误 2: {}", e),
     }
 

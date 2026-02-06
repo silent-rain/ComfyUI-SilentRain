@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use llama_cpp_core::{
     ContexParams, GenerateRequest, Pipeline, PipelineConfig, global_cache, model::ModelConfig,
-    sampler::SamplerConfig,
+    sampler::SamplerConfig, types::chat_completion_response_extract_content,
 };
 
 use crate::{
@@ -324,6 +324,6 @@ impl LlamaCppPromptHelperv2 {
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
         let output = pipeline.generate(&generate_request).await?;
 
-        Ok((output.text,))
+        Ok((chat_completion_response_extract_content(&output),))
     }
 }

@@ -15,8 +15,10 @@ use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, GenerateRequest, MediaData, Pipeline, PipelineConfig, model::ModelConfig,
+    ContexParams, GenerateRequest, Pipeline, PipelineConfig,
+    model::ModelConfig,
     sampler::SamplerConfig,
+    types::{MediaData, chat_completion_response_extract_content},
 };
 
 use crate::{
@@ -435,7 +437,8 @@ impl LlamaCppImageCaptionv2 {
                     }
 
                     info!("image {i} processing completed");
-                    Ok::<_, Error>(output.text)
+                    let content = chat_completion_response_extract_content(&output);
+                    Ok::<_, Error>(content)
                 })
             })
             .collect::<Vec<_>>();

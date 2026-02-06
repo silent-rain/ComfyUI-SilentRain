@@ -37,6 +37,7 @@ llama-cpp-2 = { workspace = true, features = [
     "sampler",
     "mtmd",
 ] }
+async-openai = { workspace = true, features = ["chat-completion"] }
 
 
 # Utils

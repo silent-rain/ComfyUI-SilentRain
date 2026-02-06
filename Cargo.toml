@@ -56,6 +56,7 @@ parking_lot = "0.12"  # 更高效的锁
 indexmap = "2.13"     # 有序的 HashMap
 infer = "0.19"        # 推断文件和MIME类型的轻量级工具
 uuid = "1.20"
+async-openai = "0.32"
 
 anyhow = "1.0"
 thiserror = "2.0"

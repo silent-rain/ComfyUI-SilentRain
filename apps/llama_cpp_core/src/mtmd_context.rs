@@ -18,13 +18,14 @@ use llama_cpp_2::{
     mtmd::{MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdInputText},
     sampling::LlamaSampler,
 };
-use log::info;
+use log::{error, info};
 
 use crate::{
     context::{ContexParams, ContextWrapper},
     error::Error,
-    types::{FinishReason, StreamToken},
+    types::{FinishReason, StreamResponseBuilder},
 };
+use async_openai::types::chat::CreateChatCompletionStreamResponse;
 
 /// State of the MTMD application.
 pub struct MtmdContextWrapper {
@@ -104,21 +105,27 @@ impl MtmdContextWrapper {
         Ok(())
     }
 
-    /// 流式生成响应，通过 channel 返回 token
+    /// 流式生成响应，通过 channel 返回标准 OpenAI 格式的响应
     pub fn generate_response(
         &mut self,
         sampler: &mut LlamaSampler,
-    ) -> mpsc::UnboundedReceiver<StreamToken> {
+    ) -> mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
         let verbose = self.contex_params.verbose;
         let t_main_start = ggml_time_us();
 
+        // 记录 prompt tokens（已经处理的输入 token 数）
+        let prompt_tokens = self.batch.n_tokens() as u32;
         let mut n_past = self.n_past;
         let mut n_cur = self.batch.n_tokens();
-        let mut tokens_generated = 0;
-        let mut results = String::new();
+        let mut tokens_generated: u32 = 0;
+        let model_name = "llama-model".to_string(); // 可以从配置中获取
+
+        // 生成唯一ID
+        let id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+        let builder = StreamResponseBuilder::new(&id, &model_name);
 
         while n_cur < max_tokens {
             // 采样下一个 token
@@ -140,7 +147,13 @@ impl MtmdContextWrapper {
 
                     info!("{}", self.base_context.timings());
                 }
-                let _ = tx.send(StreamToken::finish(FinishReason::Stop));
+                // 发送带 usage 统计的结束响应
+                let response = builder.build_finish_with_usage(
+                    FinishReason::Stop,
+                    prompt_tokens,
+                    tokens_generated,
+                );
+                let _ = tx.send(response);
                 break;
             }
 
@@ -151,7 +164,10 @@ impl MtmdContextWrapper {
             {
                 Ok(bytes) => bytes,
                 Err(e) => {
-                    let _ = tx.send(StreamToken::error(format!("Token decode error: {}", e)));
+                    error!("Token decode error: {}", e);
+                    // 发送错误响应给调用者
+                    let error_response = builder.build_error(format!("Token decode failed: {}", e));
+                    let _ = tx.send(error_response);
                     break;
                 }
             };
@@ -161,22 +177,26 @@ impl MtmdContextWrapper {
                 let _ = std::io::stdout().flush();
             }
 
-            // 发送 token，如果接收端关闭则停止生成
-            results.push_str(&piece);
-            if tx.send(StreamToken::content(piece)).is_err() {
+            // 发送标准的 OpenAI 格式响应
+            let response = builder.build_content(piece);
+            if tx.send(response).is_err() {
                 break;
             }
 
             // 准备下一个 batch
             self.batch.clear();
             if let Err(e) = self.batch.add(token, n_past, &[0], true) {
-                let _ = tx.send(StreamToken::error(format!("Batch add error: {}", e)));
+                error!("Batch add error: {}", e);
+                let error_response = builder.build_error(format!("Batch add failed: {}", e));
+                let _ = tx.send(error_response);
                 break;
             }
 
             // 解码
             if let Err(e) = self.base_context.decode(&mut self.batch) {
-                let _ = tx.send(StreamToken::error(format!("Decode error: {}", e)));
+                error!("Decode error: {}", e);
+                let error_response = builder.build_error(format!("Decode failed: {}", e));
+                let _ = tx.send(error_response);
                 break;
             }
 
@@ -186,7 +206,12 @@ impl MtmdContextWrapper {
 
             // 检查是否达到最大 token 数
             if n_cur >= max_tokens {
-                let _ = tx.send(StreamToken::finish(FinishReason::Length));
+                let response = builder.build_finish_with_usage(
+                    FinishReason::Length,
+                    prompt_tokens,
+                    tokens_generated,
+                );
+                let _ = tx.send(response);
                 break;
             }
         }
@@ -254,8 +279,9 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, PromptMessageRole, Sampler, sampler::SamplerConfig,
-        types::MediaData,
+        Backend, HistoryMessage, Model, Sampler,
+        sampler::SamplerConfig,
+        types::{MediaData, PromptMessageRole},
     };
 
     use super::*;
@@ -318,11 +344,11 @@ mod tests {
 
         // 接收响应
         let mut full_text = String::new();
-        while let Some(token) = rx.recv().await {
-            match token {
-                StreamToken::Content(text) => full_text.push_str(&text),
-                StreamToken::Finish(reason) => full_text.push_str(&reason.to_string()),
-                StreamToken::Error(msg) => return Err(anyhow::anyhow!(msg)),
+        while let Some(response) = rx.recv().await {
+            for choice in &response.choices {
+                if let Some(content) = &choice.delta.content {
+                    full_text.push_str(content);
+                }
             }
         }
 

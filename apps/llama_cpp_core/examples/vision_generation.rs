@@ -2,7 +2,10 @@
 
 use std::sync::Arc;
 
-use llama_cpp_core::{GenerateRequest, Pipeline, PipelineConfig, utils::log::init_logger};
+use llama_cpp_core::{
+    GenerateRequest, Pipeline, PipelineConfig, types::chat_completion_response_extract_content,
+    utils::log::init_logger,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -96,10 +99,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 执行第一个推理
     let results1 = pipeline.generate(&request1).await?;
-    println!("Response 1: {}", results1.text);
+    println!(
+        "Response 1: {}",
+        chat_completion_response_extract_content(&results1)
+    );
 
     // 执行第二个推理
     let results2 = pipeline.generate(&request2).await?;
-    println!("Response 2: {}", results2.text);
+    println!(
+        "Response 2: {}",
+        chat_completion_response_extract_content(&results2)
+    );
     Ok(())
 }
