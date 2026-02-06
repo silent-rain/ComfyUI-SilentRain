@@ -127,6 +127,8 @@ pub enum Error {
 
     #[error("Failed to obtain semaphore license, {0}")]
     AcquireError(String),
+    #[error("task join error, {0}")]
+    TaskJoinError(String),
 }
 
 impl From<std::io::Error> for Error {

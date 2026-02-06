@@ -2,7 +2,6 @@
 //! 支持图像反推
 use std::sync::Arc;
 
-use futures::future::join_all;
 use log::error;
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
@@ -374,14 +373,16 @@ impl LlamaCppImageCaptionv2 {
         let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
-        // 生成所有并发
-        let futures = medias.into_iter().enumerate().map(|(i, media)| {
-            let semaphore = Arc::clone(&semaphore);
-            let pipeline_clone = pipeline.clone();
-
-            {
+        // 生成所有并行任务
+        let handles = medias
+            .into_iter()
+            .enumerate()
+            .map(|(i, media)| {
+                let semaphore = Arc::clone(&semaphore);
+                let pipeline_clone = pipeline.clone();
                 let generate_request_clone = generate_request.clone().with_media(media);
-                async move {
+
+                tokio::spawn(async move {
                     let _permit = semaphore.acquire().await.map_err(|e| {
                         error!("获取Semaphore许可失败, err: {:#?}", e);
                         Error::AcquireError(e.to_string())
@@ -391,17 +392,19 @@ impl LlamaCppImageCaptionv2 {
 
                     info!("iamge {i} prcessing completed");
                     Ok::<_, Error>(output.text)
-                }
-            }
-        });
+                })
+            })
+            .collect::<Vec<_>>();
 
-        // 并发执行所有 Future
-        let results: Vec<String> = join_all(futures)
+        // 并行执行所有任务并收集结果
+        let results = futures::future::try_join_all(handles)
             .await
+            .map_err(|e| {
+                error!("任务执行失败, err: {:#?}", e);
+                Error::TaskJoinError(e.to_string())
+            })?
             .into_iter()
-            .collect::<Result<Vec<String>, _>>()?
-            .into_iter()
-            .collect();
+            .collect::<Result<Vec<String>, Error>>()?;
 
         Ok((results,))
     }
