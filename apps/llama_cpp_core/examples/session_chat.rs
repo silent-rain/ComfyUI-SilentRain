@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, Pipeline, PipelineConfig, pipeline::chat_completion_response_extract_content,
+    Pipeline, PipelineConfig, StreamEvent, pipeline::response_extract_content,
     utils::log::init_logger,
 };
 
@@ -20,9 +20,7 @@ async fn main() -> anyhow::Result<()> {
         "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string()
     });
 
-    let pipeline_config = PipelineConfig::new(model_path)
-        .with_cache_model(true)
-        .with_verbose(true);
+    let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
@@ -37,10 +35,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_session);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 第二轮对话（自动携带历史）
     println!("[User] 我叫什么名字？");
@@ -48,10 +43,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_session);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 第三轮对话
     println!("[User] 我喜欢吃苹果");
@@ -59,10 +51,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_session);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 第四轮对话（测试长期记忆）
     println!("[User] 我的名字和喜欢的水果是什么？");
@@ -70,10 +59,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_session);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     println!("\n=== 多会话隔离示例 ===\n");
 
@@ -87,10 +73,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_a);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 用户 B 的自我介绍
     println!("[User B] 你好，我是 Bob");
@@ -98,10 +81,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_b);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 验证用户 A 的记忆
     println!("[User A] 我叫什么名字？");
@@ -109,10 +89,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_a);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     // 验证用户 B 的记忆（应该是 Bob，不是 Alice）
     println!("[User B] 我叫什么名字？");
@@ -120,10 +97,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(user_b);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     println!("\n=== 并发会话示例 ===\n");
 
@@ -146,7 +120,7 @@ async fn main() -> anyhow::Result<()> {
             println!(
                 "[{}] 第一轮: {}",
                 session_id,
-                chat_completion_response_extract_content(&result)
+                response_extract_content(&result)
             );
 
             // 验证记忆
@@ -157,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
             println!(
                 "[{}] 第二轮: {}",
                 session_id,
-                chat_completion_response_extract_content(&result)
+                response_extract_content(&result)
             );
 
             anyhow::Ok(())
@@ -197,12 +171,14 @@ async fn main() -> anyhow::Result<()> {
     let mut full_response = String::new();
 
     println!("[Assistant] ");
-    while let Some(chunk) = rx.recv().await {
-        for choice in &chunk.choices {
-            if let Some(content) = &choice.delta.content {
+    while let Some(event) = rx.recv().await {
+        match event {
+            StreamEvent::TextDelta { content, index } => {
                 print!("{}", content);
-                full_response.push_str(content);
+                full_response.push_str(&content);
             }
+            StreamEvent::Done => break,
+            _ => {}
         }
     }
     println!("\n");
@@ -215,10 +191,7 @@ async fn main() -> anyhow::Result<()> {
         .with_system("你是一个 helpful 的助手")
         .with_session_id(stream_session);
     let result = pipeline.generate(&request).await?;
-    println!(
-        "[Assistant] {}\n",
-        chat_completion_response_extract_content(&result)
-    );
+    println!("[Assistant] {}\n", response_extract_content(&result));
 
     println!("\n所有示例完成！");
 

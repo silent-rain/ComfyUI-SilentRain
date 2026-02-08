@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, Pipeline, PipelineConfig, pipeline::chat_completion_response_extract_content,
-    utils::log::init_logger,
+    InputItem, Pipeline, PipelineConfig, Request, pipeline::response_extract_content,
+    types::MessageRole, utils::log::init_logger,
 };
 
 #[tokio::main]
@@ -12,16 +12,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logger();
 
     let model_path =
-        "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf".to_string();
+        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
     let mmproj_path =
-        "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf".to_string();
+        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf"
+            .to_string();
 
     let pipeline_config = PipelineConfig::new_with_mmproj(model_path, mmproj_path)
         .with_n_gpu_layers(10) // GPU 层数配置 - 影响 GPU 加速
         // .with_n_threads(8) // 线程配置 - 影响 mmproj 编码速度
         .with_n_batch(1024) // 批处理配置 - 影响图像解码
-        .with_cache_model(true) // 模型缓存配置
-        .with_verbose(true);
+        .with_media_marker("<start_of_image>") // 媒体标记配置
+        .with_image_max_resolution(768) // 图片最大分辨率配置
+        .with_verbose(false);
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
@@ -82,33 +84,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ...（共9条）"#
     };
 
-    // 第一个推理请求
-    let request1 = GenerateRequest::text(user_prompt).with_system("你是专注生成套图模特提示词专家，用于生成3个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-    .with_media_marker("<start_of_image>") // 媒体标记配置
-    .with_image_max_resolution(768) // 图片最大分辨率配置
-    .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
+    // 推理请求
+    let request = Request::builder()
+        .instructions("你是专注生成套图模特提示词专家，用于生成3同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+        .input_items(vec![InputItem::message(
+            MessageRole::User.to_string(),
+            vec![
+                InputItem::content_text(user_prompt),
+                InputItem::content_image_base64(&base64_data, mime_type),
+            ],
+        )])
+        .build();
 
-    // 第二个推理请求
-    let request2 = GenerateRequest::text(
-        "生成3个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
-    )
-    .with_system("你是专注生成套图模特提示词专家。")
-    .with_media_marker("<start_of_image>") // 媒体标记配置
-    .with_image_max_resolution(768)
-    .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
+    // 执行推理
+    let results = pipeline.generate(&request).await?;
+    println!("Response: {}", response_extract_content(&results));
 
-    // 执行第一个推理
-    let results1 = pipeline.generate(&request1).await?;
-    println!(
-        "Response 1: {}",
-        chat_completion_response_extract_content(&results1)
-    );
-
-    // 执行第二个推理
-    let results2 = pipeline.generate(&request2).await?;
-    println!(
-        "Response 2: {}",
-        chat_completion_response_extract_content(&results2)
-    );
     Ok(())
 }

@@ -34,10 +34,6 @@ pub struct PipelineConfig {
     /// 采样配置
     #[serde(default)]
     pub sampling: SamplerConfig,
-
-    /// Enables verbose logging from llama.cpp.
-    #[serde(default)]
-    pub verbose: bool,
 }
 
 impl PipelineConfig {
@@ -126,15 +122,20 @@ impl PipelineConfig {
         self
     }
 
-    /// 是否缓存模型
-    pub fn with_cache_model(mut self, cache: bool) -> Self {
-        self.model.cache_model = cache;
+    /// 设置媒体标记
+    pub fn with_media_marker(mut self, marker: impl Into<String>) -> Self {
+        self.context.media_marker = marker.into();
+        self
+    }
+
+    /// 设置图像最大分辨率
+    pub fn with_image_max_resolution(mut self, max_resolution: u32) -> Self {
+        self.context.image_max_resolution = max_resolution;
         self
     }
 
     /// 是否启用详细日志
     pub fn with_verbose(mut self, verbose: bool) -> Self {
-        self.verbose = verbose;
         self.model.verbose = verbose;
         self.context.verbose = verbose;
         self

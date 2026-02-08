@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use llama_cpp_core::{
-    GenerateRequest, Pipeline, PipelineConfig, pipeline::chat_completion_response_extract_content,
+    GenerateRequest, Pipeline, PipelineConfig, pipeline::response_extract_content,
     utils::log::init_logger,
 };
 
@@ -12,9 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logger();
 
     let model_path =
-        "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf".to_string();
+        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
     let mmproj_path =
-        "/data/ComfyUI/models/clip/Qwen2.5-VL-7B-Instruct-abliterated.mmproj-f16.gguf".to_string();
+        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf"
+            .to_string();
 
     let pipeline_config = PipelineConfig::new_with_mmproj(model_path, mmproj_path)
         // .with_n_threads(8) // 线程配置 - 影响 mmproj 编码速度
@@ -96,10 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 执行第一个推理
     let results1 = pipeline.generate(&request1).await?;
-    println!(
-        "Response 1: {}",
-        chat_completion_response_extract_content(&results1)
-    );
+    println!("Response 1: {}", response_extract_content(&results1));
 
     println!("========================== 并发测试 ==========================");
 
@@ -116,18 +114,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (result1, result2) = tokio::try_join!(task1, task2)?;
 
     match result1 {
-        Ok(output) => println!(
-            "并发结果 1: {}",
-            chat_completion_response_extract_content(&output)
-        ),
+        Ok(output) => println!("并发结果 1: {}", response_extract_content(&output)),
         Err(e) => eprintln!("并发错误 1: {}", e),
     }
 
     match result2 {
-        Ok(output) => println!(
-            "并发结果 2: {}",
-            chat_completion_response_extract_content(&output)
-        ),
+        Ok(output) => println!("并发结果 2: {}", response_extract_content(&output)),
         Err(e) => eprintln!("并发错误 2: {}", e),
     }
 

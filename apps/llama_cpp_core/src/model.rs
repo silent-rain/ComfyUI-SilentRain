@@ -79,9 +79,6 @@ pub struct ModelConfig {
     #[serde(default)]
     pub media_marker: Option<String>,
 
-    /// 是否缓存模型
-    #[serde(default)]
-    pub cache_model: bool,
     /// 是否打印详细信息
     #[serde(default)]
     pub verbose: bool,
@@ -98,7 +95,6 @@ impl Default for ModelConfig {
             devices: Vec::new(),
             media_marker: Some("<__media__>".to_string()), // 默认媒体标记
             n_threads: 4,
-            cache_model: false,
             verbose: false,
         }
     }
@@ -134,11 +130,6 @@ impl ModelConfig {
 
     pub fn with_media_marker(mut self, media_marker: impl Into<String>) -> Self {
         self.media_marker = Some(media_marker.into());
-        self
-    }
-
-    pub fn with_cache_model(mut self, cache_model: bool) -> Self {
-        self.cache_model = cache_model;
         self
     }
 
@@ -282,8 +273,7 @@ impl Model {
         }
 
         // Load model
-        info!("Loading model from file: {:?}", self.config.model_path);
-        info!("Loading model model_params: {:?}", model_params);
+        info!("Loading model with params: {:?}", model_params);
         let model = LlamaModel::load_from_file(backend, &self.config.model_path, &model_params)
             .map_err(|e| {
                 error!("Failed to load model: {:?}", e);
@@ -295,7 +285,7 @@ impl Model {
 
     /// 加载模型（带缓存）
     pub fn load_cache_llama_model(&self, backend: &LlamaBackend) -> Result<Arc<LlamaModel>, Error> {
-        if !self.config.cache_model {
+        if !true {
             self.cache.remove(&self.cache_model_key)?;
             return Ok(Arc::new(self.load_llama_model(backend)?));
         }
@@ -377,7 +367,7 @@ impl Model {
         &self,
         model: Arc<LlamaModel>,
     ) -> Result<Arc<MtmdContext>, Error> {
-        if !self.config.cache_model {
+        if !true {
             self.cache.remove(&self.cache_mmproj_key)?;
             let ctx = self.load_mtmd_mtmd_context(model)?;
             return Ok(ctx.into());

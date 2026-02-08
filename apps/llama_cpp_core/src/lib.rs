@@ -22,12 +22,14 @@ pub use cache::{CacheManager, global_cache};
 pub use context::ContexParams;
 pub use history::HistoryMessage;
 pub use model::Model;
-pub use pipeline::{GenerateRequest, Pipeline, PipelineConfig};
+pub use pipeline::{
+    Input, InputItem, MessageContent, Pipeline, PipelineConfig, Request, RequestBuilder, Response,
+    ResponseItem, StreamEvent, Tool, ToolChoice,
+};
 pub use sampler::Sampler;
 
-// Re-export async-openai standard request types for OpenAI API compatibility
+// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
 pub use types::{
-    ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessage,
-    ChatCompletionRequestSystemMessage, ChatCompletionRequestToolMessage,
-    ChatCompletionRequestUserMessage, CreateChatCompletionRequest,
+    BackgroundHandle, Client, Container, Effort, ImageGenerateRequest, ImageGenerateResponse,
+    SummarySetting, VectorStore,
 };

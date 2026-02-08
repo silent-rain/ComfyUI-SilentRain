@@ -18,7 +18,8 @@ use llama_cpp_core::{
     ContexParams, GenerateRequest, Pipeline, PipelineConfig,
     model::ModelConfig,
     sampler::SamplerConfig,
-    types::{MediaData, chat_completion_response_extract_content},
+    types::MediaData,
+    pipeline::response_extract_content,
 };
 
 use crate::{
@@ -437,7 +438,7 @@ impl LlamaCppImageCaptionv2 {
                     }
 
                     info!("image {i} processing completed");
-                    let content = chat_completion_response_extract_content(&output);
+                    let content = response_extract_content(&output);
                     Ok::<_, Error>(content)
                 })
             })

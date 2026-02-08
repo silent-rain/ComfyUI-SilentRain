@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use llama_cpp_core::{
     GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
-    pipeline::chat_completion_response_extract_content, utils::log::init_logger,
+    pipeline::response_extract_content, utils::log::init_logger,
 };
 
 #[tokio::main]
@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         let request =
             GenerateRequest::text("你好，我叫小明").with_system("你是一个 helpful 的助手");
         let result = pipeline.generate(&request).await?;
-        let content = chat_completion_response_extract_content(&result);
+        let content = response_extract_content(&result);
         println!("[Assistant] {}\n", content);
 
         // 手动更新历史
@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_history(history.clone()); // <-- 需要手动传入
         let result = pipeline.generate(&request).await?;
-        let content = chat_completion_response_extract_content(&result);
+        let content = response_extract_content(&result);
         println!("[Assistant] {}\n", content);
 
         // 再次手动更新历史
@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
         let result = pipeline.generate(&request).await?;
         println!(
             "[Assistant] {}\n",
-            chat_completion_response_extract_content(&result)
+            response_extract_content(&result)
         );
 
         // 第二轮：自动加载历史，无需传入
@@ -86,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
         let result = pipeline.generate(&request).await?;
         println!(
             "[Assistant] {}\n",
-            chat_completion_response_extract_content(&result)
+            response_extract_content(&result)
         );
 
         // 第三轮：继续自动累积历史
@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
         let result = pipeline.generate(&request).await?;
         println!(
             "[Assistant] {}\n",
-            chat_completion_response_extract_content(&result)
+            response_extract_content(&result)
         );
 
         // 第四轮：验证长期记忆
@@ -108,7 +108,7 @@ async fn main() -> anyhow::Result<()> {
         let result = pipeline.generate(&request).await?;
         println!(
             "[Assistant] {}\n",
-            chat_completion_response_extract_content(&result)
+            response_extract_content(&result)
         );
 
         println!("✓ 特点：无需维护 history，Pipeline 自动管理\n");
@@ -134,7 +134,7 @@ async fn main() -> anyhow::Result<()> {
         let result = pipeline.generate(&request).await?;
         println!(
             "[Assistant] {}\n",
-            chat_completion_response_extract_content(&result)
+            response_extract_content(&result)
         );
     }
 
@@ -145,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
             .with_system("你是一个 helpful 的助手")
             .with_session_id(*id);
         let result = pipeline.generate(&request).await?;
-        let content = chat_completion_response_extract_content(&result);
+        let content = response_extract_content(&result);
         println!("[{}] 我叫什么名字？", id);
         println!("[Assistant] {}\n", content);
         assert!(content.contains(*name), "应该记住名字 {}", name);

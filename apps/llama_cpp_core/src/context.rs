@@ -8,27 +8,23 @@
 
 use std::{io::Write, num::NonZero, sync::Arc, time::Duration};
 
-use tokio::sync::mpsc;
-
 use llama_cpp_2::{
     context::{LlamaContext, params::LlamaContextParams},
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
     model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel},
+    mtmd::mtmd_default_marker,
     sampling::LlamaSampler,
     timing::LlamaTimings,
     token::LlamaToken,
 };
+use open_ai_rust_responses_by_sshift::StreamEvent;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tracing::{error, info};
 
-use crate::{
-    error::Error,
-    pipeline::StreamResponseBuilder,
-    types::{FinishReason, PoolingTypeMode},
-};
-use async_openai::types::chat::CreateChatCompletionStreamResponse;
+use crate::{error::Error, pipeline::StreamResponseBuilder, types::PoolingTypeMode};
 
 /// Context Params
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,10 +53,16 @@ pub struct ContexParams {
     #[serde(default)]
     pub pooling_type: PoolingTypeMode,
 
+    /// 媒体占位符标记
+    #[serde(default)]
+    pub media_marker: String,
+
     /// Chat template to use, default template if not provided
-    // #[arg(long = "chat-template", value_name = "TEMPLATE")]
     #[serde(default)]
     pub chat_template: Option<String>,
+
+    /// 图片最大分辨率限制
+    pub image_max_resolution: u32,
 
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
@@ -78,7 +80,10 @@ impl Default for ContexParams {
 
             pooling_type: PoolingTypeMode::Unspecified,
 
+            media_marker: mtmd_default_marker().to_string(),
             chat_template: None,
+
+            image_max_resolution: 768,
 
             verbose: false,
         }
@@ -117,9 +122,21 @@ impl ContexParams {
         self
     }
 
+    /// 设置媒体标记
+    pub fn with_media_marker(mut self, marker: impl Into<String>) -> Self {
+        self.media_marker = marker.into();
+        self
+    }
+
     /// 设置聊天模板
     pub fn with_chat_template(mut self, chat_template: String) -> Self {
         self.chat_template = Some(chat_template);
+        self
+    }
+
+    /// 设置图像最大分辨率
+    pub fn with_image_max_resolution(mut self, max_resolution: u32) -> Self {
+        self.image_max_resolution = max_resolution;
         self
     }
 
@@ -216,11 +233,11 @@ impl ContextWrapper {
         Ok(())
     }
 
-    /// 流式生成响应，通过 channel 返回标准 OpenAI 格式的响应
+    /// 流式生成响应，通过 channel 返回 OpenAI Responses API 格式的 StreamEvent
     pub fn generate_response(
         &mut self,
         sampler: &mut LlamaSampler,
-    ) -> mpsc::UnboundedReceiver<CreateChatCompletionStreamResponse> {
+    ) -> Result<UnboundedReceiver<StreamEvent>, Error> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
@@ -229,14 +246,17 @@ impl ContextWrapper {
         let t_main_start = ggml_time_us();
 
         // 记录 prompt tokens（已经处理的输入 token 数）
-        let prompt_tokens = self.batch.n_tokens() as u32;
+        let _prompt_tokens = self.batch.n_tokens() as u32;
         let mut n_cur = self.batch.n_tokens();
         let mut tokens_generated: u32 = 0;
-        let model_name = "llama-model".to_string(); // 可以从配置中获取
 
-        // 生成唯一ID
-        let id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
-        let builder = StreamResponseBuilder::new(&id, &model_name);
+        let builder = StreamResponseBuilder::new();
+
+        // 首先发送 ResponseCreated 事件
+        tx.send(builder.build_created_event()).map_err(|e| {
+            error!("Failed to send ResponseCreated event: {}", e);
+            Error::Stream(e.to_string())
+        })?;
 
         // 循环生成 token，直到达到最大长度 max_tokens
         while n_cur < max_tokens {
@@ -260,13 +280,16 @@ impl ContextWrapper {
 
                     info!("{}", self.context.timings());
                 }
-                // 发送带 usage 统计的结束响应
-                let response = builder.build_finish_with_usage(
-                    FinishReason::Stop,
-                    prompt_tokens,
-                    tokens_generated,
-                );
-                let _ = tx.send(response);
+                // 发送文本停止事件（符合 OpenAI Responses API 标准）
+                tx.send(builder.build_text_stop_event()).map_err(|e| {
+                    error!("Failed to send text stop event: {}", e);
+                    Error::Stream(e.to_string())
+                })?;
+                // 发送完成事件
+                tx.send(builder.build_done_event()).map_err(|e| {
+                    error!("Failed to send done event: {}", e);
+                    Error::Stream(e.to_string())
+                })?;
                 break;
             }
 
@@ -278,9 +301,6 @@ impl ContextWrapper {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     error!("Token decode error: {}", e);
-                    // 发送错误响应给调用者
-                    let error_response = builder.build_error(format!("Token decode failed: {}", e));
-                    let _ = tx.send(error_response);
                     break;
                 }
             };
@@ -290,9 +310,9 @@ impl ContextWrapper {
                 let _ = std::io::stdout().flush();
             }
 
-            // 发送标准的 OpenAI 格式响应
-            let response = builder.build_content(piece);
-            if tx.send(response).is_err() {
+            // 发送文本增量事件
+            if let Err(e) = tx.send(builder.build_content_event(piece)) {
+                error!("Failed to send event: {}", e);
                 break;
             }
 
@@ -302,16 +322,12 @@ impl ContextWrapper {
             // 参数：token值, 位置索引, 序列ID数组, 是否需要计算 logits (true)
             if let Err(e) = self.batch.add(token, n_cur, &[0], true) {
                 error!("Batch add error: {}", e);
-                let error_response = builder.build_error(format!("Batch add failed: {}", e));
-                let _ = tx.send(error_response);
                 break;
             }
 
             // 解码
             if let Err(e) = self.context.decode(&mut self.batch) {
                 error!("Decode error: {}", e);
-                let error_response = builder.build_error(format!("Decode failed: {}", e));
-                let _ = tx.send(error_response);
                 break;
             }
 
@@ -320,17 +336,20 @@ impl ContextWrapper {
 
             // 检查是否达到最大 token 数
             if n_cur >= max_tokens {
-                let response = builder.build_finish_with_usage(
-                    FinishReason::Length,
-                    prompt_tokens,
-                    tokens_generated,
-                );
-                let _ = tx.send(response);
+                // 发送文本停止事件（符合 OpenAI Responses API 标准）
+                tx.send(builder.build_text_stop_event()).map_err(|e| {
+                    error!("Failed to send text stop event: {}", e);
+                    Error::Stream(e.to_string())
+                })?;
+                tx.send(builder.build_done_event()).map_err(|e| {
+                    error!("Failed to send done event: {}", e);
+                    Error::Stream(e.to_string())
+                })?;
                 break;
             }
         }
 
-        rx
+        Ok(rx)
     }
 }
 
@@ -492,8 +511,10 @@ impl ContextWrapper {
 
 #[cfg(test)]
 mod tests {
+    use open_ai_rust_responses_by_sshift::StreamEvent;
+
     use crate::{
-        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::PromptMessageRole,
+        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::MessageRole,
     };
 
     use super::*;
@@ -523,23 +544,25 @@ mod tests {
         let system_prompt = "You are a helpful assistant".to_string();
         let user_prompt = "Hello, how are you?".to_string();
         let msgs = vec![
-            LlamaChatMessage::new(PromptMessageRole::System.to_string(), system_prompt.clone())?,
-            LlamaChatMessage::new(PromptMessageRole::User.to_string(), user_prompt.clone())?,
+            LlamaChatMessage::new(MessageRole::System.to_string(), system_prompt.clone())?,
+            LlamaChatMessage::new(MessageRole::User.to_string(), user_prompt.clone())?,
         ];
 
         // 评估消息
         ctx.eval_messages(msgs)?;
 
         // 生成响应
-        let mut rx = ctx.generate_response(&mut sampler);
+        let mut rx = ctx.generate_response(&mut sampler)?;
 
         // 接收响应
         let mut full_text = String::new();
-        while let Some(response) = rx.recv().await {
-            for choice in &response.choices {
-                if let Some(content) = &choice.delta.content {
-                    full_text.push_str(content);
+        while let Some(event) = rx.recv().await {
+            match event {
+                StreamEvent::TextDelta { content, index: _ } => {
+                    full_text.push_str(&content);
                 }
+                StreamEvent::Done => break,
+                _ => {}
             }
         }
 

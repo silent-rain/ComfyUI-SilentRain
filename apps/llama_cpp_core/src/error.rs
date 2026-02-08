@@ -24,6 +24,9 @@ pub enum Error {
     #[error("Lock error: {0}")]
     LockError(String),
 
+    #[error("Stream error: {0}")]
+    Stream(String),
+
     // ==================== 后端错误 ====================
     #[error(transparent)]
     LlamaCppError(#[from] LlamaCppError),
@@ -98,6 +101,8 @@ pub enum Error {
 
     #[error(transparent)]
     ImageError(#[from] ImageError),
+    #[error(transparent)]
+    Base64decodeError(#[from] base64::DecodeError),
 
     // ==================== 配置错误 ====================
     #[error("Invalid configuration: {message}")]

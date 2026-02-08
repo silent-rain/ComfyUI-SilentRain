@@ -1,6 +1,7 @@
 //! 图像处理工具
 use std::io::Cursor;
 
+use base64::{Engine, engine::general_purpose};
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage, imageops::FilterType};
 use tracing::{error, info};
 
@@ -138,5 +139,11 @@ impl Image {
     /// 获取图像
     pub fn to_image(&self) -> DynamicImage {
         self.img.clone()
+    }
+
+    /// 转换为 base64 编码字符串
+    pub fn to_base64(&self) -> Result<String, Error> {
+        let buffer = self.to_vec()?;
+        Ok(general_purpose::STANDARD.encode(buffer))
     }
 }

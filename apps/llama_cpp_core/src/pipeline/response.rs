@@ -1,225 +1,100 @@
-//! 流式响应构建器
+//! 流式响应构建器 - OpenAI Responses API 兼容
 
-// Re-export async-openai types for OpenAI API compatibility
-pub use async_openai::types::chat::{
-    ChatChoice,
-    ChatChoiceStream,
-    ChatCompletionResponseMessage,
-    ChatCompletionStreamResponseDelta,
-    CompletionUsage,
-    // Standard request types
-    CreateChatCompletionResponse,
-    CreateChatCompletionStreamResponse,
-    FinishReason,
-    Role,
-};
+// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
+pub use open_ai_rust_responses_by_sshift::{InputItem, Model, Response, StreamEvent};
 
 /// 流式响应构建器
-/// 用于构建标准的 CreateChatCompletionStreamResponse
+/// 用于构建标准的 OpenAI Responses API 流式响应
 #[derive(Debug, Clone)]
 pub struct StreamResponseBuilder {
     id: String,
-    model: String,
-    created: u32,
     index: u32,
 }
-
+impl Default for StreamResponseBuilder {
+    fn default() -> Self {
+        let id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+        Self { id, index: 0 }
+    }
+}
 impl StreamResponseBuilder {
     /// 创建新的流式响应构建器
-    pub fn new(id: impl Into<String>, model: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            model: model.into(),
-            created: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs() as u32,
-            index: 0,
-        }
+    pub fn new() -> Self {
+        StreamResponseBuilder::default()
     }
 
-    /// 设置 choice index
-    pub fn with_index(mut self, index: u32) -> Self {
-        self.index = index;
-        self
+    /// 设置响应 ID
+    pub fn new_with_id(index: u32) -> Self {
+        let id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+        Self { id, index }
     }
 
-    /// 构建内容块响应
-    pub fn build_content(&self, content: impl Into<String>) -> CreateChatCompletionStreamResponse {
-        let delta = ChatCompletionStreamResponseDelta {
-            content: Some(content.into()),
-            #[allow(deprecated)]
-            function_call: None,
-            tool_calls: None,
-            role: Some(Role::Assistant),
-            refusal: None,
-        };
-
-        let choice = ChatChoiceStream {
-            index: self.index,
-            delta,
-            finish_reason: None,
-            logprobs: None,
-        };
-
-        CreateChatCompletionStreamResponse {
+    /// 构建响应创建事件
+    pub fn build_created_event(&self) -> StreamEvent {
+        StreamEvent::ResponseCreated {
             id: self.id.clone(),
-            choices: vec![choice],
-            created: self.created,
-            model: self.model.clone(),
-            service_tier: None,
-            #[allow(deprecated)]
-            system_fingerprint: None,
-            object: "chat.completion.chunk".to_string(),
-            usage: None,
         }
     }
 
-    /// 构建结束响应
-    pub fn build_finish(&self, finish_reason: FinishReason) -> CreateChatCompletionStreamResponse {
-        self.build_finish_with_usage(finish_reason, 0, 0)
-    }
-
-    /// 构建错误响应（将错误信息作为内容发送，然后正常结束）
-    pub fn build_error(&self, error_msg: impl Into<String>) -> CreateChatCompletionStreamResponse {
-        let delta = ChatCompletionStreamResponseDelta {
-            content: Some(format!("\n[Error: {}]", error_msg.into())),
-            #[allow(deprecated)]
-            function_call: None,
-            tool_calls: None,
-            role: Some(Role::Assistant),
-            refusal: None,
-        };
-
-        let choice = ChatChoiceStream {
+    /// 构建内容块响应 (流式事件)
+    pub fn build_content_event(&self, content: impl Into<String>) -> StreamEvent {
+        StreamEvent::TextDelta {
+            content: content.into(),
             index: self.index,
-            delta,
-            finish_reason: Some(FinishReason::Stop),
-            logprobs: None,
-        };
-
-        CreateChatCompletionStreamResponse {
-            id: self.id.clone(),
-            choices: vec![choice],
-            created: self.created,
-            model: self.model.clone(),
-            service_tier: None,
-            #[allow(deprecated)]
-            system_fingerprint: None,
-            object: "chat.completion.chunk".to_string(),
-            usage: None,
         }
     }
 
-    /// 构建带 usage 的最终响应（用于流式传输的最后一条消息，包含完整统计）
-    pub fn build_finish_with_usage(
-        &self,
-        finish_reason: FinishReason,
-        prompt_tokens: u32,
-        completion_tokens: u32,
-    ) -> CreateChatCompletionStreamResponse {
-        let delta = ChatCompletionStreamResponseDelta {
-            content: None,
-            #[allow(deprecated)]
-            function_call: None,
-            tool_calls: None,
-            role: None,
-            refusal: None,
-        };
-
-        let choice = ChatChoiceStream {
-            index: self.index,
-            delta,
-            finish_reason: Some(finish_reason),
-            logprobs: None,
-        };
-
-        let usage = if prompt_tokens > 0 || completion_tokens > 0 {
-            Some(CompletionUsage {
-                prompt_tokens,
-                completion_tokens,
-                total_tokens: prompt_tokens + completion_tokens,
-                prompt_tokens_details: None,
-                completion_tokens_details: None,
-            })
-        } else {
-            None
-        };
-
-        CreateChatCompletionStreamResponse {
-            id: self.id.clone(),
-            choices: vec![choice],
-            created: self.created,
-            model: self.model.clone(),
-            service_tier: None,
-            #[allow(deprecated)]
-            system_fingerprint: None,
-            object: "chat.completion.chunk".to_string(),
-            usage,
-        }
+    /// 构建文本停止事件
+    /// 按照 OpenAI Responses API 标准，每个 choice 结束后应发送 TextStop 事件
+    pub fn build_text_stop_event(&self) -> StreamEvent {
+        StreamEvent::TextStop { index: self.index }
     }
-}
 
-/// 构建标准聊天完成响应
-pub fn build_chat_completion_response(
-    id: impl Into<String>,
-    model: impl Into<String>,
-    content: impl Into<String>,
-    finish_reason: FinishReason,
-) -> CreateChatCompletionResponse {
-    build_chat_completion_response_with_usage(id, model, content, finish_reason, None)
-}
-
-/// 构建带 usage 统计的标准聊天完成响应
-pub fn build_chat_completion_response_with_usage(
-    id: impl Into<String>,
-    model: impl Into<String>,
-    content: impl Into<String>,
-    finish_reason: FinishReason,
-    usage: Option<CompletionUsage>,
-) -> CreateChatCompletionResponse {
-    let created = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as u32;
-
-    let message = ChatCompletionResponseMessage {
-        content: Some(content.into()),
-        refusal: None,
-        role: Role::Assistant,
-        audio: None,
-        #[allow(deprecated)]
-        function_call: None,
-        tool_calls: None,
-        annotations: None,
-    };
-
-    let choice = ChatChoice {
-        index: 0,
-        message,
-        finish_reason: Some(finish_reason),
-        logprobs: None,
-    };
-
-    CreateChatCompletionResponse {
-        id: id.into(),
-        choices: vec![choice],
-        created,
-        model: model.into(),
-        service_tier: None,
-        #[allow(deprecated)]
-        system_fingerprint: None,
-        object: "chat.completion".to_string(),
-        usage,
+    /// 构建完成事件
+    pub fn build_done_event(&self) -> StreamEvent {
+        StreamEvent::Done
     }
 }
 
 /// 从响应中提取内容文本
-pub fn chat_completion_response_extract_content(response: &CreateChatCompletionResponse) -> String {
-    response
-        .choices
-        .first()
-        .and_then(|c| c.message.content.as_ref())
-        .cloned()
-        .unwrap_or_default()
+pub fn response_extract_content(response: &Response) -> String {
+    response.output_text()
+}
+
+/// 创建简单的文本输入项
+pub fn create_text_input(content: impl Into<String>) -> Vec<InputItem> {
+    vec![InputItem::message(
+        "user",
+        vec![InputItem::content_text(content)],
+    )]
+}
+
+/// 创建带图像的输入项
+pub fn create_vision_input(
+    text: impl Into<String>,
+    image_url: impl Into<String>,
+) -> Vec<InputItem> {
+    vec![InputItem::message(
+        "user",
+        vec![
+            InputItem::content_text(text),
+            InputItem::content_image_with_detail(image_url, "auto"),
+        ],
+    )]
+}
+
+/// 创建模型枚举
+pub fn create_model(model_name: &str) -> Model {
+    match model_name.to_lowercase().as_str() {
+        "gpt-5" => Model::GPT5,
+        "gpt-5-mini" => Model::GPT5Mini,
+        "gpt-5-nano" => Model::GPT5Nano,
+        "gpt-4o" => Model::GPT4o,
+        "gpt-4o-mini" => Model::GPT4oMini,
+        "o4-mini" => Model::O4Mini,
+        "o3" => Model::O3,
+        "o1" => Model::O1,
+        "o1-mini" => Model::O1Mini,
+        "o1-preview" => Model::O1Preview,
+        _ => Model::GPT4oMini, // 默认使用 GPT4oMini
+    }
 }

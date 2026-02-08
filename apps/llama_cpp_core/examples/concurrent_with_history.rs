@@ -4,28 +4,20 @@
 //! 1. 使用 Arc<Pipeline> 实现并发推理
 //! 2. 在外部管理历史消息，实现多轮对话
 //! 3. 不同请求使用不同的历史上下文
-//! 4. 获取 token 使用统计 (usage)
 
 use std::sync::Arc;
 
 use llama_cpp_core::{
     GenerateRequest, HistoryMessage, Pipeline, PipelineConfig,
-    pipeline::chat_completion_response_extract_content, types::CreateChatCompletionResponse,
+    pipeline::response_extract_content, types::Response,
     utils::log::init_logger,
 };
 
-/// 从响应中提取 usage 信息并格式化
-fn format_usage(response: &CreateChatCompletionResponse) -> String {
-    response
-        .usage
-        .as_ref()
-        .map(|u| {
-            format!(
-                "[prompt: {}, completion: {}, total: {}]",
-                u.prompt_tokens, u.completion_tokens, u.total_tokens
-            )
-        })
-        .unwrap_or_default()
+/// 从响应中提取状态信息
+fn format_status(_response: &Response) -> String {
+    // Responses API 使用不同的 usage 结构
+    // 可以根据实际需求进行调整
+    String::new()
 }
 
 #[tokio::main]
@@ -51,13 +43,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("User: 你好，我叫小明");
         println!(
             "Assistant: {} {}",
-            chat_completion_response_extract_content(&response1),
-            format_usage(&response1)
+            response_extract_content(&response1),
+            format_status(&response1)
         );
 
         // 更新历史（外部管理）
         history.add_user("你好，我叫小明")?;
-        history.add_assistant(chat_completion_response_extract_content(&response1))?;
+        history.add_assistant(response_extract_content(&response1))?;
 
         // 第二轮（带历史）
         let request2 = GenerateRequest::text("我叫什么名字？")
@@ -67,13 +59,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("User: 我叫什么名字？");
         println!(
             "Assistant: {} {}",
-            chat_completion_response_extract_content(&response2),
-            format_usage(&response2)
+            response_extract_content(&response2),
+            format_status(&response2)
         );
 
         // 更新历史
         history.add_user("我叫什么名字？")?;
-        history.add_assistant(chat_completion_response_extract_content(&response2))?;
+        history.add_assistant(response_extract_content(&response2))?;
 
         // 第三轮（带完整历史）
         let request3 = GenerateRequest::text("我们刚才聊了什么？").with_history(history);
@@ -81,8 +73,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("User: 我们刚才聊了什么？");
         println!(
             "Assistant: {} {}",
-            chat_completion_response_extract_content(&response3),
-            format_usage(&response3)
+            response_extract_content(&response3),
+            format_status(&response3)
         );
     }
 
@@ -123,15 +115,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("User A (喜欢Python) 问：我应该学习什么编程语言？");
         println!(
             "Assistant: {} {}",
-            chat_completion_response_extract_content(&response_a),
-            format_usage(&response_a)
+            response_extract_content(&response_a),
+            format_status(&response_a)
         );
 
         println!("\nUser B (喜欢Rust) 问：我应该学习什么编程语言？");
         println!(
             "Assistant: {} {}",
-            chat_completion_response_extract_content(&response_b),
-            format_usage(&response_b)
+            response_extract_content(&response_b),
+            format_status(&response_b)
         );
     }
 
@@ -162,8 +154,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(output) => println!(
                     "问题{}: {} {}",
                     i + 1,
-                    chat_completion_response_extract_content(output),
-                    format_usage(output)
+                    response_extract_content(output),
+                    format_status(output)
                 ),
                 Err(e) => eprintln!("错误{}: {}", i + 1, e),
             }

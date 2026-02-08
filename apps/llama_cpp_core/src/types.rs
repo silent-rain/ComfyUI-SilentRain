@@ -5,32 +5,19 @@
 use llama_cpp_2::context::params::LlamaPoolingType;
 use serde::{Deserialize, Serialize};
 
-// Re-export async-openai types for OpenAI API compatibility
-pub use async_openai::types::chat::{
-    ChatChoice,
-    ChatChoiceLogprobs,
-    ChatChoiceStream,
-    ChatCompletionRequestAssistantMessage,
-    ChatCompletionRequestMessage,
-    ChatCompletionRequestSystemMessage,
-    ChatCompletionRequestToolMessage,
-    ChatCompletionRequestUserMessage,
-    ChatCompletionResponseMessage,
-    ChatCompletionStreamResponseDelta,
-    CompletionTokensDetails,
-    CompletionUsage,
-    // Standard request types
-    CreateChatCompletionRequest,
-    CreateChatCompletionResponse,
-    CreateChatCompletionStreamResponse,
-    FinishReason,
-    PromptTokensDetails,
-    Role,
+// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
+pub use open_ai_rust_responses_by_sshift::types::{
+    BackgroundHandle, Container, Effort, Include, ReasoningParams, SummarySetting,
+    Input, TextConfig, TruncationSetting,
+};
+pub use open_ai_rust_responses_by_sshift::{
+    Client, ImageGenerateRequest, ImageGenerateResponse, InputItem, Model, Request, RequestBuilder,
+    Response, StreamEvent, Tool, ToolChoice, VectorStore,
 };
 
 /// 对话消息角色枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum PromptMessageRole {
+pub enum MessageRole {
     /// 系统角色（用于初始化或系统级指令）
     System,
     /// 用户角色（人类用户输入）
@@ -41,18 +28,18 @@ pub enum PromptMessageRole {
     Custom(String),
 }
 
-impl std::fmt::Display for PromptMessageRole {
+impl std::fmt::Display for MessageRole {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PromptMessageRole::System => write!(f, "System"),
-            PromptMessageRole::User => write!(f, "User"),
-            PromptMessageRole::Assistant => write!(f, "Assistant"),
-            PromptMessageRole::Custom(s) => write!(f, "{}", s),
+            MessageRole::System => write!(f, "System"),
+            MessageRole::User => write!(f, "User"),
+            MessageRole::Assistant => write!(f, "Assistant"),
+            MessageRole::Custom(s) => write!(f, "{}", s),
         }
     }
 }
 
-impl PromptMessageRole {
+impl MessageRole {
     pub fn custom(role: &str) -> Self {
         Self::Custom(role.to_string())
     }

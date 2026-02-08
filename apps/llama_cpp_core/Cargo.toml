@@ -37,7 +37,8 @@ llama-cpp-2 = { workspace = true, features = [
     "sampler",
     "mtmd",
 ] }
-async-openai = { workspace = true, features = ["chat-completion"] }
+open-ai-rust-responses-by-sshift = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 
 
 # Utils
@@ -52,4 +53,5 @@ encoding_rs = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 infer = { workspace = true }
+base64 = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

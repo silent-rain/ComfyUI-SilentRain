@@ -7,6 +7,7 @@
 - **纯文本推理**：支持 GGUF 格式模型的文本生成
 - **多模态支持**：通过 mmproj 文件支持视觉-语言模型（如 Qwen2.5-VL）
 - **异步 API**：基于 Tokio 的异步推理接口
+- **OpenAI Responses API 兼容**：使用 `open-ai-rust-responses-by-sshift` 提供标准响应格式
 - **模型缓存**：内置 LRU 缓存机制，避免重复加载模型
 - **聊天模板**：自动检测和应用模型聊天模板
 - **媒体标记自动处理**：自动补全用户提示词中的媒体标记
@@ -50,22 +51,19 @@ tokio = { version = "1", features = ["full"] }
 ### 1. 纯文本推理
 
 ```rust
-use llama_cpp_core::{Pipeline, PipelineConfig};
+use llama_cpp_core::{Pipeline, PipelineConfig, GenerateRequest, pipeline::response_extract_content};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let pipeline_config = PipelineConfig::new(
-        "/path/to/model.gguf".to_string(),
-        None
-    )
-    .with_system_prompt("You are a helpful assistant.".to_string())
-    .with_user_prompt("Hello, how are you?".to_string())
-    .with_temperature(0.7);
+    let pipeline_config = PipelineConfig::new("/path/to/model.gguf".to_string());
+    let pipeline = Pipeline::try_new(pipeline_config)?;
 
-    let mut pipeline = Pipeline::try_new(pipeline_config)?;
-    let output = pipeline.infer().await?;
+    let request = GenerateRequest::text("Hello, how are you?")
+        .with_system("You are a helpful assistant.")
+        .with_temperature(0.7);
 
-    println!("Response: {}", output.text);
+    let response = pipeline.generate(&request).await?;
+    println!("Response: {}", response_extract_content(&response));
     Ok(())
 }
 ```
@@ -73,28 +71,24 @@ async fn main() -> anyhow::Result<()> {
 ### 2. 视觉推理（多模态）
 
 ```rust
-use llama_cpp_core::{Pipeline, PipelineConfig, MediaData};
+use llama_cpp_core::{Pipeline, PipelineConfig, GenerateRequest, pipeline::response_extract_content};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let pipeline_config = PipelineConfig::new(
+    let pipeline_config = PipelineConfig::new_with_mmproj(
         "/path/to/vision-model.gguf".to_string(),
-        Some("/path/to/mmproj.gguf".to_string())
-    )
-    .with_user_prompt("Describe this image".to_string())
-    .with_media_marker("<image>".to_string());
+        "/path/to/mmproj.gguf".to_string()
+    );
 
-    let mut pipeline = Pipeline::try_new(pipeline_config)?;
+    let pipeline = Pipeline::try_new(pipeline_config)?;
 
-    // 从文件加载图像
-    pipeline.load_image_file("/path/to/image.png")?;
+    let request = GenerateRequest::text("Describe this image")
+        .with_system("You are a helpful assistant.")
+        .with_media_marker("<image>")
+        .with_media_file("/path/to/image.png")?;
 
-    // 或从缓冲区加载
-    // let image_data = std::fs::read("/path/to/image.png")?;
-    // pipeline.load_image_buffer(&image_data)?;
-
-    let output = pipeline.infer().await?;
-    println!("Response: {}", output.text);
+    let response = pipeline.generate(&request).await?;
+    println!("Response: {}", response_extract_content(&response));
     Ok(())
 }
 ```
@@ -120,6 +114,36 @@ let config = PipelineConfig::new(model_path, mmproj_path)
     // 缓存配置
     .with_cache_model(true) // 缓存模型以供重用
     .with_keep_context(true); // 保持对话上下文
+```
+
+## OpenAI Responses API 兼容性
+
+本库使用 [`open-ai-rust-responses-by-sshift`](https://crates.io/crates/open-ai-rust-responses-by-sshift) 提供与 OpenAI Responses API 兼容的响应格式。
+
+### 响应类型
+
+```rust
+use llama_cpp_core::types::Response;
+
+// Response 结构包含以下主要字段：
+// - id: 响应唯一标识
+// - object: 对象类型 ("response")
+// - created_at: 创建时间戳
+// - model: 使用的模型
+// - status: 响应状态 ("completed" 等)
+// - output: 输出项列表
+// - output_text: 合并后的输出文本 (便捷字段)
+```
+
+### 流式事件
+
+```rust
+use llama_cpp_core::types::StreamEvent;
+
+// 流式推理返回的事件类型：
+// - ResponseCreated { id }: 响应创建事件
+// - TextDelta { content, index }: 文本增量事件
+// - Done: 流式传输完成
 ```
 
 ## 核心类型
@@ -153,14 +177,40 @@ let config = PipelineConfig::new(model_path, mmproj_path)
 
 注意：设置过大的值（如 10000）不会提升性能，反而会增加模型加载时间。
 
-### GenerationOutput
+### GenerateRequest
+
+生成请求结构体，用于配置推理参数：
 
 ```rust
-pub struct GenerationOutput {
-    pub text: String,              // 生成的文本
-    pub tokens_generated: usize,   // 生成的 token 数量
-    pub finish_reason: FinishReason, // 结束原因 (Stop/Length)
-}
+use llama_cpp_core::GenerateRequest;
+
+let request = GenerateRequest::text("Hello, how are you?")
+    .with_system("You are a helpful assistant.")
+    .with_model("gpt-4")
+    .with_temperature(0.7)
+    .with_max_tokens(500);
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `model` | `String` | 模型名称 |
+| `temperature` | `f32` | 采样温度 (默认 0.7) |
+| `max_tokens` | `u32` | 最大生成 token 数 |
+| `stream` | `bool` | 是否流式输出 |
+| `session_id` | `String` | 会话ID（用于历史管理） |
+| `keep_context` | `bool` | 是否保留上下文 |
+| `medias` | `Vec<MediaData>` | 多模态媒体数据 |
+| `media_marker` | `String` | 媒体占位符标记 |
+
+### Response
+
+OpenAI Responses API 兼容的响应结构：
+
+```rust
+use llama_cpp_core::{Response, pipeline::response_extract_content};
+
+// 从响应中提取文本内容
+let text = response_extract_content(&response);
 ```
 
 ## 媒体标记说明

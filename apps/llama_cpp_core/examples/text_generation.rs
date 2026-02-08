@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use llama_cpp_core::{GenerateRequest, Pipeline, PipelineConfig, utils::log::init_logger};
+use llama_cpp_core::{Pipeline, PipelineConfig, Request, utils::log::init_logger};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,11 +10,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model_path =
         "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
-    let pipeline_config = PipelineConfig::new(model_path).with_verbose(true);
+    let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
-    let request = GenerateRequest::text("你是谁？");
+    let request = Request::builder().input("你是谁？").build();
     let results = pipeline.generate(&request).await?;
 
     println!("{results:?}");

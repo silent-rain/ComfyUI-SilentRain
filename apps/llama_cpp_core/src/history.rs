@@ -6,7 +6,7 @@ use llama_cpp_2::model::LlamaChatMessage;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::{cache::CacheType, error::Error, global_cache, types::PromptMessageRole};
+use crate::{cache::CacheType, error::Error, global_cache, types::MessageRole};
 
 /// 默认最大历史消息数（保留最近100条）
 const DEFAULT_MAX_HISTORY_MESSAGES: usize = 100;
@@ -17,12 +17,12 @@ const WARN_HISTORY_THRESHOLD: usize = 80;
 /// 用于存储历史消息，可持久化到 SQLite 或缓存
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageEntry {
-    role: PromptMessageRole,
+    role: MessageRole,
     content: String,
 }
 
 impl MessageEntry {
-    fn new(role: PromptMessageRole, content: impl Into<String>) -> Self {
+    fn new(role: MessageRole, content: impl Into<String>) -> Self {
         Self {
             role,
             content: content.into(),
@@ -97,7 +97,7 @@ impl HistoryMessage {
         let first_non_system = self
             .entries
             .iter()
-            .position(|e| e.role != PromptMessageRole::System)
+            .position(|e| e.role != MessageRole::System)
             .unwrap_or(0);
 
         if first_non_system < self.entries.len() {
@@ -114,26 +114,26 @@ impl HistoryMessage {
     }
 
     pub fn add_assistant(&mut self, msg: impl Into<String>) -> Result<(), Error> {
-        let entry = MessageEntry::new(PromptMessageRole::Assistant, msg);
+        let entry = MessageEntry::new(MessageRole::Assistant, msg);
         self.add_entry(entry);
         Ok(())
     }
 
     pub fn add_user(&mut self, msg: impl Into<String>) -> Result<(), Error> {
-        let entry = MessageEntry::new(PromptMessageRole::User, msg);
+        let entry = MessageEntry::new(MessageRole::User, msg);
         self.add_entry(entry);
         Ok(())
     }
 
     pub fn add_system(&mut self, msg: impl Into<String>) -> Result<(), Error> {
-        let entry = MessageEntry::new(PromptMessageRole::System, msg);
+        let entry = MessageEntry::new(MessageRole::System, msg);
         self.add_entry(entry);
         Ok(())
     }
 
     pub fn add_custom(
         &mut self,
-        role: PromptMessageRole,
+        role: MessageRole,
         msg: impl Into<String>,
     ) -> Result<(), Error> {
         let entry = MessageEntry::new(role, msg);

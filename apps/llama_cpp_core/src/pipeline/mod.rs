@@ -7,8 +7,21 @@ mod response;
 
 pub use pipeline_config::PipelineConfig;
 pub use pipeline_impl::Pipeline;
-pub use request::GenerateRequest;
+pub use request::{
+    Input,
+    InputItem,
+    MessageContent,
+    Model,
+    // 标准 OpenAI Responses API 类型
+    Request,
+    RequestBuilder,
+    Response,
+    ResponseItem,
+    StreamEvent,
+    Tool,
+    ToolChoice,
+};
 pub use response::{
-    StreamResponseBuilder, build_chat_completion_response,
-    build_chat_completion_response_with_usage, chat_completion_response_extract_content,
+    StreamResponseBuilder, create_model, create_text_input, create_vision_input,
+    response_extract_content,
 };
