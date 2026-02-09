@@ -139,7 +139,7 @@ pub fn parse_request_input(
                         let role = input_item
                             .role
                             .clone()
-                            .unwrap_or_else(|| "user".to_string());
+                            .unwrap_or_else(|| MessageRole::User.to_string());
                         if let Some(contents) = &input_item.content {
                             let message_content = parse_message_content(
                                 role,

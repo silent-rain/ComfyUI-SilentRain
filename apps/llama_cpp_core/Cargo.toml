@@ -38,7 +38,7 @@ llama-cpp-2 = { workspace = true, features = [
     "mtmd",
 ] }
 open-ai-rust-responses-by-sshift = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 
 
 # Utils
