@@ -93,6 +93,48 @@ impl Image {
         self.resize_to_scale(scale)
     }
 
+    /// 根据配置的最大分辨率缩放图像
+    ///
+    /// 如果图像最长边超过配置的最大分辨率，则按比例缩放
+    /// 配置值小于 64 时会自动调整为 64
+    ///
+    /// # Arguments
+    /// * `max_resolution` - 配置的最大分辨率
+    ///
+    /// # Returns
+    /// - `Ok(Image)` - 缩放后的图像（如果需要缩放）或原图像（如果不需要）
+    ///
+    /// # Example
+    /// ```
+    /// let img = Image::from_bytes(&data)?;
+    /// let resized = img.resize_with_max_resolution(768)?;
+    /// ```
+    pub fn resize_with_max_resolution(&self, max_resolution: u32) -> Result<Self, Error> {
+        // 确保最小分辨率为 64
+        let effective_max = if max_resolution < 64 {
+            64
+        } else {
+            max_resolution
+        };
+
+        // 获取图像最长边
+        let longest = self.longest();
+
+        // 如果图像尺寸在限制范围内，直接返回原图
+        if longest <= effective_max {
+            return Ok(self.clone());
+        }
+
+        // 按比例缩放
+        info!(
+            "Resizing image from {}x{} to fit max resolution {}",
+            self.width(),
+            self.height(),
+            effective_max
+        );
+        self.resize_to_longest(effective_max)
+    }
+
     /// 获取最长边
     pub fn longest(&self) -> u32 {
         self.width().max(self.height())
@@ -141,10 +183,39 @@ impl Image {
         self.img.clone()
     }
 
+    /// 从二进制数据加载图像
+    pub fn from_bytes(data: &[u8]) -> Result<Self, Error> {
+        let img = image::load_from_memory(data).map_err(|e| {
+            error!("Failed to load image from bytes: {}", e);
+            e
+        })?;
+        Ok(Image { img })
+    }
+
     /// 转换为 base64 编码字符串
     pub fn to_base64(&self) -> Result<String, Error> {
         let buffer = self.to_vec()?;
-        Ok(general_purpose::STANDARD.encode(buffer))
+        Ok(general_purpose::STANDARD.encode(&buffer))
+    }
+
+    /// 转换为特定格式的 base64 编码字符串
+    ///
+    /// # Arguments
+    /// * `format` - 图像格式，如 "png", "jpeg"
+    pub fn to_base64_with_format(&self, format: &str) -> Result<String, Error> {
+        let mut buffer = Vec::new();
+        let image_format = match format.to_lowercase().as_str() {
+            "jpeg" | "jpg" => ImageFormat::Jpeg,
+            "png" => ImageFormat::Png,
+            "webp" => ImageFormat::WebP,
+            "gif" => ImageFormat::Gif,
+            _ => ImageFormat::Png,
+        };
+
+        self.img
+            .write_to(&mut Cursor::new(&mut buffer), image_format)?;
+
+        Ok(general_purpose::STANDARD.encode(&buffer))
     }
 }
 

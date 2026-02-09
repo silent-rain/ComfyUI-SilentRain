@@ -29,7 +29,7 @@ use crate::{
         ChatStreamBuilder,
         request::{is_multimodal_request, parse_request_input},
     },
-    utils::image::decode_image_sources,
+    utils::image::{Image, decode_image_sources},
 };
 
 /// 推理流水线
@@ -300,10 +300,18 @@ impl Pipeline {
             parse_request_input(request, Some(self.config.context.media_marker.clone()))?;
         let decoded_images = decode_image_sources(&parsed_input.image_sources).await?;
 
-        // TODO 图片缩放
+        // 图片缩放逻辑
+        let image_max_resolution = self.config.context.image_max_resolution;
 
         for data in decoded_images {
-            mtmd_ctx.load_media_buffer(&data).map_err(|e| {
+            // 从二进制数据创建 Image 对象，并根据配置缩放
+            let img = Image::from_bytes(&data)?.resize_with_max_resolution(image_max_resolution)?;
+            img.save("/home/one/Downloads/resized.jpg")?;
+
+            // 将缩放后的图像转换为字节数据
+            let resized_data = img.to_vec()?;
+
+            mtmd_ctx.load_media_buffer(&resized_data).map_err(|e| {
                 error!("Failed to load media: {}", e);
                 e
             })?;
@@ -323,10 +331,11 @@ impl Pipeline {
 #[cfg(test)]
 mod tests {
     use async_openai::types::chat::CreateChatCompletionRequestArgs;
+    use base64::{Engine, engine::general_purpose};
 
     use crate::{
         pipeline::{ChatMessagesBuilder, UserMessageBuilder},
-        utils::{image::Image, log::init_logger},
+        utils::log::init_logger,
     };
 
     use super::*;
@@ -338,7 +347,7 @@ mod tests {
         let model_path =
             "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
 
-        let pipeline_config = PipelineConfig::new(model_path).with_verbose(true);
+        let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
@@ -355,11 +364,11 @@ mod tests {
             )
             .build()?;
 
-        println!("{}", serde_json::to_string(&request).unwrap());
+        info!("{}", serde_json::to_string(&request).unwrap());
 
         let results = pipeline.generate(&request).await?;
 
-        println!("{:?}", results);
+        info!("{:?}", results);
         Ok(())
     }
 
@@ -375,16 +384,15 @@ mod tests {
                 .to_string();
 
         let pipeline_config =
-            PipelineConfig::new_with_mmproj(model_path, mmproj_path).with_verbose(true);
+            PipelineConfig::new_with_mmproj(model_path, mmproj_path).with_verbose(false);
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
         // 读取图像文件并编码为base64
-        let image_url = "/data/cy/00089-915810967.png";
+        let image_url = "/data/cy/rgthree.compare._temp_glbsl_00013_.png";
         let mime_type = infer::get_from_path(image_url)?.unwrap().mime_type();
-        let base64_data = Image::from_file(image_url)?
-            .resize_to_longest(512)?
-            .to_base64()?;
+        let buffer = std::fs::read(image_url)?;
+        let base64_data = general_purpose::STANDARD.encode(&buffer);
 
         // 反推图片
         let request = CreateChatCompletionRequestArgs::default()
@@ -404,7 +412,7 @@ mod tests {
 
         let results = pipeline.generate(&request).await?;
 
-        println!("{:?}", results);
+        info!("{:?}", results);
         Ok(())
     }
 
@@ -442,7 +450,7 @@ mod tests {
 
         let results = pipeline.generate(&request).await?;
 
-        println!("{:?}", results);
+        info!("{:?}", results);
         Ok(())
     }
 }
