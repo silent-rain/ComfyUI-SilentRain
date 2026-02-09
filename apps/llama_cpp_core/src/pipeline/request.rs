@@ -6,8 +6,7 @@
 
 use async_openai::types::chat::{
     ChatCompletionRequestAssistantMessageContent, ChatCompletionRequestAssistantMessageContentPart,
-    ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImage,
-    ChatCompletionRequestMessageContentPartText, ChatCompletionRequestSystemMessageContent,
+    ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageContent,
     ChatCompletionRequestSystemMessageContentPart, ChatCompletionRequestUserMessageContent,
     ChatCompletionRequestUserMessageContentPart, CreateChatCompletionRequest,
 };
