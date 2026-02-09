@@ -58,3 +58,4 @@ strum_macros = { workspace = true }
 infer = { workspace = true }
 base64 = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
+reqwest = { workspace = true, features = [] }

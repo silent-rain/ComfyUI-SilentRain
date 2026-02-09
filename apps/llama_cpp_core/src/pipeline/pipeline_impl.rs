@@ -13,7 +13,6 @@ use async_openai::types::chat::{
     CreateChatCompletionRequest, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
     FinishReason,
 };
-use base64::{Engine, engine::general_purpose};
 use llama_cpp_2::{
     LogOptions, llama_backend::LlamaBackend, model::LlamaChatMessage, send_logs_to_tracing,
 };
@@ -30,6 +29,7 @@ use crate::{
         ChatStreamBuilder,
         request::{is_multimodal_request, parse_request_input},
     },
+    utils::image::decode_image_sources,
 };
 
 /// 推理流水线
@@ -118,16 +118,6 @@ impl Pipeline {
     ) -> Result<Vec<LlamaChatMessage>, Error> {
         let mut messages = Vec::new();
 
-        // // 系统消息：优先使用请求中的，其次使用配置中的
-        // if let Some(instructions) = &request.instructions
-        //     && !instructions.is_empty()
-        // {
-        //     messages.push(LlamaChatMessage::new(
-        //         MessageRole::System.to_string(),
-        //         instructions.to_string(),
-        //     )?);
-        // }
-
         // TODO 添加历史消息
         // if let Some(store) = request.store
         //     && store
@@ -165,19 +155,6 @@ impl Pipeline {
     }
 
     /// 执行推理
-    ///
-    /// # Arguments
-    /// * `request` - 生成请求
-    ///
-    /// # Example
-    /// ```rust,ignore
-    /// let request = CreateChatCompletionRequest {
-    ///     model: "gpt-4".to_string(),
-    ///     messages: vec![...],
-    ///     ..Default::default()
-    /// };
-    /// let result = pipeline.generate(&request).await?;
-    /// ```
     pub async fn generate(
         &self,
         request: &CreateChatCompletionRequest,
@@ -211,7 +188,7 @@ impl Pipeline {
                 }
                 // 记录结束原因
                 if choice.finish_reason.is_some() {
-                    finish_reason = choice.finish_reason.clone();
+                    finish_reason = choice.finish_reason;
                 }
             }
         }
@@ -230,16 +207,16 @@ impl Pipeline {
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let rx = if !is_multimodal_request(request) {
-            self.generate_text_stream(request)?
+            self.generate_text_stream(request).await?
         } else {
-            self.generate_media_stream(request)?
+            self.generate_media_stream(request).await?
         };
 
         Ok(rx)
     }
 
     /// 纯文本流式推理内部实现
-    fn generate_text_stream(
+    async fn generate_text_stream(
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
@@ -278,7 +255,7 @@ impl Pipeline {
     }
 
     /// 媒体流式推理内部实现
-    fn generate_media_stream(
+    async fn generate_media_stream(
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
@@ -321,37 +298,15 @@ impl Pipeline {
         // Load media files
         let parsed_input =
             parse_request_input(request, Some(self.config.context.media_marker.clone()))?;
-        for image_source in &parsed_input.image_sources {
-            // 处理图像来源
-            match image_source {
-                crate::pipeline::request::ImageSource::Url(_url) => {
-                    unimplemented!()
-                }
-                crate::pipeline::request::ImageSource::Base64(base64_str) => {
-                    // data:{};base64,
-                    // 提取base64数据部分
-                    let base64_data = if base64_str.starts_with("data:") {
-                        base64_str.split_once(',').map(|(_, data)| data)
-                    } else {
-                        Some(base64_str).map(|x| x.as_str())
-                    }
-                    .ok_or_else(|| {
-                        error!("Invalid base64 format");
-                        std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            "Invalid base64 format",
-                        )
-                    })?;
+        let decoded_images = decode_image_sources(&parsed_input.image_sources).await?;
 
-                    // 解析
-                    info!("Loading media from base64 string");
-                    let data = general_purpose::STANDARD.decode(base64_data)?;
-                    mtmd_ctx.load_media_buffer(&data).map_err(|e| {
-                        error!("Failed to load media: {}", e);
-                        e
-                    })?;
-                }
-            }
+        // TODO 图片缩放
+
+        for data in decoded_images {
+            mtmd_ctx.load_media_buffer(&data).map_err(|e| {
+                error!("Failed to load media: {}", e);
+                e
+            })?;
         }
 
         // 评估消息
@@ -367,10 +322,14 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        types::Request,
-        utils::{image::Image, log::init_logger},
+    use async_openai::types::chat::{
+        ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessageContentPartImage,
+        ChatCompletionRequestMessageContentPartText, ChatCompletionRequestSystemMessage,
+        ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageContent,
+        CreateChatCompletionRequestArgs, ImageDetail, ImageUrl,
     };
+
+    use crate::utils::{image::Image, log::init_logger};
 
     use super::*;
 
@@ -385,7 +344,36 @@ mod tests {
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
-        let request = Request::builder().input("你是谁？").build();
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages([
+                // Can also use ChatCompletionRequest<Role>MessageArgs for builder pattern
+                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
+                ChatCompletionRequestUserMessage::from("Who won the world series in 2020?").into(),
+                ChatCompletionRequestAssistantMessage::from(
+                    "The Los Angeles Dodgers won the World Series in 2020.",
+                )
+                .into(),
+                // ChatCompletionRequestUserMessage::from("Where was it played?").into(),
+                ChatCompletionRequestUserMessage {
+                    content: ChatCompletionRequestUserMessageContent::Array(vec![
+                        ChatCompletionRequestMessageContentPartText::from("Where was it played?")
+                            .into(),
+                        ChatCompletionRequestMessageContentPartImage::from(ImageUrl {
+                            url: "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png".to_string(),
+                            detail: Some(ImageDetail::Auto),
+                        })
+                        .into(),
+                    ]),
+                    ..Default::default()
+                }
+                .into(),
+            ])
+            .build()?;
+
+        println!("{}", serde_json::to_string(&request).unwrap());
+
         let results = pipeline.generate(&request).await?;
 
         println!("{:?}", results);
@@ -393,7 +381,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_simple_vision() -> anyhow::Result<()> {
+    async fn test_simple_vision_for_image_base64() -> anyhow::Result<()> {
         init_logger();
 
         let model_path =
@@ -409,22 +397,108 @@ mod tests {
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
         // 读取图像文件并编码为base64
-        let image_path = "/data/cy/00089-915810967.png";
-        let mime_type = infer::get_from_path(image_path)?.unwrap().mime_type();
-        let base64_data = Image::from_file(image_path)?
+        let image_url = "/data/cy/00089-915810967.png";
+        let mime_type = infer::get_from_path(image_url)?.unwrap().mime_type();
+        let base64_data = Image::from_file(image_url)?
             .resize_to_longest(512)?
             .to_base64()?;
 
         // 反推图片
-        let request = Request::builder()
-            .input_items(vec![InputItem::message(
-                MessageRole::User.to_string(),
-                vec![
-                    InputItem::content_text("描述这张图片"),
-                    InputItem::content_image_base64(&base64_data, mime_type),
-                ],
-            )])
-            .build();
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages([
+                // 系统消息
+                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
+                // 用户消息：包含文本 + 图片（数组形式）
+                ChatCompletionRequestUserMessage {
+                    content: ChatCompletionRequestUserMessageContent::Array(vec![
+                        // 文本部分
+                        ChatCompletionRequestMessageContentPartText::from("描述这张图片").into(),
+                        // 图片部分
+                        ChatCompletionRequestMessageContentPartImage {
+                            image_url: ImageUrl {
+                                url: format!("data:{};base64,{}", mime_type, base64_data),
+                                detail: Some(ImageDetail::Auto),
+                            },
+                        }
+                        .into(),
+                    ]),
+                    ..Default::default()
+                }
+                .into(),
+            ])
+            .build()?;
+
+        // let request = Request::builder()
+        //     .input_items(vec![InputItem::message(
+        //         MessageRole::User.to_string(),
+        //         vec![
+        //             InputItem::content_text("描述这张图片"),
+        //             InputItem::content_image_base64(&base64_data, mime_type),
+        //         ],
+        //     )])
+        //     .build();
+        let results = pipeline.generate(&request).await?;
+
+        println!("{:?}", results);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_simple_vision_for_image_url() -> anyhow::Result<()> {
+        init_logger();
+
+        let model_path =
+            "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf"
+                .to_string();
+        let mmproj_path =
+            "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf"
+                .to_string();
+
+        let pipeline_config =
+            PipelineConfig::new_with_mmproj(model_path, mmproj_path).with_verbose(true);
+
+        let pipeline = Pipeline::try_new(pipeline_config)?;
+
+        let image_url = "https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg";
+
+        // 反推图片
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages([
+                // 系统消息
+                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
+                // 用户消息：包含文本 + 图片（数组形式）
+                ChatCompletionRequestUserMessage {
+                    content: ChatCompletionRequestUserMessageContent::Array(vec![
+                        // 文本部分
+                        ChatCompletionRequestMessageContentPartText::from("描述这张图片").into(),
+                        // 图片部分
+                        ChatCompletionRequestMessageContentPartImage {
+                            image_url: ImageUrl {
+                                url: image_url.to_string(),
+                                detail: Some(ImageDetail::Auto),
+                            },
+                        }
+                        .into(),
+                    ]),
+                    ..Default::default()
+                }
+                .into(),
+            ])
+            .build()?;
+
+        // let request = Request::builder()
+        //     .input_items(vec![InputItem::message(
+        //         MessageRole::User.to_string(),
+        //         vec![
+        //             InputItem::content_text("描述这张图片"),
+        //             InputItem::content_image_base64(&base64_data, mime_type),
+        //         ],
+        //     )])
+        //     .build();
         let results = pipeline.generate(&request).await?;
 
         println!("{:?}", results);

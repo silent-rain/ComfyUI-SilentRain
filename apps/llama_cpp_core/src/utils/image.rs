@@ -5,7 +5,7 @@ use base64::{Engine, engine::general_purpose};
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage, imageops::FilterType};
 use tracing::{error, info};
 
-use crate::error::Error;
+use crate::{error::Error, pipeline::ImageSource};
 
 /// 图像处理工具
 #[derive(Debug, Default, Clone)]
@@ -146,4 +146,65 @@ impl Image {
         let buffer = self.to_vec()?;
         Ok(general_purpose::STANDARD.encode(buffer))
     }
+}
+
+/// 解码图像来源列表
+///
+/// 将所有 ImageSource 解码为二进制数据列表
+///
+/// # Arguments
+/// * `image_sources` - 图像来源列表
+///
+/// # Returns
+/// - `Vec<Vec<u8>>` - 解码后的图像数据列表
+pub async fn decode_image_sources(image_sources: &[ImageSource]) -> Result<Vec<Vec<u8>>, Error> {
+    let mut decoded_images = Vec::new();
+
+    for image_source in image_sources {
+        match image_source {
+            ImageSource::Url(url) => {
+                info!("Loading media from URL: {}", url);
+                let data = download_image(url).await?;
+                decoded_images.push(data);
+            }
+            ImageSource::Base64(media_type, base64_data) => {
+                info!("Loading media from base64 string (type: {})", media_type);
+                let data = general_purpose::STANDARD.decode(base64_data)?;
+                decoded_images.push(data);
+            }
+        }
+    }
+
+    Ok(decoded_images)
+}
+
+/// 从 URL 下载图片
+///
+/// # Arguments
+/// * `url` - 图片 URL
+///
+/// # Returns
+/// - `Vec<u8>` - 下载的图片数据
+async fn download_image(url: &str) -> Result<Vec<u8>, Error> {
+    info!("Downloading image from: {}", url);
+
+    let response = reqwest::get(url)
+        .await
+        .map_err(|e| Error::HttpRequest(format!("Failed to send request: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(Error::HttpRequest(format!(
+            "HTTP error: {} for URL: {}",
+            response.status(),
+            url
+        )));
+    }
+
+    let data = response.bytes().await.map_err(|e| Error::ImageDownload {
+        url: url.to_string(),
+        message: format!("Failed to download image: {}", e),
+    })?;
+
+    info!("Successfully downloaded {} bytes from URL", data.len());
+    Ok(data.to_vec())
 }

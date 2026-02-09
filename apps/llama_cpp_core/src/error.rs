@@ -131,37 +131,16 @@ pub enum Error {
     #[error("Serialization error: {0}")]
     Serde(#[from] serde_json::Error),
 
+    // ==================== 网络错误 ====================
+    #[error("HTTP request failed: {0}")]
+    HttpRequest(String),
+
+    #[error("Failed to download image from URL: {url}, err: {message}")]
+    ImageDownload { url: String, message: String },
+
     // ==================== 外部错误 ====================
     #[error("Unsupported feature: {feature}")]
     UnsupportedFeature { feature: String },
     #[error("Failed to create tokio runtime: {0}")]
     RuntimeError(String),
-}
-
-/// 错误类别
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorCategory {
-    Backend,
-    Model,
-    Generation,
-    Input,
-    Config,
-    Cache,
-    Plugin,
-    System,
-}
-
-impl std::fmt::Display for ErrorCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ErrorCategory::Backend => write!(f, "Backend"),
-            ErrorCategory::Model => write!(f, "Model"),
-            ErrorCategory::Generation => write!(f, "Generation"),
-            ErrorCategory::Input => write!(f, "Input"),
-            ErrorCategory::Config => write!(f, "Configuration"),
-            ErrorCategory::Cache => write!(f, "Cache"),
-            ErrorCategory::Plugin => write!(f, "Plugin"),
-            ErrorCategory::System => write!(f, "System"),
-        }
-    }
 }

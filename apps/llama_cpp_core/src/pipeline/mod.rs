@@ -17,6 +17,8 @@ pub use request::{
     ParsedInput,
     is_multimodal_request,
     parse_request_input,
+    // 构建器
+    ChatMessagesBuilder,
 };
 pub use response::{ChatStreamBuilder, response_extract_content};
 
