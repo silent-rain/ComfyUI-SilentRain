@@ -6,7 +6,7 @@ use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use base64::Engine;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
-    pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
+    pipeline::{ChatMessagesBuilder, UserMessageBuilder},
     utils::log::init_logger,
 };
 
@@ -114,8 +114,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     // 执行推理
-    let results = pipeline.generate(&request).await?;
-    println!("Response: {}", response_extract_content(&results));
+    let mut rx = pipeline.generate_stream(&request).await?;
 
+    // 接收响应
+    let mut full_text = String::new();
+    while let Some(chunk) = rx.recv().await {
+        if let Some(choice) = chunk.choices.first() {
+            if let Some(content) = &choice.delta.content {
+                full_text.push_str(content);
+            }
+            if choice.finish_reason.is_some() {
+                break;
+            }
+        }
+    }
+    println!("{full_text:?}");
     Ok(())
 }

@@ -67,9 +67,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let  messages = ChatMessagesBuilder::new()
             .system("You are a helpful assistant.")
-            .user(UserMessageBuilder::new().text("Who won the world series in 2020?"))
+            .users(UserMessageBuilder::new().text("Who won the world series in 2020?"))
             .assistant("The Los Angeles Dodgers won the World Series in 2020.")
-            .user(UserMessageBuilder::new().text("Where was it played?").image_url("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"))
+            .users(UserMessageBuilder::new().text("Where was it played?").image_url("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"))
            .build();
 
         let request = CreateChatCompletionRequestArgs::default()

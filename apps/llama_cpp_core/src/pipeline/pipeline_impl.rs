@@ -322,14 +322,12 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use async_openai::types::chat::{
-        ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessageContentPartImage,
-        ChatCompletionRequestMessageContentPartText, ChatCompletionRequestSystemMessage,
-        ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageContent,
-        CreateChatCompletionRequestArgs, ImageDetail, ImageUrl,
-    };
+    use async_openai::types::chat::CreateChatCompletionRequestArgs;
 
-    use crate::utils::{image::Image, log::init_logger};
+    use crate::{
+        pipeline::{ChatMessagesBuilder, UserMessageBuilder},
+        utils::{image::Image, log::init_logger},
+    };
 
     use super::*;
 
@@ -347,29 +345,14 @@ mod tests {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
-            .messages([
-                // Can also use ChatCompletionRequest<Role>MessageArgs for builder pattern
-                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
-                ChatCompletionRequestUserMessage::from("Who won the world series in 2020?").into(),
-                ChatCompletionRequestAssistantMessage::from(
-                    "The Los Angeles Dodgers won the World Series in 2020.",
-                )
-                .into(),
-                // ChatCompletionRequestUserMessage::from("Where was it played?").into(),
-                ChatCompletionRequestUserMessage {
-                    content: ChatCompletionRequestUserMessageContent::Array(vec![
-                        ChatCompletionRequestMessageContentPartText::from("Where was it played?")
-                            .into(),
-                        ChatCompletionRequestMessageContentPartImage::from(ImageUrl {
-                            url: "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png".to_string(),
-                            detail: Some(ImageDetail::Auto),
-                        })
-                        .into(),
-                    ]),
-                    ..Default::default()
-                }
-                .into(),
-            ])
+            .messages(
+                ChatMessagesBuilder::new()
+                    .system("You are a helpful assistant.")
+                    .user("Who won the world series in 2020?")
+                    .assistant("The Los Angeles Dodgers won the World Series in 2020.")
+                    .users(UserMessageBuilder::new().text("Where was it played?"))
+                    .build(),
+            )
             .build()?;
 
         println!("{}", serde_json::to_string(&request).unwrap());
@@ -407,27 +390,16 @@ mod tests {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
-            .messages([
-                // 系统消息
-                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
-                // 用户消息：包含文本 + 图片（数组形式）
-                ChatCompletionRequestUserMessage {
-                    content: ChatCompletionRequestUserMessageContent::Array(vec![
-                        // 文本部分
-                        ChatCompletionRequestMessageContentPartText::from("描述这张图片").into(),
-                        // 图片部分
-                        ChatCompletionRequestMessageContentPartImage {
-                            image_url: ImageUrl {
-                                url: format!("data:{};base64,{}", mime_type, base64_data),
-                                detail: Some(ImageDetail::Auto),
-                            },
-                        }
-                        .into(),
-                    ]),
-                    ..Default::default()
-                }
-                .into(),
-            ])
+            .messages(
+                ChatMessagesBuilder::new()
+                    .system("You are a helpful assistant.")
+                    .users(
+                        UserMessageBuilder::new()
+                            .text("描述这张图片")
+                            .image_base64(mime_type, base64_data),
+                    )
+                    .build(),
+            )
             .build()?;
 
         let results = pipeline.generate(&request).await?;
@@ -452,33 +424,20 @@ mod tests {
 
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
-        let image_url = "https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg";
-
         // 反推图片
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
-            .messages([
-                // 系统消息
-                ChatCompletionRequestSystemMessage::from("You are a helpful assistant.").into(),
-                // 用户消息：包含文本 + 图片（数组形式）
-                ChatCompletionRequestUserMessage {
-                    content: ChatCompletionRequestUserMessageContent::Array(vec![
-                        // 文本部分
-                        ChatCompletionRequestMessageContentPartText::from("描述这张图片").into(),
-                        // 图片部分
-                        ChatCompletionRequestMessageContentPartImage {
-                            image_url: ImageUrl {
-                                url: image_url.to_string(),
-                                detail: Some(ImageDetail::Auto),
-                            },
-                        }
-                        .into(),
-                    ]),
-                    ..Default::default()
-                }
-                .into(),
-            ])
+            .messages(
+                ChatMessagesBuilder::new()
+                .system("You are a helpful assistant.") 
+                .users(
+                    UserMessageBuilder::new()
+                        .text("描述这张图片")
+                        .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
+                )
+                .build()
+            )
             .build()?;
 
         let results = pipeline.generate(&request).await?;

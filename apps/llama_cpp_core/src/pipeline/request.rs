@@ -427,9 +427,16 @@ impl ChatMessagesBuilder {
         self
     }
 
-    /// 添加用户消息（使用 UserMessageBuilder）
-    pub fn user(mut self, builder: UserMessageBuilder) -> Self {
+    /// 添加用户消息列表（使用 UserMessageBuilder）
+    pub fn users(mut self, builder: UserMessageBuilder) -> Self {
         self.messages.push(builder.build().into());
+        self
+    }
+
+    /// 添加用户消息
+    pub fn user(mut self, message: impl Into<String>) -> Self {
+        self.messages
+            .push(ChatCompletionRequestUserMessage::from(message.into()).into());
         self
     }
 
@@ -591,9 +598,9 @@ mod tests {
         // 与原始 API 等价性测试
         let builder_messages = ChatMessagesBuilder::new()
             .system("You are a helpful assistant.")
-            .user(UserMessageBuilder::new().text("Who won the world series in 2020?"))
+            .users(UserMessageBuilder::new().text("Who won the world series in 2020?"))
             .assistant("The Los Angeles Dodgers won the World Series in 2020.")
-            .user(
+            .users(
                 UserMessageBuilder::new()
                     .text("Where was it played?")
                     .image_url("https://example.com/image.png"),

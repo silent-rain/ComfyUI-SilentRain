@@ -90,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .model("Qwen3-VL-2B-Instruct")
         .messages(ChatMessagesBuilder::new()
             .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-            .user(
+            .users(
                 UserMessageBuilder::new()
                     .text(user_prompt)
                     .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .model("Qwen3-VL-2B-Instruct")
         .messages(ChatMessagesBuilder::new()
             .system("你是专注生成套图模特提示词专家。")
-            .user(
+            .users(
                 UserMessageBuilder::new()
                     .text("再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征")
                     .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
