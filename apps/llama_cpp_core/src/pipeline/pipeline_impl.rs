@@ -430,15 +430,6 @@ mod tests {
             ])
             .build()?;
 
-        // let request = Request::builder()
-        //     .input_items(vec![InputItem::message(
-        //         MessageRole::User.to_string(),
-        //         vec![
-        //             InputItem::content_text("描述这张图片"),
-        //             InputItem::content_image_base64(&base64_data, mime_type),
-        //         ],
-        //     )])
-        //     .build();
         let results = pipeline.generate(&request).await?;
 
         println!("{:?}", results);
@@ -490,15 +481,6 @@ mod tests {
             ])
             .build()?;
 
-        // let request = Request::builder()
-        //     .input_items(vec![InputItem::message(
-        //         MessageRole::User.to_string(),
-        //         vec![
-        //             InputItem::content_text("描述这张图片"),
-        //             InputItem::content_image_base64(&base64_data, mime_type),
-        //         ],
-        //     )])
-        //     .build();
         let results = pipeline.generate(&request).await?;
 
         println!("{:?}", results);

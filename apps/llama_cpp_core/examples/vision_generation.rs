@@ -1,10 +1,13 @@
-//! 视觉推理示例 - 并发版本
+//! 视觉推理示例 - 新版API
 
 use std::sync::Arc;
 
+use async_openai::types::chat::CreateChatCompletionRequestArgs;
+use base64::Engine;
 use llama_cpp_core::{
-    InputItem, Pipeline, PipelineConfig, Request, pipeline::response_extract_content,
-    types::MessageRole, utils::log::init_logger,
+    Pipeline, PipelineConfig,
+    pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
+    utils::log::init_logger,
 };
 
 #[tokio::main]
@@ -27,6 +30,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+
+    // 读取图片文件
+    let image_path = "/path/to/your/image.jpg"; // 请替换为实际图片路径
+    let image_data = std::fs::read(image_path)?;
+    let base64_data = base64::engine::general_purpose::STANDARD.encode(&image_data);
+    let mime_type = infer::get_from_path(image_path)
+        .ok()
+        .flatten()
+        .map(|t| t.mime_type().to_string())
+        .unwrap_or_else(|| "image/jpeg".to_string());
 
     let user_prompt = {
         r#"
@@ -84,17 +97,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ...（共9条）"#
     };
 
-    // 推理请求
-    let request = Request::builder()
-        .instructions("你是专注生成套图模特提示词专家，用于生成3同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-        .input_items(vec![InputItem::message(
-            MessageRole::User.to_string(),
-            vec![
-                InputItem::content_text(user_prompt),
-                InputItem::content_image_base64(&base64_data, mime_type),
-            ],
-        )])
+    // 使用新的构建器 API 构建请求
+    let messages = ChatMessagesBuilder::new()
+        .system("你是专注生成套图模特提示词专家，用于生成3同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+        .user(
+            UserMessageBuilder::new()
+                .text(user_prompt)
+                .image_base64(mime_type, base64_data),
+        )
         .build();
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(2048u32)
+        .model("Qwen3-VL-2B-Instruct")
+        .messages(messages)
+        .build()?;
 
     // 执行推理
     let results = pipeline.generate(&request).await?;

@@ -277,59 +277,44 @@ fn extract_base64_from_data_uri(data_uri: &str) -> Option<(String, String)> {
     })
 }
 
-/// 聊天消息构建器
+/// 用户消息内容构建器
 ///
-/// 简化 Vec<ChatCompletionRequestMessage> 的构建，支持文本和图片
+/// 用于构建单条用户消息的内容，支持纯文本或多模态（文本+图片）
 ///
 /// # 示例
 /// ```
-/// use llama_cpp_core::pipeline::ChatMessagesBuilder;
-/// use async_openai::types::chat::CreateChatCompletionRequestArgs;
+/// use llama_cpp_core::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
 ///
-/// let messages = ChatMessagesBuilder::new()
-///     .system("You are a helpful assistant.")
-///     .user_text("描述这张图片")
+/// // 纯文本消息
+/// let text_only = UserMessageBuilder::new().text("Hello").build();
+///
+/// // 多模态消息（文本 + 图片）
+/// let multimodal = UserMessageBuilder::new()
+///     .text("描述这张图片")
 ///     .image_url("https://example.com/image.jpg")
 ///     .build();
-///
-/// let request = CreateChatCompletionRequestArgs::default()
-///     .model("Qwen3-VL-2B-Instruct")
-///     .messages(messages)
-///     .build()
-///     .unwrap();
 /// ```
-#[derive(Debug, Clone)]
-pub struct ChatMessagesBuilder {
-    messages: Vec<ChatCompletionRequestMessage>,
-    current_user_parts: Vec<ChatCompletionRequestUserMessageContentPart>,
+#[derive(Debug, Clone, Default)]
+pub struct UserMessageBuilder {
+    parts: Vec<ChatCompletionRequestUserMessageContentPart>,
 }
 
-impl ChatMessagesBuilder {
-    /// 创建新的消息构建器
+impl UserMessageBuilder {
+    /// 创建新的用户消息构建器
     pub fn new() -> Self {
-        Self {
-            messages: Vec::new(),
-            current_user_parts: Vec::new(),
-        }
+        Self { parts: Vec::new() }
     }
 
-    /// 添加系统消息
-    pub fn system(mut self, message: impl Into<String>) -> Self {
-        self.messages
-            .push(ChatCompletionRequestSystemMessage::from(message.into()).into());
-        self
-    }
-
-    /// 添加用户文本消息
-    pub fn user_text(mut self, text: impl Into<String>) -> Self {
-        self.current_user_parts
+    /// 添加文本内容
+    pub fn text(mut self, text: impl Into<String>) -> Self {
+        self.parts
             .push(ChatCompletionRequestMessageContentPartText::from(text.into()).into());
         self
     }
 
     /// 添加图片 URL
     pub fn image_url(mut self, url: impl Into<String>) -> Self {
-        self.current_user_parts.push(
+        self.parts.push(
             ChatCompletionRequestMessageContentPartImage {
                 image_url: ImageUrl {
                     url: url.into(),
@@ -352,7 +337,7 @@ impl ChatMessagesBuilder {
         base64_data: impl Into<String>,
     ) -> Self {
         let url = format!("data:{};base64,{}", mime_type.into(), base64_data.into());
-        self.current_user_parts.push(
+        self.parts.push(
             ChatCompletionRequestMessageContentPartImage {
                 image_url: ImageUrl {
                     url,
@@ -381,6 +366,73 @@ impl ChatMessagesBuilder {
         Ok(self.image_base64(mime_type, base64_data))
     }
 
+    /// 构建用户消息
+    ///
+    /// 如果只有一部分且是文本，返回 Text 类型
+    /// 否则返回 Array 类型
+    pub fn build(self) -> ChatCompletionRequestUserMessage {
+        if self.parts.len() == 1 {
+            // 检查是否是纯文本
+            if let ChatCompletionRequestUserMessageContentPart::Text(text_part) = &self.parts[0] {
+                return ChatCompletionRequestUserMessage {
+                    content: ChatCompletionRequestUserMessageContent::Text(text_part.text.clone()),
+                    ..Default::default()
+                };
+            }
+        }
+
+        // 多部分或单图片，使用 Array
+        ChatCompletionRequestUserMessage {
+            content: ChatCompletionRequestUserMessageContent::Array(self.parts),
+            ..Default::default()
+        }
+    }
+}
+
+/// 聊天消息构建器
+///
+/// 简化 Vec<ChatCompletionRequestMessage> 的构建
+///
+/// # 示例
+/// ```
+/// use llama_cpp_core::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
+/// use async_openai::types::chat::CreateChatCompletionRequestArgs;
+///
+/// let messages = ChatMessagesBuilder::new()
+///     .system("You are a helpful assistant.")
+///     .user(UserMessageBuilder::new().text("Hello"))
+///     .assistant("Hi there!")
+///     .user(UserMessageBuilder::new()
+///         .text("描述这张图片")
+///         .image_url("https://example.com/image.jpg"))
+///     .build();
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct ChatMessagesBuilder {
+    messages: Vec<ChatCompletionRequestMessage>,
+}
+
+impl ChatMessagesBuilder {
+    /// 创建新的消息构建器
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+        }
+    }
+
+    /// 添加系统消息
+    pub fn system(mut self, message: impl Into<String>) -> Self {
+        self.messages
+            .push(ChatCompletionRequestSystemMessage::from(message.into()).into());
+        self
+    }
+
+    /// 添加用户消息（使用 UserMessageBuilder）
+    pub fn user(mut self, builder: UserMessageBuilder) -> Self {
+        self.messages.push(builder.build().into());
+        self
+    }
+
     /// 添加助手消息
     pub fn assistant(mut self, message: impl Into<String>) -> Self {
         self.messages
@@ -388,31 +440,15 @@ impl ChatMessagesBuilder {
         self
     }
 
-    /// 将当前用户部分内容刷新到消息列表
-    fn flush_user_parts(&mut self) {
-        if !self.current_user_parts.is_empty() {
-            self.messages.push(
-                ChatCompletionRequestUserMessage {
-                    content: ChatCompletionRequestUserMessageContent::Array(
-                        self.current_user_parts.clone(),
-                    ),
-                    ..Default::default()
-                }
-                .into(),
-            );
-        }
-    }
-
     /// 构建消息列表
-    pub fn build(mut self) -> Vec<ChatCompletionRequestMessage> {
-        self.flush_user_parts();
+    pub fn build(self) -> Vec<ChatCompletionRequestMessage> {
         self.messages
     }
 }
 
-impl Default for ChatMessagesBuilder {
-    fn default() -> Self {
-        Self::new()
+impl From<UserMessageBuilder> for ChatCompletionRequestUserMessage {
+    fn from(builder: UserMessageBuilder) -> Self {
+        builder.build()
     }
 }
 
@@ -516,41 +552,79 @@ mod tests {
     }
 
     #[test]
+    fn test_user_message_builder() {
+        // 纯文本 - 应该返回 Text 类型
+        let user_msg = UserMessageBuilder::new().text("Hello").build();
+        match &user_msg.content {
+            ChatCompletionRequestUserMessageContent::Text(text) => {
+                assert_eq!(text, "Hello");
+            }
+            _ => panic!("Expected Text content for single text message"),
+        }
+
+        // 多模态 - 应该返回 Array 类型
+        let user_msg = UserMessageBuilder::new()
+            .text("描述这张图片")
+            .image_url("https://example.com/image.jpg")
+            .build();
+        match &user_msg.content {
+            ChatCompletionRequestUserMessageContent::Array(parts) => {
+                assert_eq!(parts.len(), 2);
+            }
+            _ => panic!("Expected Array content for multimodal message"),
+        }
+
+        // 单图片 - 应该返回 Array 类型（因为包含图片）
+        let user_msg = UserMessageBuilder::new()
+            .image_url("https://example.com/image.jpg")
+            .build();
+        match &user_msg.content {
+            ChatCompletionRequestUserMessageContent::Array(parts) => {
+                assert_eq!(parts.len(), 1);
+            }
+            _ => panic!("Expected Array content for image-only message"),
+        }
+    }
+
+    #[test]
     fn test_chat_messages_builder() {
-        // 测试纯文本
-        let messages = ChatMessagesBuilder::new()
+        // 与原始 API 等价性测试
+        let builder_messages = ChatMessagesBuilder::new()
             .system("You are a helpful assistant.")
-            .user_text("Hello")
+            .user(UserMessageBuilder::new().text("Who won the world series in 2020?"))
+            .assistant("The Los Angeles Dodgers won the World Series in 2020.")
+            .user(
+                UserMessageBuilder::new()
+                    .text("Where was it played?")
+                    .image_url("https://example.com/image.png"),
+            )
             .build();
 
-        assert_eq!(messages.len(), 2);
+        // 期望的消息数量: system + user1 + assistant + user2 = 4
+        assert_eq!(builder_messages.len(), 4);
 
-        // 测试多模态
-        let messages = ChatMessagesBuilder::new()
-            .system("You are a helpful assistant.")
-            .user_text("描述这张图片")
-            .image_url("https://example.com/image.jpg")
-            .build();
+        // 验证第一条用户消息是纯文本
+        if let ChatCompletionRequestMessage::User(user_msg) = &builder_messages[1] {
+            match &user_msg.content {
+                ChatCompletionRequestUserMessageContent::Text(text) => {
+                    assert_eq!(text, "Who won the world series in 2020?");
+                }
+                _ => panic!("First user message should be Text type"),
+            }
+        } else {
+            panic!("Expected User message at index 1");
+        }
 
-        assert_eq!(messages.len(), 2);
-
-        // 测试 Base64 图片
-        let messages = ChatMessagesBuilder::new()
-            .user_text("描述这张图片")
-            .image_base64("image/png", "iVBORw0KGgo=")
-            .build();
-
-        assert_eq!(messages.len(), 1);
-
-        // 测试多轮对话
-        let messages = ChatMessagesBuilder::new()
-            .system("You are a helpful assistant.")
-            .user_text("Hello")
-            .assistant("Hi there!")
-            .user_text("描述这张图片")
-            .image_url("https://example.com/image.jpg")
-            .build();
-
-        assert_eq!(messages.len(), 3);
+        // 验证最后一条用户消息是多模态 Array
+        if let ChatCompletionRequestMessage::User(user_msg) = &builder_messages[3] {
+            match &user_msg.content {
+                ChatCompletionRequestUserMessageContent::Array(parts) => {
+                    assert_eq!(parts.len(), 2); // 文本 + 图片
+                }
+                _ => panic!("Last user message should be Array type"),
+            }
+        } else {
+            panic!("Expected User message at index 3");
+        }
     }
 }

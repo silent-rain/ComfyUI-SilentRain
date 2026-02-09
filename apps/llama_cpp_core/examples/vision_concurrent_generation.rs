@@ -2,8 +2,10 @@
 
 use std::sync::Arc;
 
+use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use llama_cpp_core::{
-    GenerateRequest, Pipeline, PipelineConfig, pipeline::response_extract_content,
+    Pipeline, PipelineConfig,
+    pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
     utils::log::init_logger,
 };
 
@@ -20,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pipeline_config = PipelineConfig::new_with_mmproj(model_path, mmproj_path)
         // .with_n_threads(8) // 线程配置 - 影响 mmproj 编码速度
         .with_n_batch(1024) // 批处理配置 - 影响图像解码
-        .with_cache_model(true) // 模型缓存配置
+        .with_image_max_resolution(768) // 图片最大分辨率配置
         .with_verbose(true);
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）
@@ -83,17 +85,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 第一个推理请求
-    let request1 = GenerateRequest::text(user_prompt).with_system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-    .with_image_max_resolution(768) // 图片最大分辨率配置
-    .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
+    let request1 = CreateChatCompletionRequestArgs::default()
+        .max_tokens(2048u32)
+        .model("Qwen3-VL-2B-Instruct")
+        .messages(ChatMessagesBuilder::new()
+            .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+            .user(
+                UserMessageBuilder::new()
+                    .text(user_prompt)
+                    .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
+            )
+        .build())
+        .build()?;
 
     // 第二个推理请求（可以并发执行）
-    let request2 = GenerateRequest::text(
-        "再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征",
-    )
-    .with_system("你是专注生成套图模特提示词专家。")
-    .with_image_max_resolution(768)
-    .with_media_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?;
+    let request2 = CreateChatCompletionRequestArgs::default()
+        .max_tokens(2048u32)
+        .model("Qwen3-VL-2B-Instruct")
+        .messages(ChatMessagesBuilder::new()
+            .system("你是专注生成套图模特提示词专家。")
+            .user(
+                UserMessageBuilder::new()
+                    .text("再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征")
+                    .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
+            )
+        .build())
+        .build()?;
 
     // 执行第一个推理
     let results1 = pipeline.generate(&request1).await?;

@@ -19,6 +19,7 @@ pub use request::{
     parse_request_input,
     // 构建器
     ChatMessagesBuilder,
+    UserMessageBuilder,
 };
 pub use response::{ChatStreamBuilder, response_extract_content};
 
