@@ -22,14 +22,11 @@ pub use cache::{CacheManager, global_cache};
 pub use context::ContexParams;
 pub use history::HistoryMessage;
 pub use model::Model;
-pub use pipeline::{
-    Input, InputItem, MessageContent, Pipeline, PipelineConfig, Request, RequestBuilder, Response,
-    ResponseItem, StreamEvent, Tool, ToolChoice,
-};
+pub use pipeline::{ChatStreamBuilder, Pipeline, PipelineConfig};
 pub use sampler::Sampler;
 
-// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
+// Re-export internal types
 pub use types::{
-    BackgroundHandle, Client, Container, Effort, ImageGenerateRequest, ImageGenerateResponse,
-    SummarySetting, VectorStore,
+    CreateChatCompletionRequest as Request, CreateChatCompletionResponse as Response, MediaData,
+    MediaType, MessageRole, PoolingTypeMode,
 };

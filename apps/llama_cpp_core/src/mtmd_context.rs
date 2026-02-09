@@ -9,6 +9,7 @@
 
 use std::{io::Write, sync::Arc, time::Duration};
 
+use async_openai::types::chat::CreateChatCompletionStreamResponse;
 use llama_cpp_2::{
     ggml_time_us,
     llama_batch::LlamaBatch,
@@ -17,13 +18,12 @@ use llama_cpp_2::{
     sampling::LlamaSampler,
 };
 use log::{error, info};
-use open_ai_rust_responses_by_sshift::StreamEvent;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 use crate::{
     context::{ContexParams, ContextWrapper},
     error::Error,
-    pipeline::StreamResponseBuilder,
+    pipeline::ChatStreamBuilder,
 };
 
 /// State of the MTMD application.
@@ -104,11 +104,14 @@ impl MtmdContextWrapper {
         Ok(())
     }
 
-    /// 流式生成响应，通过 channel 返回 OpenAI Responses API 格式的 StreamEvent
+    /// 流式生成响应，返回 async_openai 标准流式结构
+    ///
+    /// 返回 CreateChatCompletionStreamResponse 的流，与 OpenAI Chat Completions API 兼容
     pub fn generate_response(
         &mut self,
         sampler: &mut LlamaSampler,
-    ) -> Result<UnboundedReceiver<StreamEvent>, Error> {
+        model_id: impl Into<String>,
+    ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let max_tokens = self.contex_params.max_predict();
@@ -116,19 +119,14 @@ impl MtmdContextWrapper {
         let t_main_start = ggml_time_us();
 
         // 记录 prompt tokens（已经处理的输入 token 数）
-        let _prompt_tokens = self.batch.n_tokens() as u32;
+        let prompt_tokens = self.batch.n_tokens() as u32;
         let mut n_past = self.n_past;
         let mut n_cur = self.batch.n_tokens();
-        let mut tokens_generated: u32 = 0;
 
-        let builder = StreamResponseBuilder::new();
+        // 创建流式响应构建器
+        let mut builder = ChatStreamBuilder::new(model_id).with_prompt_tokens(prompt_tokens);
 
-        // 首先发送 ResponseCreated 事件
-        tx.send(builder.build_created_event()).map_err(|e| {
-            error!("Failed to send ResponseCreated event: {}", e);
-            Error::Stream(e.to_string())
-        })?;
-
+        // 循环生成 token，直到达到最大长度 max_tokens
         while n_cur < max_tokens {
             // 采样下一个 token
             let token = sampler.sample(&self.base_context.context, -1);
@@ -136,29 +134,27 @@ impl MtmdContextWrapper {
 
             // 检查是否为结束标记
             if self.llama_model.is_eog_token(token) {
-                {
-                    // 记录结束时间并计算持续时间
-                    let t_main_end = ggml_time_us();
-                    let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
-                    info!(
-                        "Generated {} tokens in {:.2}s ({:.2} t/s)",
-                        tokens_generated,
-                        duration.as_secs_f32(),
-                        tokens_generated as f32 / duration.as_secs_f32().max(0.001)
-                    );
+                // 记录结束时间并计算持续时间
+                let t_main_end = ggml_time_us();
+                let duration = Duration::from_micros((t_main_end - t_main_start) as u64);
+                let tokens_generated = builder.tokens_generated();
+                info!(
+                    "Generated {} tokens in {:.2}s ({:.2} t/s)",
+                    tokens_generated,
+                    duration.as_secs_f32(),
+                    tokens_generated as f32 / duration.as_secs_f32().max(0.001)
+                );
+                info!("{}", self.base_context.timings());
 
-                    info!("{}", self.base_context.timings());
+                // 发送停止标记的 chunk
+                if let Err(e) = tx.send(builder.build_stop_chunk()) {
+                    error!("Failed to send stop chunk: {}", e);
+                    break;
                 }
-                // 发送文本停止事件（符合 OpenAI Responses API 标准）
-                tx.send(builder.build_text_stop_event()).map_err(|e| {
-                    error!("Failed to send text stop event: {}", e);
-                    Error::Stream(e.to_string())
-                })?;
-                // 发送完成事件
-                tx.send(builder.build_done_event()).map_err(|e| {
-                    error!("Failed to send done event: {}", e);
-                    Error::Stream(e.to_string())
-                })?;
+                // 发送包含 usage 的最终 chunk
+                if let Err(e) = tx.send(builder.build_final_chunk_with_usage()) {
+                    error!("Failed to send final usage chunk: {}", e);
+                }
                 break;
             }
 
@@ -179,9 +175,10 @@ impl MtmdContextWrapper {
                 let _ = std::io::stdout().flush();
             }
 
-            // 发送文本增量事件
-            if let Err(e) = tx.send(builder.build_content_event(piece)) {
-                error!("Failed to send event: {}", e);
+            // 使用构建器创建并发送流式响应 chunk
+            let chunk = builder.build_content_chunk(piece);
+            if let Err(e) = tx.send(chunk) {
+                error!("Failed to send chunk: {}", e);
                 break;
             }
 
@@ -200,19 +197,18 @@ impl MtmdContextWrapper {
 
             n_past += 1;
             n_cur += 1;
-            tokens_generated += 1;
 
             // 检查是否达到最大 token 数
             if n_cur >= max_tokens {
-                // 发送文本停止事件（符合 OpenAI Responses API 标准）
-                tx.send(builder.build_text_stop_event()).map_err(|e| {
-                    error!("Failed to send text stop event: {}", e);
-                    Error::Stream(e.to_string())
-                })?;
-                tx.send(builder.build_done_event()).map_err(|e| {
-                    error!("Failed to send done event: {}", e);
-                    Error::Stream(e.to_string())
-                })?;
+                // 发送长度限制停止 chunk
+                if let Err(e) = tx.send(builder.build_length_chunk()) {
+                    error!("Failed to send length chunk: {}", e);
+                    break;
+                }
+                // 发送包含 usage 的最终 chunk
+                if let Err(e) = tx.send(builder.build_final_chunk_with_usage()) {
+                    error!("Failed to send final usage chunk: {}", e);
+                }
                 break;
             }
         }
@@ -341,17 +337,18 @@ mod tests {
         mtmd_ctx.eval_messages(msgs)?;
 
         // 生成响应
-        let mut rx = mtmd_ctx.generate_response(&mut sampler)?;
+        let mut rx = mtmd_ctx.generate_response(&mut sampler, "test-model")?;
 
         // 接收响应
         let mut full_text = String::new();
-        while let Some(event) = rx.recv().await {
-            match event {
-                StreamEvent::TextDelta { content, index: _ } => {
-                    full_text.push_str(&content);
+        while let Some(chunk) = rx.recv().await {
+            if let Some(choice) = chunk.choices.first() {
+                if let Some(content) = &choice.delta.content {
+                    full_text.push_str(content);
                 }
-                StreamEvent::Done => break,
-                _ => {}
+                if choice.finish_reason.is_some() {
+                    break;
+                }
             }
         }
 

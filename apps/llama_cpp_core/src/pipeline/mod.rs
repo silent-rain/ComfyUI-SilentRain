@@ -8,20 +8,21 @@ mod response;
 pub use pipeline_config::PipelineConfig;
 pub use pipeline_impl::Pipeline;
 pub use request::{
-    Input,
-    InputItem,
-    MessageContent,
-    Model,
-    // 标准 OpenAI Responses API 类型
-    Request,
-    RequestBuilder,
-    Response,
-    ResponseItem,
-    StreamEvent,
-    Tool,
-    ToolChoice,
+    // async-openai types
+    ChatCompletionResponseMessage,
+    CreateChatCompletionResponse,
+    FunctionCall,
+    FunctionObject,
+    ImageSource,
+    ParsedInput,
+    is_multimodal_request,
+    parse_request_input,
 };
-pub use response::{
-    StreamResponseBuilder, create_model, create_text_input, create_vision_input,
-    response_extract_content,
+pub use response::{ChatStreamBuilder, response_extract_content};
+
+// 重新导出 async-openai 的核心类型
+pub use crate::types::{
+    ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImage,
+    ChatCompletionRequestMessageContentPartText, ChatCompletionRequestUserMessage,
+    ChatCompletionRequestUserMessageContent, CreateChatCompletionRequest as Request,
 };

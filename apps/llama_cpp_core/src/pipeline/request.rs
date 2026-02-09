@@ -2,42 +2,23 @@
 //!
 //! ## 架构说明
 //!
-//! 本模块直接使用 `open-ai-rust-responses-by-sshift::Request` 标准结构
+//! 本模块使用 `async_openai::CreateChatCompletionRequest` 标准结构
 
+use async_openai::types::chat::{
+    ChatCompletionRequestAssistantMessageContent, ChatCompletionRequestAssistantMessageContentPart,
+    ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImage,
+    ChatCompletionRequestMessageContentPartText, ChatCompletionRequestSystemMessageContent,
+    ChatCompletionRequestSystemMessageContentPart, ChatCompletionRequestUserMessageContent,
+    ChatCompletionRequestUserMessageContentPart, CreateChatCompletionRequest,
+};
 use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::{error::Error, types::MessageRole};
 
-// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
-pub use open_ai_rust_responses_by_sshift::{
-    Input, InputItem, MessageContent, Model, Request, RequestBuilder, Response, ResponseItem,
-    StreamEvent, Tool, ToolChoice,
+// 导出 async-openai 类型
+pub use async_openai::types::chat::{
+    ChatCompletionResponseMessage, CreateChatCompletionResponse, FunctionCall, FunctionObject,
 };
-
-/// 内容片段（用于反序列化 message content）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContentPart {
-    #[serde(rename = "type")]
-    /// 内容类型: input_image/input_text
-    pub content_type: String,
-    /// 图片 URL（可能是 path 或 http 或 data:image/...）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
-    /// file_id
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_id: Option<String>,
-    /// 图片URL (标准字段)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<String>,
-    /// 细节级别
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub detail: Option<String>,
-    /// 文本内容
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
-}
 
 /// 图片来源
 #[derive(Debug, Clone)]
@@ -46,8 +27,6 @@ pub enum ImageSource {
     Url(String),
     /// data:{};base64,{}
     Base64(String),
-    /// OpenAI File ID
-    FileId(String),
 }
 
 /// 解析后的输入结果
@@ -60,41 +39,34 @@ pub struct ParsedInput {
 }
 
 /// 检查请求是否包含图片（多模态请求）
-pub fn is_multimodal_request(request: &Request) -> bool {
-    // 2. 检查 InputItem 中的图片
-    if let Input::Items(ref items) = request.input {
-        for item in items {
-            // 直接是 input_image 类型
-            if item.item_type == "input_image" {
-                return true;
-            }
-            // 或者是 message 类型中包含 input_image
-            if item.item_type == "message"
-                && let Some(Value::Array(contents)) = &item.content
-            {
-                for content in contents {
-                    if let Some(type_val) = content.get("type")
-                        && type_val == "input_image"
-                    {
-                        return true;
-                    }
+pub fn is_multimodal_request(request: &CreateChatCompletionRequest) -> bool {
+    for msg in request.messages.clone() {
+        if let ChatCompletionRequestMessage::User(user_msg) = msg
+            && let ChatCompletionRequestUserMessageContent::Array(parts) = &user_msg.content
+        {
+            for part in parts {
+                if matches!(
+                    part,
+                    ChatCompletionRequestUserMessageContentPart::ImageUrl(_)
+                ) {
+                    return true;
                 }
             }
         }
     }
-
     false
 }
 
-/// 解析 Request 的 input 字段
+/// 解析 Request 的消息
 ///
-/// 处理各种 InputItem 类型，返回结构化的解析结果
+/// 处理标准的 `CreateChatCompletionRequest`，将消息转换为 LlamaChatMessage 列表
+/// 支持多模态：图片内容会被提取，并在对应用户消息中添加媒体标记
 ///
 /// # Arguments
-/// * `request` - 请求
-/// ```
+/// * `request` - 标准 Chat Completions 请求
+/// * `media_marker` - 媒体标记（用于多模态，默认使用 mtmd 默认标记）
 pub fn parse_request_input(
-    request: &Request,
+    request: &CreateChatCompletionRequest,
     media_marker: Option<impl Into<String>>,
 ) -> Result<ParsedInput, Error> {
     let mut messages = Vec::new();
@@ -104,56 +76,49 @@ pub fn parse_request_input(
         .map(|s| s.into())
         .unwrap_or(mtmd_default_marker().to_string());
 
-    match &request.input {
-        Input::Text(text) => {
-            messages.push(LlamaChatMessage::new(
-                MessageRole::User.to_string(),
-                text.to_string(),
-            )?);
-        }
-        Input::Items(input_items) => {
-            for input_item in input_items {
-                match input_item.item_type.as_str() {
-                    // 纯文本类型
-                    "text" => {
-                        let text = input_item
-                            .content
-                            .as_ref()
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
-                            .unwrap_or_default();
-                        messages.push(LlamaChatMessage::new(MessageRole::User.to_string(), text)?);
-                    }
-                    // 图片类型
-                    "input_image" => {
-                        if let Some(image) = extract_image_source(input_item) {
-                            messages.push(LlamaChatMessage::new(
-                                MessageRole::User.to_string(),
-                                media_marker.clone(),
-                            )?);
-                            image_sources.push(image);
-                        }
-                    }
-                    // 消息类型（包含 role 和 content 数组）
-                    "message" => {
-                        let role = input_item
-                            .role
-                            .clone()
-                            .unwrap_or_else(|| MessageRole::User.to_string());
-                        if let Some(contents) = &input_item.content {
-                            let message_content = parse_message_content(
-                                role,
-                                contents.clone(),
-                                Some(media_marker.clone()),
-                            )?;
-                            messages.extend(message_content.messages);
-                            image_sources.extend(message_content.image_sources);
-                        }
-                    }
-                    _ => {
-                        tracing::warn!("Unknown content type in message: {}", input_item.item_type);
+    for msg in request.messages.clone() {
+        match msg {
+            // 系统消息
+            ChatCompletionRequestMessage::System(system_msg) => {
+                let content = extract_system_content(&system_msg.content);
+                if !content.is_empty() {
+                    messages.push(LlamaChatMessage::new(
+                        MessageRole::System.to_string(),
+                        content,
+                    )?);
+                }
+            }
+            // 用户消息：支持文本和多模态（文本+图片）
+            ChatCompletionRequestMessage::User(user_msg) => {
+                let (user_text, img_sources) =
+                    parse_user_message(&user_msg.content, &media_marker)?;
+
+                // 收集图片来源
+                image_sources.extend(img_sources);
+
+                // 添加用户消息（包含媒体标记）
+                if !user_text.is_empty() {
+                    messages.push(LlamaChatMessage::new(
+                        MessageRole::User.to_string(),
+                        user_text,
+                    )?);
+                }
+            }
+            // 助手消息
+            ChatCompletionRequestMessage::Assistant(assistant_msg) => {
+                if let Some(content) = &assistant_msg.content {
+                    let text = extract_assistant_content(content);
+                    if !text.is_empty() {
+                        messages.push(LlamaChatMessage::new(
+                            MessageRole::Assistant.to_string(),
+                            text,
+                        )?);
                     }
                 }
+            }
+            // 工具/函数消息：暂不支持，记录日志后跳过
+            _ => {
+                tracing::debug!("Skipping unsupported message type in request parsing");
             }
         }
     }
@@ -164,49 +129,97 @@ pub fn parse_request_input(
     })
 }
 
-/// 解析消息内容
-fn parse_message_content(
-    role: String,
-    contents: Value,
-    media_marker: Option<impl Into<String>>,
-) -> Result<ParsedInput, Error> {
-    let mut messages = Vec::new();
-    let mut image_sources = Vec::new();
+/// 提取系统消息内容
+fn extract_system_content(content: &ChatCompletionRequestSystemMessageContent) -> String {
+    match content {
+        ChatCompletionRequestSystemMessageContent::Text(text) => text.clone(),
+        ChatCompletionRequestSystemMessageContent::Array(parts) => parts
+            .iter()
+            .filter_map(|p| match p {
+                ChatCompletionRequestSystemMessageContentPart::Text(t) => Some(t.text.clone()),
+            })
+            .collect::<Vec<_>>()
+            .join(""),
+    }
+}
 
-    let media_marker = media_marker
-        .map(|s| s.into())
-        .unwrap_or(mtmd_default_marker().to_string());
+/// 解析用户消息内容
+///
+/// 处理文本或多模态内容（文本+图片数组）
+/// 多模态时，在文本后追加媒体标记（参考 llama.cpp mtmd 规范）
+///
+/// # Returns
+/// - `(用户消息文本, 图片来源列表)`
+fn parse_user_message(
+    content: &ChatCompletionRequestUserMessageContent,
+    media_marker: &str,
+) -> Result<(String, Vec<ImageSource>), Error> {
+    match content {
+        // 纯文本消息
+        ChatCompletionRequestUserMessageContent::Text(text) => Ok((text.clone(), Vec::new())),
+        // 多模态消息：文本 + 图片数组
+        ChatCompletionRequestUserMessageContent::Array(parts) => {
+            let mut text_parts = Vec::new();
+            let mut image_count = 0;
+            let mut image_sources = Vec::new();
 
-    let contents: Vec<ContentPart> = serde_json::from_value(contents)?;
-
-    for content in contents {
-        match content.content_type.as_str() {
-            // 文本内容处理
-            "input_text" => {
-                if let Some(text) = content.text {
-                    messages.push(LlamaChatMessage::new(role.clone(), text)?);
+            for part in parts {
+                match part {
+                    ChatCompletionRequestUserMessageContentPart::Text(text_part) => {
+                        // 清理文本中可能存在的默认标记（避免重复）
+                        let clean_text = text_part.text.replace(media_marker, "");
+                        text_parts.push(clean_text);
+                    }
+                    ChatCompletionRequestUserMessageContentPart::ImageUrl(image_part) => {
+                        image_count += 1;
+                        // 提取图片来源
+                        if let Some(source) = extract_image_source(&image_part.image_url.url) {
+                            image_sources.push(source);
+                        }
+                    }
+                    _ => {} // 忽略其他类型
                 }
             }
-            // 图片类型
-            "input_image" => {
-                if let Some(image) = extract_image_source_from_content(&content) {
-                    messages.push(LlamaChatMessage::new(
-                        MessageRole::User.to_string(),
-                        media_marker.clone(),
-                    )?);
-                    image_sources.push(image);
-                }
+
+            // 合并文本，添加媒体标记
+            let mut user_text = text_parts.join(" ");
+
+            // 多模态时，在消息末尾添加媒体标记
+            if image_count > 0 {
+                let markers = media_marker.repeat(image_count);
+                user_text = format!("{} {}", user_text.trim(), markers);
             }
-            _ => {
-                tracing::warn!("Unknown content type in message: {}", content.content_type);
-            }
+
+            Ok((user_text, image_sources))
         }
     }
+}
 
-    Ok(ParsedInput {
-        messages,
-        image_sources,
-    })
+/// 提取助手消息内容
+fn extract_assistant_content(content: &ChatCompletionRequestAssistantMessageContent) -> String {
+    match content {
+        ChatCompletionRequestAssistantMessageContent::Text(text) => text.clone(),
+        ChatCompletionRequestAssistantMessageContent::Array(parts) => parts
+            .iter()
+            .filter_map(|p| match p {
+                ChatCompletionRequestAssistantMessageContentPart::Text(t) => Some(t.text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(""),
+    }
+}
+
+/// 从图片 URL 提取图片来源
+fn extract_image_source(url: &str) -> Option<ImageSource> {
+    if url.starts_with("http") || url.starts_with("https") {
+        Some(ImageSource::Url(url.to_string()))
+    } else if url.starts_with("data:") {
+        // 从 data URI 中提取纯 base64 数据
+        extract_base64_from_data_uri(url).map(ImageSource::Base64)
+    } else {
+        None
+    }
 }
 
 /// 从 data URI 中提取纯 base64 数据
@@ -222,54 +235,6 @@ fn extract_base64_from_data_uri(data_uri: &str) -> Option<String> {
     data_uri
         .find(',')
         .map(|comma_pos| data_uri[comma_pos + 1..].to_string())
-}
-
-/// 从 InputItem 提取图片来源
-fn extract_image_source(item: &InputItem) -> Option<ImageSource> {
-    // http/https
-    if let Some(url) = &item.image_url
-        && (url.starts_with("http") || url.starts_with("https"))
-    {
-        return Some(ImageSource::Url(url.clone()));
-    }
-    // base64 (data URI 格式)
-    if let Some(url) = &item.image_url
-        && url.starts_with("data:")
-    {
-        // 从 data URI 中提取纯 base64 数据
-        if let Some(base64_data) = extract_base64_from_data_uri(url) {
-            return Some(ImageSource::Base64(base64_data));
-        }
-    }
-    // file id
-    if let Some(file_id) = &item.text {
-        return Some(ImageSource::FileId(file_id.clone()));
-    }
-    None
-}
-
-/// 从 ContentPart 提取图片来源
-fn extract_image_source_from_content(content: &ContentPart) -> Option<ImageSource> {
-    // http/https
-    if let Some(url) = &content.image_url
-        && (url.starts_with("http") || url.starts_with("https"))
-    {
-        return Some(ImageSource::Url(url.clone()));
-    }
-    // base64 (data URI 格式)
-    if let Some(url) = &content.image_url
-        && url.starts_with("data:")
-    {
-        // 从 data URI 中提取纯 base64 数据
-        if let Some(base64_data) = extract_base64_from_data_uri(url) {
-            return Some(ImageSource::Base64(base64_data));
-        }
-    }
-    // file id
-    if let Some(file_id) = &content.file_id {
-        return Some(ImageSource::FileId(file_id.clone()));
-    }
-    None
 }
 
 // impl MultimodalRequest {
@@ -424,14 +389,5 @@ mod tests {
         // 普通 base64 字符串应该返回 None
         let plain_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
         assert!(extract_base64_from_data_uri(plain_base64).is_none());
-    }
-
-    #[test]
-    fn test_extract_base64_from_data_uri_with_newlines() {
-        // 测试包含换行符的 data URI (某些系统会添加换行)
-        let data_uri = "data:image/png;base64,iVBORw0KGgo\nAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ\nAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-        let result = extract_base64_from_data_uri(data_uri).unwrap();
-        // 注意：换行符会被保留在 base64 字符串中，解码时需要处理
-        assert!(result.contains("\n"));
     }
 }

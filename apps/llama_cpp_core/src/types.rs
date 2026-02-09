@@ -5,14 +5,13 @@
 use llama_cpp_2::context::params::LlamaPoolingType;
 use serde::{Deserialize, Serialize};
 
-// Re-export open-ai-rust-responses-by-sshift types for OpenAI Responses API compatibility
-pub use open_ai_rust_responses_by_sshift::types::{
-    BackgroundHandle, Container, Effort, Include, ReasoningParams, SummarySetting,
-    Input, TextConfig, TruncationSetting,
-};
-pub use open_ai_rust_responses_by_sshift::{
-    Client, ImageGenerateRequest, ImageGenerateResponse, InputItem, Model, Request, RequestBuilder,
-    Response, StreamEvent, Tool, ToolChoice, VectorStore,
+// Re-export async-openai types for OpenAI API compatibility
+pub use async_openai::types::chat::{
+    ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImage,
+    ChatCompletionRequestMessageContentPartText, ChatCompletionRequestUserMessage,
+    ChatCompletionRequestUserMessageContent, ChatCompletionRequestUserMessageContentPart,
+    ChatCompletionResponseMessage, CreateChatCompletionRequest, CreateChatCompletionResponse,
+    FunctionCall, FunctionObject, Role,
 };
 
 /// 对话消息角色枚举
@@ -42,6 +41,28 @@ impl std::fmt::Display for MessageRole {
 impl MessageRole {
     pub fn custom(role: &str) -> Self {
         Self::Custom(role.to_string())
+    }
+}
+
+impl From<MessageRole> for String {
+    fn from(role: MessageRole) -> Self {
+        match role {
+            MessageRole::System => "system".to_string(),
+            MessageRole::User => "user".to_string(),
+            MessageRole::Assistant => "assistant".to_string(),
+            MessageRole::Custom(s) => s,
+        }
+    }
+}
+
+impl From<&MessageRole> for String {
+    fn from(role: &MessageRole) -> Self {
+        match role {
+            MessageRole::System => "system".to_string(),
+            MessageRole::User => "user".to_string(),
+            MessageRole::Assistant => "assistant".to_string(),
+            MessageRole::Custom(s) => s.clone(),
+        }
     }
 }
 
@@ -141,3 +162,9 @@ impl MediaData {
         }
     }
 }
+
+/// 请求结构别名 - 使用 async-openai 标准请求
+pub type Request = CreateChatCompletionRequest;
+
+/// 响应结构别名 - 使用 async-openai 标准响应
+pub type Response = CreateChatCompletionResponse;

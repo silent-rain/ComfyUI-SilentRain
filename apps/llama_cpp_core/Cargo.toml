@@ -37,7 +37,10 @@ llama-cpp-2 = { workspace = true, features = [
     "sampler",
     "mtmd",
 ] }
-open-ai-rust-responses-by-sshift = { workspace = true }
+async-openai = { workspace = true, features = [
+    "chat-completion",
+    "chat-completion-types",
+] }
 chrono = { workspace = true, features = ["serde"] }
 
 
