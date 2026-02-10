@@ -3,11 +3,15 @@
 use std::sync::Arc;
 
 use async_openai::types::chat::CreateChatCompletionRequestArgs;
+use futures::future::join_all;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
+    error::Error,
     pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
     utils::log::init_logger,
 };
+use tokio::sync::Semaphore;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,118 +31,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建 Pipeline（注意：是 Arc，支持并发共享）
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+    let semaphore = Arc::new(Semaphore::new(2)); // 限制最大并发数为 2
 
-    let user_prompt = {
-        r#"
-任务：根据提供的单张人物图片，生成9个结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致
+    let user_prompts = vec![
+        "修改表情, 例如：魅惑地笑/捂嘴偷笑/平静地笑容等, 要求9个图像都有不同的表情",
+        "修改姿势, 例如：双手叉腰，比心的手势等, 要求9个图像都有不同的动作，动作变化幅度不应很小",
+        "修改拍摄景别, 例如：特写，中景等, 要求9个图像根据不同动作有合适的拍摄景别",
+        "修改拍摄角度, 例如：微俯拍30度，正面拍摄等, 要求9个图像根据不同动作有合适的拍摄角度",
+    ];
 
-### 提示词生成规则
-获取图片内容，按照整体规则生成合适的提示词；
+    // 生成所有并发
+    let futures = user_prompts.into_iter().enumerate().map(|(i, user_prompt)| {
+        let semaphore = Arc::clone(&semaphore);
+        let pipeline_clone = pipeline.clone();
 
-按以下模板生成9条不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  
+        {
+            async move {
+                let _permit = semaphore.acquire().await.map_err(|e| {
+                    error!("获取Semaphore许可失败, err: {:#?}", e);
+                    Error::AcquireError(e.to_string())
+                })?;
 
-【修改指令】
-
-##修改表情：
-
-示例：
-
-如：魅惑地笑/捂嘴偷笑/平静地笑容等
-要求9个图像都有不同的表情
-
-##修改姿势：
-
-示例：
-
-如：双手叉腰，比心的手势等
-要求9个图像都有不同的动作，动作变化幅度不应很小
-
-
-##修改拍摄景别：
-
-示例
-
-如：特写，中景等
-要求9个图像根据不同动作有合适的拍摄景别
-
-##修改拍摄角度
-
-示例
-
-如：微俯拍30度，正面拍摄等
-要求9个图像根据不同动作有合适的拍摄角度
+                 let request1 = CreateChatCompletionRequestArgs::default()
+                    .max_tokens(2048u32)
+                    .model("Qwen3-VL-2B-Instruct")
+                    .messages(ChatMessagesBuilder::new()
+                        .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+                        .users(
+                            UserMessageBuilder::new()
+                                .text(user_prompt)
+                                .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
+                        )
+                    .build())
+                    .build()?;
 
 
-写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  
+                let output = pipeline_clone.generate(&request1).await?;
+                let result = response_extract_content(&output);
 
+                info!("iamge {i} prcessing completed");
+                Ok::<_, Error>(result)
+            }
+        }
+    });
 
-### 输出要求  
-仅返回10条提示词，每条独立成段，用换行分隔，无其他内容。  
-输出格式：【prompt_1】,【prompt_2】,【prompt_3】...
+    // 并发执行所有 Future
+    let results: Vec<String> = join_all(futures)
+        .await
+        .into_iter()
+        .collect::<Result<Vec<String>, _>>()?
+        .into_iter()
+        .collect();
 
-
-### 示例如下：
-
-【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K
-
-...（共9条）"#
-    };
-
-    // 第一个推理请求
-    let request1 = CreateChatCompletionRequestArgs::default()
-        .max_tokens(2048u32)
-        .model("Qwen3-VL-2B-Instruct")
-        .messages(ChatMessagesBuilder::new()
-            .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
-            .users(
-                UserMessageBuilder::new()
-                    .text(user_prompt)
-                    .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
-            )
-        .build())
-        .build()?;
-
-    // 第二个推理请求（可以并发执行）
-    let request2 = CreateChatCompletionRequestArgs::default()
-        .max_tokens(2048u32)
-        .model("Qwen3-VL-2B-Instruct")
-        .messages(ChatMessagesBuilder::new()
-            .system("你是专注生成套图模特提示词专家。")
-            .users(
-                UserMessageBuilder::new()
-                    .text("再生成9个提示词，保持写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征")
-                    .image_file("/home/one/Downloads/cy/ComfyUI_01918_.png")?,
-            )
-        .build())
-        .build()?;
-
-    // 执行第一个推理
-    let results1 = pipeline.generate(&request1).await?;
-    println!("Response 1: {}", response_extract_content(&results1));
-
-    println!("========================== 并发测试 ==========================");
-
-    // 并发执行多个请求
-    let pipeline_clone = Arc::clone(&pipeline);
-    let request_clone = request2.clone();
-    let task1 = tokio::spawn(async move { pipeline_clone.generate(&request_clone).await });
-
-    let pipeline_clone2 = Arc::clone(&pipeline);
-    let request_clone2 = request2.clone();
-    let task2 = tokio::spawn(async move { pipeline_clone2.generate(&request_clone2).await });
-
-    // 等待并发结果
-    let (result1, result2) = tokio::try_join!(task1, task2)?;
-
-    match result1 {
-        Ok(output) => println!("并发结果 1: {}", response_extract_content(&output)),
-        Err(e) => eprintln!("并发错误 1: {}", e),
-    }
-
-    match result2 {
-        Ok(output) => println!("并发结果 2: {}", response_extract_content(&output)),
-        Err(e) => eprintln!("并发错误 2: {}", e),
-    }
-
+    info!("Final results: {:#?}", results);
     Ok(())
 }
