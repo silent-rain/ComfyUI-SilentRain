@@ -2,8 +2,8 @@
 
 use async_openai::types::chat::{
     ChatChoice, ChatChoiceStream, ChatCompletionResponseMessage, ChatCompletionStreamResponseDelta,
-    CompletionUsage, CreateChatCompletionResponse, CreateChatCompletionStreamResponse, FinishReason,
-    Role,
+    CompletionUsage, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
+    FinishReason, Role,
 };
 
 /// 流式聊天响应构建器

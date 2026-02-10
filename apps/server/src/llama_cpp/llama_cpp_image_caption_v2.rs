@@ -15,11 +15,8 @@ use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, GenerateRequest, Pipeline, PipelineConfig,
-    model::ModelConfig,
-    sampler::SamplerConfig,
-    types::MediaData,
-    pipeline::response_extract_content,
+    ContexParams, GenerateRequest, Pipeline, PipelineConfig, model::ModelConfig,
+    pipeline::response_extract_content, sampler::SamplerConfig, types::MediaData,
 };
 
 use crate::{

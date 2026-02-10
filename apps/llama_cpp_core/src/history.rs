@@ -131,11 +131,7 @@ impl HistoryMessage {
         Ok(())
     }
 
-    pub fn add_custom(
-        &mut self,
-        role: MessageRole,
-        msg: impl Into<String>,
-    ) -> Result<(), Error> {
+    pub fn add_custom(&mut self, role: MessageRole, msg: impl Into<String>) -> Result<(), Error> {
         let entry = MessageEntry::new(role, msg);
         self.add_entry(entry);
         Ok(())

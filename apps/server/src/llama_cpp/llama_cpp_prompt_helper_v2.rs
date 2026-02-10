@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use llama_cpp_core::{
     ContexParams, GenerateRequest, Pipeline, PipelineConfig, global_cache, model::ModelConfig,
-    sampler::SamplerConfig, pipeline::response_extract_content,
+    pipeline::response_extract_content, sampler::SamplerConfig,
 };
 
 use crate::{

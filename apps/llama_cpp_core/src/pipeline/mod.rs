@@ -10,16 +10,16 @@ pub use pipeline_impl::Pipeline;
 pub use request::{
     // async-openai types
     ChatCompletionResponseMessage,
+    // 构建器
+    ChatMessagesBuilder,
     CreateChatCompletionResponse,
     FunctionCall,
     FunctionObject,
     ImageSource,
     ParsedInput,
+    UserMessageBuilder,
     is_multimodal_request,
     parse_request_input,
-    // 构建器
-    ChatMessagesBuilder,
-    UserMessageBuilder,
 };
 pub use response::{ChatStreamBuilder, response_extract_content};
 
