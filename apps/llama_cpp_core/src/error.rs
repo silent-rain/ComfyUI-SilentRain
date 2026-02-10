@@ -56,6 +56,8 @@ pub enum Error {
     MtmdTokenizeError(#[from] MtmdTokenizeError),
     #[error(transparent)]
     MtmdBitmapError(#[from] MtmdBitmapError),
+    #[error(transparent)]
+    OpenAIError(#[from] async_openai::error::OpenAIError),
 
     // #[error(transparent)]
     // NulError(#[from] std::ffi::NulError),
@@ -143,4 +145,8 @@ pub enum Error {
     UnsupportedFeature { feature: String },
     #[error("Failed to create tokio runtime: {0}")]
     RuntimeError(String),
+    #[error("Failed to obtain semaphore license, {0}")]
+    AcquireError(String),
+    #[error("task join error, {0}")]
+    TaskJoinError(String),
 }
