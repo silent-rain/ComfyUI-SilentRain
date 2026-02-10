@@ -2,7 +2,7 @@
 
 use llama_cpp_2::sampling::LlamaSampler;
 
-use rand::TryRngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -124,7 +124,7 @@ impl SamplerConfig {
     pub fn seed(&self) -> u32 {
         // 随机值
         if self.seed == 0 {
-            rand::rng().try_next_u32().unwrap_or(0)
+            rand::rng().next_u32()
         } else {
             self.seed
         }
