@@ -1,6 +1,5 @@
 //! llama.cpp Model Loader v2
 
-use llama_cpp_core::model::ModelConfig;
 use log::error;
 use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
@@ -88,7 +87,6 @@ impl LlamaCppModelv2 {
     #[pyo3(name = "INPUT_TYPES")]
     fn input_types(_cls: &Bound<'_, PyType>) -> PyResult<Py<PyDict>> {
         let model_list = Self::get_model_list();
-        let config = ModelConfig::default();
 
         InputSpec::new()
             // 模型路径
@@ -103,7 +101,7 @@ impl LlamaCppModelv2 {
             .with_required(
                 "cache_model",
                 InputType::bool()
-                    .default(config.cache_model)
+                    .default(false)
                     .tooltip("Cache model in memory for reuse"),
             )
             .build()

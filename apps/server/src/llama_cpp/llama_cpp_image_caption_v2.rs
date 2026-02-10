@@ -348,13 +348,6 @@ impl LlamaCppImageCaptionv2 {
             Error::InvalidParameter(format!("update model kwargs error: {e}"))
         })?;
 
-        let verbose: bool = kwargs
-            .get_item("verbose")
-            .ok()
-            .flatten()
-            .map(|v| v.extract().unwrap_or(false))
-            .unwrap_or(false);
-
         let concurrency_limit: u32 = kwargs
             .get_item("concurrency_limit")
             .ok()
@@ -369,7 +362,6 @@ impl LlamaCppImageCaptionv2 {
             model: model_config,
             context: context_config,
             sampling: sampler_config,
-            verbose,
         };
         let mut generate_request: GenerateRequest = depythonize(&kwargs)?;
 

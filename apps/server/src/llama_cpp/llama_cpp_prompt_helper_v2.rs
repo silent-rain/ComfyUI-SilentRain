@@ -7,14 +7,14 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
+    types::{PyDict, PyDictMethods, PyType},
 };
 use pythonize::depythonize;
 use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, GenerateRequest, Pipeline, PipelineConfig, global_cache, model::ModelConfig,
+    ContexParams, Pipeline, PipelineConfig, global_cache, model::ModelConfig,
     pipeline::response_extract_content, sampler::SamplerConfig,
 };
 
@@ -286,13 +286,6 @@ impl LlamaCppPromptHelperv2 {
             Error::InvalidParameter(format!("update model kwargs error: {e}"))
         })?;
 
-        let verbose: bool = kwargs
-            .get_item("verbose")
-            .ok()
-            .flatten()
-            .map(|v| v.extract().unwrap_or(false))
-            .unwrap_or(false);
-
         let model_config: ModelConfig = depythonize(&kwargs)?;
         let sampler_config: SamplerConfig = depythonize(&kwargs)?;
         let context_config: ContexParams = depythonize(&kwargs)?;
@@ -300,7 +293,6 @@ impl LlamaCppPromptHelperv2 {
             model: model_config,
             context: context_config,
             sampling: sampler_config,
-            verbose,
         };
         let generate_request: GenerateRequest = depythonize(&kwargs)?;
 
