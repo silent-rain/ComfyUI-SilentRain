@@ -18,7 +18,7 @@ use pyo3::{
     types::{PyAnyMethods, PyDict, PyType},
 };
 use pythonize::{depythonize, pythonize};
-use rand::TryRngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
@@ -640,7 +640,7 @@ impl LlamaCppOptions {
         // 随机值
         if self.seed == -1 {
             // 随机值
-            rand::rng().try_next_u32().unwrap_or(0)
+            rand::rng().next_u32()
         } else {
             self.seed as u32
         }
