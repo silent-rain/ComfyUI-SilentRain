@@ -376,7 +376,7 @@ impl Model {
         // 尝试从缓存获取
         if let Some(entry) = self
             .cache
-            .get_data::<SendableMtmdContext>(&self.cache_mmproj_key)?
+            .get_data::<SafeMtmdContext>(&self.cache_mmproj_key)?
         {
             info!("MtmdContext cache hit: {:?}", self.config.mmproj_path);
             return Ok(entry.0.clone());
@@ -384,7 +384,7 @@ impl Model {
 
         // 加载新模型
         let ctx = self.load_mtmd_mtmd_context(model)?;
-        let sendable_ctx = Arc::new(SendableMtmdContext(ctx.into()));
+        let sendable_ctx = Arc::new(SafeMtmdContext(ctx.into()));
 
         // 缓存参数
         let params = vec![
@@ -411,18 +411,25 @@ impl Model {
 ///
 /// 注意：MtmdContext 内部包含 NonNull 指针，但 llama.cpp 的 mtmd_context
 /// 实际上可以安全地在线程间移动（只要不在多个线程同时访问）
-pub struct SendableMtmdContext(Arc<MtmdContext>);
+pub struct SafeMtmdContext(Arc<MtmdContext>);
 
 // 不安全地实现 Send trait
 // 安全前提：MtmdContext 只能在单线程中使用，但可以在不同线程间传递
 // 只要确保不会同时从多个线程访问即可
-unsafe impl Send for SendableMtmdContext {}
-unsafe impl Sync for SendableMtmdContext {}
+unsafe impl Send for SafeMtmdContext {}
+unsafe impl Sync for SafeMtmdContext {}
+
 /// 智能指针解引用
-impl std::ops::Deref for SendableMtmdContext {
+impl std::ops::Deref for SafeMtmdContext {
     type Target = Arc<MtmdContext>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl std::ops::DerefMut for SafeMtmdContext {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

@@ -135,7 +135,7 @@ pub struct Sampler {}
 
 impl Sampler {
     /// load sampler
-    pub fn load_sampler(params: &SamplerConfig) -> Result<LlamaSampler, Error> {
+    pub fn load_sampler(params: &SamplerConfig) -> Result<SafeLlamaSampler, Error> {
         /* penalties 配置说明:
             减少重复性: penalties(64, 1.2, 0.0, 0.2)
             增加多样性: penalties(64, 1.1, 0.1, 0.0)
@@ -156,6 +156,31 @@ impl Sampler {
             // LlamaSampler::greedy(),   // 贪婪采样器，始终选择概率最高的 token, 应用于最后一个
             LlamaSampler::dist(params.seed()), // 随机种子，用于生成随机数, 应用于最后一个
         ]);
-        Ok(sampler)
+        Ok(SafeLlamaSampler(sampler))
+    }
+}
+
+/// 包装 LlamaSampler 使其支持 Send
+/// 实际上可以安全地在线程间移动（只要不在多个线程同时访问）
+pub struct SafeLlamaSampler(pub LlamaSampler);
+
+// 不安全地实现 Send trait
+// 安全前提：SafeLlamaSampler 只能在单线程中使用，但可以在不同线程间传递
+// 只要确保不会同时从多个线程访问即可
+unsafe impl Send for SafeLlamaSampler {}
+unsafe impl Sync for SafeLlamaSampler {}
+
+/// 智能指针解引用
+impl std::ops::Deref for SafeLlamaSampler {
+    type Target = LlamaSampler;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for SafeLlamaSampler {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

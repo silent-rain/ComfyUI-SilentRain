@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_openai::types::chat::CreateChatCompletionRequestArgs;
-use futures::future::{join_all, try_join_all};
+use futures::future::try_join_all;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
     error::Error,
