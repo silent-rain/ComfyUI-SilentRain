@@ -276,9 +276,8 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, Sampler,
-        sampler::SamplerConfig,
-        types::{MediaData, MessageRole},
+        Backend, HistoryMessage, MessageRole, Model, Sampler, sampler::SamplerConfig,
+        types::MediaData,
     };
 
     use super::*;
@@ -354,11 +353,11 @@ mod tests {
 
         // 将上下文信息添加到历史消息中
         {
-            history_message.add_system(system_prompt)?; // 仅添加系统提示
+            history_message.add_system(system_prompt); // 仅添加系统提示
 
             // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user(user_prompt)?;
-            history_message.add_assistant(full_text.clone())?;
+            history_message.add_user_text(user_prompt);
+            history_message.add_assistant_text(full_text.clone());
         }
 
         println!("{full_text:?}");

@@ -4,11 +4,22 @@
     "rust-analyzer.linkedProjects": [
         "./Cargo.toml",
         "./apps/server/Cargo.toml",
+        "./apps/llama_cpp_core/Cargo.toml",
     ],
     "rust-analyzer.cargo.extraEnv": {
         "LIBCLANG_PATH": "/usr/lib",
         "PYO3_PYTHON": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3",
         "LD_LIBRARY_PATH": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
+    },
+    "rust-analyzer.server.extraEnv": {
+        "LIBCLANG_PATH": "/usr/lib"
+    },
+    "terminal.integrated.env.linux": {
+        "LIBCLANG_PATH": "/usr/lib"
+    },
+    "rust-analyzer.runnables.extraEnv": {
+        "LIBCLANG_PATH": "/usr/lib",
+        "LLVM_CONFIG_PATH": "/usr/bin/llvm-config"
     },
     "codingcopilot.autoRun": true,
 }

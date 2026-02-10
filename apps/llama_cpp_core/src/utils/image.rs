@@ -5,7 +5,7 @@ use base64::{Engine, engine::general_purpose};
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage, imageops::FilterType};
 use tracing::{error, info};
 
-use crate::{error::Error, pipeline::ImageSource};
+use crate::{error::Error, message_plugins::ImageSource};
 
 /// 图像处理工具
 #[derive(Debug, Default, Clone)]

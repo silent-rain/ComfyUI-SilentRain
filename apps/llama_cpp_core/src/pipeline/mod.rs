@@ -15,7 +15,6 @@ pub use request::{
     CreateChatCompletionResponse,
     FunctionCall,
     FunctionObject,
-    ImageSource,
     ParsedInput,
     UserMessageBuilder,
     is_multimodal_request,

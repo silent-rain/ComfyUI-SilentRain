@@ -19,6 +19,7 @@ t = "test -- --nocapture" # 单元测试显示println!宏的打印信息
 
 
 [env]
+LIBCLANG_PATH = "/usr/lib"
 BINDGEN_EXTRA_CLANG_ARGS = "--target=x86_64-unknown-linux-gnu"
 # LD_LIBRARY_PATH = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib" # python
 # LIBRARY_PATH = "/usr/lib" # g++ clang

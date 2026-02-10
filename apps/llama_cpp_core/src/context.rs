@@ -65,9 +65,17 @@ pub struct ContexParams {
     /// 图片最大分辨率限制
     pub image_max_resolution: u32,
 
+    /// 最大历史消息数
+    #[serde(default = "default_max_history")]
+    pub max_history: usize,
+
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
     pub verbose: bool,
+}
+
+fn default_max_history() -> usize {
+    100
 }
 
 impl Default for ContexParams {
@@ -85,6 +93,7 @@ impl Default for ContexParams {
             chat_template: None,
 
             image_max_resolution: 768,
+            max_history: 100,
 
             verbose: false,
         }
@@ -561,11 +570,11 @@ mod tests {
 
         // 将上下文信息添加到历史消息中
         {
-            history_message.add_system(system_prompt)?; // 仅添加系统提示
+            history_message.add_system(system_prompt); // 仅添加系统提示
 
             // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user(user_prompt)?;
-            history_message.add_assistant(full_text.clone())?;
+            history_message.add_user_text(user_prompt);
+            history_message.add_assistant_text(full_text.clone());
         }
 
         println!("{full_text:?}");

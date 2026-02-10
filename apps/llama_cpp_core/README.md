@@ -2,6 +2,13 @@
 
 基于 [llama-cpp-2](https://github.com/utilityai/llama-cpp-rs) 的 Rust 高性能推理引擎，支持文本生成和多模态（视觉）推理。
 
+## TODO
+
+- 参数对接，请求参数接入；
+- 模型缓存， comfyui端接入；
+- 历史上下文, 待完善；
+- comfyui对接；
+
 ## 特性
 
 - **纯文本推理**：支持 GGUF 格式模型的文本生成

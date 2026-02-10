@@ -14,15 +14,17 @@ pub use async_openai::types::chat::{
     FunctionCall, FunctionObject, Role,
 };
 
-/// 对话消息角色枚举
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// 消息角色枚举 - 清晰明确的角色定义
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MessageRole {
-    /// 系统角色（用于初始化或系统级指令）
+    /// 系统角色 - 用于系统提示和全局指令
     System,
-    /// 用户角色（人类用户输入）
+    /// 用户角色 - 人类用户输入
     User,
-    /// AI 助手角色（模型生成的回复）
+    /// 助手角色 - AI 生成的回复
     Assistant,
+    /// Tool 角色 - Tool 执行结果
+    Tool,
     /// 可选：自定义角色（如多AI代理场景）
     Custom(String),
 }
@@ -30,9 +32,10 @@ pub enum MessageRole {
 impl std::fmt::Display for MessageRole {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MessageRole::System => write!(f, "System"),
-            MessageRole::User => write!(f, "User"),
-            MessageRole::Assistant => write!(f, "Assistant"),
+            MessageRole::System => write!(f, "system"),
+            MessageRole::User => write!(f, "user"),
+            MessageRole::Assistant => write!(f, "assistant"),
+            MessageRole::Tool => write!(f, "tool"),
             MessageRole::Custom(s) => write!(f, "{}", s),
         }
     }
@@ -41,28 +44,6 @@ impl std::fmt::Display for MessageRole {
 impl MessageRole {
     pub fn custom(role: &str) -> Self {
         Self::Custom(role.to_string())
-    }
-}
-
-impl From<MessageRole> for String {
-    fn from(role: MessageRole) -> Self {
-        match role {
-            MessageRole::System => "system".to_string(),
-            MessageRole::User => "user".to_string(),
-            MessageRole::Assistant => "assistant".to_string(),
-            MessageRole::Custom(s) => s,
-        }
-    }
-}
-
-impl From<&MessageRole> for String {
-    fn from(role: &MessageRole) -> Self {
-        match role {
-            MessageRole::System => "system".to_string(),
-            MessageRole::User => "user".to_string(),
-            MessageRole::Assistant => "assistant".to_string(),
-            MessageRole::Custom(s) => s.clone(),
-        }
     }
 }
 

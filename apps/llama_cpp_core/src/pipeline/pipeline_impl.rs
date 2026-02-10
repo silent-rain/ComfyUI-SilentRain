@@ -20,10 +20,13 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{error, info};
 
 use crate::{
-    Backend, HistoryMessage, Model, PipelineConfig, Sampler,
-    cache::{CacheType, global_cache},
+    Backend, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
+    message_plugins::{
+        CurrentInputPlugin, HistoryPlugin, MessageContext, MessagePipeline, NormalizePlugin,
+        SystemPromptPlugin, ToolsPlugin, UnifiedMessage,
+    },
     mtmd_context::MtmdContextWrapper,
     pipeline::{
         ChatStreamBuilder,
@@ -55,83 +58,69 @@ impl Pipeline {
         // llama.cpp 日志
         send_logs_to_tracing(LogOptions::default().with_logs_enabled(enabled));
     }
-
-    /// 保存会话历史
-    ///
-    /// # Arguments
-    /// * `session_id` - 会话ID
-    /// * `user_prompt` - 用户提示词
-    /// * `assistant_response` - 助手回复内容
-    fn save_session_history(
-        &self,
-        session_id: &str,
-        user_prompt: &str,
-        assistant_response: &str,
-    ) -> Result<(), Error> {
-        // 尝试加载已有历史，如果不存在则创建新的
-        let mut history = match HistoryMessage::from_cache(session_id.to_string()) {
-            Ok(existing) => (*existing).clone(),
-            Err(_) => HistoryMessage::new(),
-        };
-
-        // 添加用户消息
-        history.add_user(user_prompt)?;
-        // 添加助手回复
-        history.add_assistant(assistant_response)?;
-
-        // 保存到缓存
-        history.force_update_cache(session_id.to_string())?;
-
-        info!(
-            "Session '{}' history saved ({} messages)",
-            session_id,
-            history.message_count()
-        );
-        Ok(())
-    }
-
-    /// 清除指定会话的历史
-    ///
-    /// # Arguments
-    /// * `session_id` - 会话ID
-    pub fn clear_session_history(&self, session_id: &str) -> Result<(), Error> {
-        let cache_key = format!("history_message_{}", session_id);
-        global_cache().remove(&cache_key)?;
-        info!("Session '{}' history cleared", session_id);
-        Ok(())
-    }
-
-    /// 获取所有会话ID列表
-    pub fn list_session_ids(&self) -> Result<Vec<String>, Error> {
-        let session_ids = global_cache().get_keys_by_type(CacheType::MessageContext)?;
-        Ok(session_ids)
-    }
 }
 
 impl Pipeline {
-    /// 根据请求准备消息
+    /// 根据请求准备消息（新版 - 使用插件系统）
     ///
-    /// 转换为 LlamaChatMessage 列表
+    /// 流程：
+    /// 1. 将 async_openai 消息转换为 UnifiedMessage
+    /// 2. 通过插件管道处理（标准化、系统消息去重、加载历史等）
+    /// 3. 转换为 LlamaChatMessage 列表
+    ///
+    /// # Arguments
+    /// * `request` - OpenAI 标准请求
+    /// * `session_id` - 可选的会话 ID，用于加载历史上下文
     pub fn prepare_messages(
         &self,
         request: &CreateChatCompletionRequest,
+        session_id: Option<&str>,
     ) -> Result<Vec<LlamaChatMessage>, Error> {
-        let mut messages = Vec::new();
+        // 1. 将请求消息转换为 UnifiedMessage
+        let unified_messages: Vec<UnifiedMessage> = request
+            .messages
+            .iter()
+            .cloned()
+            .map(UnifiedMessage::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
 
-        // TODO 添加历史消息
-        // if let Some(store) = request.store
-        //     && store
-        // {
-        //     messages.extend(request.history.clone());
-        // }
+        // 2. 构建插件管道
+        let pipeline = MessagePipeline::new()
+            .add_plugin(
+                NormalizePlugin::new()
+                    .with_trim(true)
+                    .with_remove_empty(true),
+            )
+            .add_plugin(SystemPromptPlugin::keep_first())
+            .add_plugin(HistoryPlugin::new().with_max_history(self.config.context.max_history))
+            .add_plugin(CurrentInputPlugin::new())
+            .add_plugin(ToolsPlugin::new());
 
-        // 解析输入消息
-        let parsed_input =
-            parse_request_input(request, Some(self.config.context.media_marker.clone()))?;
-        messages.extend(parsed_input.messages);
+        // 3. 构建处理上下文
+        let context = MessageContext::default()
+            .with_session_id(session_id.unwrap_or(""))
+            .with_media_marker(&self.config.context.media_marker)
+            .with_max_history(self.config.context.max_history);
 
-        info!("Prepared messages: {:?}", messages);
-        Ok(messages)
+        // 4. 执行插件处理
+        let processed_messages = pipeline.process(unified_messages, &context)?;
+
+        // 5. 转换为 LlamaChatMessage
+        let llama_messages: Vec<LlamaChatMessage> = processed_messages
+            .into_iter()
+            .map(|msg| {
+                let content = msg.to_llama_format(&self.config.context.media_marker)?;
+                LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
+                    Error::InvalidInput {
+                        field: "LlamaChatMessage".to_string(),
+                        message: e.to_string(),
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        info!("Prepared {} messages for inference", llama_messages.len());
+        Ok(llama_messages)
     }
 
     /// 同步推理包装
@@ -220,7 +209,9 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request)?;
+        // TODO: 从 request 或配置中获取 session_id
+        let session_id = request.user.as_deref();
+        let msgs = self.prepare_messages(request, session_id)?;
 
         // Load model
         let llama_model = Model::from_config(self.config.model.clone())
@@ -259,7 +250,9 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request)?;
+        // TODO: 从 request 或配置中获取 session_id
+        let session_id = request.user.as_deref();
+        let msgs = self.prepare_messages(request, session_id)?;
 
         // Load model
         let model = Model::from_config(self.config.model.clone());

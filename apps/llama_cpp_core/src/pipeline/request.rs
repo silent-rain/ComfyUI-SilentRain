@@ -19,21 +19,12 @@ use base64::Engine;
 use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
 use serde_json::json;
 
-use crate::{error::Error, types::MessageRole};
+use crate::{error::Error, message_plugins::ImageSource, types::MessageRole};
 
 // 导出 async-openai 类型
 pub use async_openai::types::chat::{
     ChatCompletionResponseMessage, CreateChatCompletionResponse, FunctionCall, FunctionObject,
 };
-
-/// 图片来源
-#[derive(Debug, Clone)]
-pub enum ImageSource {
-    /// URL（http/https）
-    Url(String),
-    /// Base64 数据，包含 (media_type, base64_data)
-    Base64(String, String),
-}
 
 /// 解析后的输入结果
 #[derive(Debug, Clone)]

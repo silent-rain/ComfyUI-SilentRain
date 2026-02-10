@@ -140,6 +140,12 @@ impl PipelineConfig {
         self.context.verbose = verbose;
         self
     }
+
+    /// 设置最大历史消息数
+    pub fn with_max_history(mut self, max_history: usize) -> Self {
+        self.context.max_history = max_history;
+        self
+    }
 }
 
 impl PipelineConfig {
