@@ -482,6 +482,10 @@ fn extract_base64_from_data_uri(data_uri: &str) -> Option<(String, String)> {
 
 #[cfg(test)]
 mod tests {
+    use async_openai::types::chat::CreateChatCompletionRequestArgs;
+
+    use crate::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
+
     use super::*;
 
     #[test]
@@ -550,5 +554,82 @@ mod tests {
         // 普通 base64 字符串应该返回 None
         let plain_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
         assert!(extract_base64_from_data_uri(plain_base64).is_none());
+    }
+    #[test]
+    fn test_chat_completion_request_message_to_unified_message() -> anyhow::Result<()> {
+        let request = CreateChatCompletionRequestArgs::default()
+                    .max_tokens(2048u32)
+                    .model("Qwen3-VL-2B-Instruct")
+                    .messages(ChatMessagesBuilder::new()
+                        .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+                        .users(
+                            UserMessageBuilder::new()
+                                .text("描述这张图片")
+                                .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
+                        )
+                    .build())
+                    .build()?;
+
+        println!("request: {:#?}", serde_json::to_string(&request)?);
+
+        // 将请求消息转换为 UnifiedMessage
+        let unified_msg: Vec<UnifiedMessage> = request
+            .messages
+            .iter()
+            .cloned()
+            .map(UnifiedMessage::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        println!("unified_msg: {:#?}", serde_json::to_string(&unified_msg)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_unified_message_to_llama_messages() -> anyhow::Result<()> {
+        let request = CreateChatCompletionRequestArgs::default()
+                    .max_tokens(2048u32)
+                    .model("Qwen3-VL-2B-Instruct")
+                    .messages(ChatMessagesBuilder::new()
+                        .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+                        .users(
+                            UserMessageBuilder::new()
+                                .text("描述这张图片")
+                                .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
+                        )
+                    .build())
+                    .build()?;
+
+        println!("request: {:#?}", serde_json::to_string(&request)?);
+
+        // 将请求消息转换为 UnifiedMessage
+        let unified_msg: Vec<UnifiedMessage> = request
+            .messages
+            .iter()
+            .cloned()
+            .map(UnifiedMessage::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        println!("unified_msg: {:#?}", serde_json::to_string(&unified_msg)?);
+
+        // 5. 转换为 LlamaChatMessage
+        let llama_messages: Vec<LlamaChatMessage> = processed_messages
+            .into_iter()
+            .map(|msg| {
+                let content = msg.to_llama_format(&self.config.context.media_marker)?;
+                LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
+                    Error::InvalidInput {
+                        field: "LlamaChatMessage".to_string(),
+                        message: e.to_string(),
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        println!(
+            "llama_messages: {:#?}",
+            serde_json::to_string(&llama_messages)?
+        );
+        Ok(())
     }
 }
