@@ -483,6 +483,7 @@ fn extract_base64_from_data_uri(data_uri: &str) -> Option<(String, String)> {
 #[cfg(test)]
 mod tests {
     use async_openai::types::chat::CreateChatCompletionRequestArgs;
+    use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
 
     use crate::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
 
@@ -600,7 +601,7 @@ mod tests {
                     .build())
                     .build()?;
 
-        println!("request: {:#?}", serde_json::to_string(&request)?);
+        println!("request: {:#?}\n", serde_json::to_string(&request)?);
 
         // 将请求消息转换为 UnifiedMessage
         let unified_msg: Vec<UnifiedMessage> = request
@@ -610,13 +611,14 @@ mod tests {
             .map(UnifiedMessage::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        println!("unified_msg: {:#?}", serde_json::to_string(&unified_msg)?);
+        println!("unified_msg: {:#?}\n", serde_json::to_string(&unified_msg)?);
 
         // 5. 转换为 LlamaChatMessage
-        let llama_messages: Vec<LlamaChatMessage> = processed_messages
+        let media_marker = mtmd_default_marker().to_string();
+        let llama_messages: Vec<LlamaChatMessage> = unified_msg
             .into_iter()
             .map(|msg| {
-                let content = msg.to_llama_format(&self.config.context.media_marker)?;
+                let content = msg.to_llama_format(&media_marker)?;
                 LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
                     Error::InvalidInput {
                         field: "LlamaChatMessage".to_string(),
@@ -626,10 +628,7 @@ mod tests {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        println!(
-            "llama_messages: {:#?}",
-            serde_json::to_string(&llama_messages)?
-        );
+        println!("llama_messages: {:#?}\n", llama_messages);
         Ok(())
     }
 }

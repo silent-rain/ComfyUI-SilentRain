@@ -102,12 +102,15 @@ mod tests {
 
     #[test]
     fn test_normalize_plugin_removes_empty() {
-        let plugin = NormalizePlugin::new().with_remove_empty(true);
+        let plugin = NormalizePlugin::new()
+            .with_remove_empty(true)
+            .with_trim(true);
         let context = MessageContext::default();
 
         let messages = vec![
             UnifiedMessage::user_text("Hello"),
             UnifiedMessage::user_text("   "), // 空白消息
+            UnifiedMessage::user_text(""),    // 空消息
             UnifiedMessage::user_text("World"),
         ];
 

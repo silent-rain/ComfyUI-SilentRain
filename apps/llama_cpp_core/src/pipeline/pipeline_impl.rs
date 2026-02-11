@@ -334,6 +334,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore]
     async fn test_simple_text() -> anyhow::Result<()> {
         init_logger();
 
@@ -366,6 +367,46 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
+    async fn test_simple_vision_for_image_file() -> anyhow::Result<()> {
+        init_logger();
+
+        let model_path =
+            "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf"
+                .to_string();
+        let mmproj_path =
+            "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf"
+                .to_string();
+
+        let pipeline_config =
+            PipelineConfig::new_with_mmproj(model_path, mmproj_path).with_verbose(false);
+
+        let pipeline = Pipeline::try_new(pipeline_config)?;
+
+        // 反推图片
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages(
+                ChatMessagesBuilder::new()
+                    .system("You are a helpful assistant.")
+                    .users(
+                        UserMessageBuilder::new()
+                            .text("描述这张图片")
+                            .image_file("/data/cy/rgthree.compare._temp_glbsl_00013_.png")?,
+                    )
+                    .build(),
+            )
+            .build()?;
+
+        let results = pipeline.generate(&request).await?;
+
+        info!("{:?}", results);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore]
     async fn test_simple_vision_for_image_base64() -> anyhow::Result<()> {
         init_logger();
 
@@ -410,6 +451,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_simple_vision_for_image_url() -> anyhow::Result<()> {
         init_logger();
 

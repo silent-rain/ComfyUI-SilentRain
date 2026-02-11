@@ -522,6 +522,8 @@ mod tests {
 
         // 第三次调用，hash 不一致，更新模型
         {
+            let params = &[1, 2, 3];
+
             let model = cache
                 .get_or_insert("model1", CacheType::Model, params, || {
                     Ok(Arc::new(MyModel { value: 100 }))
