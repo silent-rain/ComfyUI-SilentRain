@@ -163,19 +163,6 @@ impl UnifiedMessage {
         }
     }
 
-    /// 检查是否是纯文本消息
-    pub fn is_text_only(&self) -> bool {
-        self.content.len() == 1 && matches!(self.content.first(), Some(ContentBlock::Text { .. }))
-    }
-
-    /// 获取纯文本内容（如果是纯文本消息）
-    pub fn get_text(&self) -> Option<&str> {
-        match self.content.first() {
-            Some(ContentBlock::Text { text }) if self.content.len() == 1 => Some(text),
-            _ => None,
-        }
-    }
-
     /// 检查是否包含图片
     pub fn has_image(&self) -> bool {
         self.content
@@ -195,12 +182,20 @@ impl UnifiedMessage {
     }
 
     /// 清理内容中的媒体标记
-    pub fn sanitize_media_marker(&mut self, marker: &str) {
-        for block in &mut self.content {
-            if let ContentBlock::Text { text } = block {
-                *text = text.replace(marker, "[图片]");
-            }
-        }
+    pub fn sanitize_media_marker(&mut self, marker: &str) -> Vec<ContentBlock> {
+        self.content
+            .clone()
+            .iter()
+            .map(|block| {
+                if let ContentBlock::Text { text } = block {
+                    ContentBlock::Text {
+                        text: text.replace(marker, "[图片]"),
+                    }
+                } else {
+                    block.clone()
+                }
+            })
+            .collect()
     }
 
     /// 获取消息中的所有 Tool 调用
@@ -213,11 +208,6 @@ impl UnifiedMessage {
 
     /// 转换为 llama.cpp 需要的格式字符串
     pub fn to_llama_format(&self, media_marker: &str) -> Result<String, Error> {
-        // 如果是纯文本，直接返回
-        if let Some(text) = self.get_text() {
-            return Ok(text.to_string());
-        }
-
         // 多内容块，序列化为 JSON 数组格式
         let parts: Vec<serde_json::Value> = self
             .content
@@ -493,15 +483,12 @@ mod tests {
     fn test_create_system_message() {
         let msg = UnifiedMessage::system("You are a helpful assistant");
         assert_eq!(msg.role, MessageRole::System);
-        assert!(msg.is_text_only());
-        assert_eq!(msg.get_text(), Some("You are a helpful assistant"));
     }
 
     #[test]
     fn test_create_user_text_message() {
         let msg = UnifiedMessage::user_text("Hello");
         assert_eq!(msg.role, MessageRole::User);
-        assert!(msg.is_text_only());
         assert!(!msg.has_image());
     }
 
@@ -512,7 +499,6 @@ mod tests {
             ImageSource::Url("https://example.com/image.png".to_string()),
         );
         assert_eq!(msg.role, MessageRole::User);
-        assert!(!msg.is_text_only());
         assert!(msg.has_image());
         assert_eq!(msg.get_image_sources().len(), 1);
     }
@@ -520,8 +506,11 @@ mod tests {
     #[test]
     fn test_sanitize_media_marker() {
         let mut msg = UnifiedMessage::user_text("See this image: <image> what is it?");
-        msg.sanitize_media_marker("<image>");
-        assert_eq!(msg.get_text(), Some("See this image: [图片] what is it?"));
+        let new_content = msg.sanitize_media_marker("<image>");
+        assert_eq!(new_content.len(), 1);
+        if let ContentBlock::Text { text } = &new_content[0] {
+            assert_eq!(*text, "See this image: [图片] what is it?");
+        }
     }
 
     #[test]

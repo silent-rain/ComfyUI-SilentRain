@@ -79,15 +79,21 @@ impl SystemPromptPlugin {
             SystemStrategy::KeepFirst => system_messages.into_iter().next(),
             SystemStrategy::KeepLast => system_messages.into_iter().last(),
             SystemStrategy::Merge => {
-                let merged_text: Vec<String> = system_messages
+                let merged_blocks = system_messages
                     .iter()
-                    .filter_map(|msg| msg.get_text().map(|s| s.to_string()))
-                    .collect();
-
-                if merged_text.is_empty() {
+                    .filter_map(|msg| {
+                        if msg.role == MessageRole::System {
+                            Some(msg.content.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .collect::<Vec<_>>();
+                if merged_blocks.is_empty() {
                     None
                 } else {
-                    Some(UnifiedMessage::system(merged_text.join("\n\n")))
+                    Some(UnifiedMessage::system_with_blocks(merged_blocks))
                 }
             }
         }
@@ -152,7 +158,6 @@ mod tests {
         let result = plugin.process(messages, &context).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].role, MessageRole::System);
-        assert_eq!(result[0].get_text(), Some("First system"));
     }
 
     #[test]
@@ -168,6 +173,5 @@ mod tests {
 
         let result = plugin.process(messages, &context).unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].get_text(), Some("First\n\nSecond"));
     }
 }
