@@ -60,6 +60,7 @@ impl HookContext {
 
         self.session_id = session_id;
         self.unified_messages = unified_messages;
+        self.request = Some(request.clone());
 
         self
     }
