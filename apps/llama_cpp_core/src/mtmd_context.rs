@@ -276,7 +276,7 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::MediaData,
+        Backend, Model, Sampler, chat_history, sampler::SamplerConfig, types::MediaData,
         types::MessageRole,
     };
 
@@ -321,8 +321,9 @@ mod tests {
             mtmd_ctx.load_media_buffer(&media.data)?;
         }
 
-        // 创建历史消息
-        let mut history_message = HistoryMessage::new();
+        // 获取历史管理器
+        let history = chat_history();
+        let session_id = "test_session";
 
         // 创建消息
         let system_prompt = "You are a helpful assistant".to_string();
@@ -352,13 +353,9 @@ mod tests {
         }
 
         // 将上下文信息添加到历史消息中
-        {
-            history_message.add_system_text(system_prompt); // 仅添加系统提示
-
-            // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user_text(user_prompt);
-            history_message.add_assistant_text(full_text.clone());
-        }
+        history.add_system_text(session_id, system_prompt)?;
+        history.add_user_text(session_id, user_prompt)?;
+        history.add_assistant_text(session_id, full_text.clone())?;
 
         println!("{full_text:?}");
         Ok(())

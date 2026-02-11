@@ -514,7 +514,7 @@ impl ContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::MessageRole,
+        Backend, Model, Sampler, chat_history, sampler::SamplerConfig, types::MessageRole,
     };
 
     use super::*;
@@ -538,8 +538,9 @@ mod tests {
         let contex_params = ContexParams::default();
         let mut ctx = ContextWrapper::try_new(llama_model.clone(), &backend, &contex_params)?;
 
-        // 创建历史消息
-        let mut history_message = HistoryMessage::new();
+        // 获取历史管理器
+        let history = chat_history();
+        let session_id = "test_session";
 
         // 创建消息
         let system_prompt = "You are a helpful assistant".to_string();
@@ -569,13 +570,9 @@ mod tests {
         }
 
         // 将上下文信息添加到历史消息中
-        {
-            history_message.add_system_text(system_prompt); // 仅添加系统提示
-
-            // 每轮聊天都添加用户提示和助手响应
-            history_message.add_user_text(user_prompt);
-            history_message.add_assistant_text(full_text.clone());
-        }
+        history.add_system_text(session_id, system_prompt)?;
+        history.add_user_text(session_id, user_prompt)?;
+        history.add_assistant_text(session_id, full_text.clone())?;
 
         println!("{full_text:?}");
         Ok(())

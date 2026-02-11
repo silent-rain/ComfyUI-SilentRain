@@ -4,22 +4,27 @@
 //! 完全独立于 global_cache，只存储 session_id -> SessionContext
 
 use std::sync::{Arc, OnceLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use dashmap::DashMap;
 use tracing::{info, warn};
 
 use crate::error::Error;
-use crate::unified_message::UnifiedMessage;
+use crate::unified_message::{ImageSource, UnifiedMessage};
 
 use super::session::SessionContext;
 
 /// 默认最大会话数
 const DEFAULT_MAX_SESSIONS: usize = 1000;
-/// 默认会话TTL（1小时）
-const DEFAULT_SESSION_TTL: Duration = Duration::from_secs(3600);
-/// 默认清理间隔（5分钟）
-const DEFAULT_CLEANUP_INTERVAL: Duration = Duration::from_secs(300);
+/// 默认会话TTL（1小时，毫秒）
+const DEFAULT_SESSION_TTL_MS: u64 = 3600 * 1000;
+/// 默认清理间隔（5分钟，毫秒）
+const DEFAULT_CLEANUP_INTERVAL_MS: u64 = 300 * 1000;
+
+/// 获取当前时间戳（毫秒）
+fn now_ms() -> u64 {
+    chrono::Utc::now().timestamp_millis() as u64
+}
 
 /// 全局单例
 static CHAT_HISTORY: OnceLock<Arc<ChatHistoryManager>> = OnceLock::new();
@@ -33,10 +38,10 @@ pub struct ChatHistoryManager {
     sessions: DashMap<String, SessionContext>,
     /// 最大会话数
     max_sessions: usize,
-    /// 会话TTL
-    ttl: Duration,
-    /// 最后清理时间
-    last_cleanup: std::sync::RwLock<Instant>,
+    /// 会话TTL（毫秒）
+    ttl_ms: u64,
+    /// 最后清理时间（毫秒）
+    last_cleanup: std::sync::RwLock<u64>,
 }
 
 impl Default for ChatHistoryManager {
@@ -44,8 +49,8 @@ impl Default for ChatHistoryManager {
         Self {
             sessions: DashMap::new(),
             max_sessions: DEFAULT_MAX_SESSIONS,
-            ttl: DEFAULT_SESSION_TTL,
-            last_cleanup: std::sync::RwLock::new(Instant::now()),
+            ttl_ms: DEFAULT_SESSION_TTL_MS,
+            last_cleanup: std::sync::RwLock::new(now_ms()),
         }
     }
 }
@@ -59,12 +64,22 @@ impl ChatHistoryManager {
     }
 
     /// 创建自定义配置的管理器
-    pub fn with_config(max_sessions: usize, ttl: Duration) -> Self {
+    pub fn from_config(max_sessions: usize, ttl: Duration) -> Self {
         Self {
             sessions: DashMap::new(),
             max_sessions,
-            ttl,
-            last_cleanup: std::sync::RwLock::new(Instant::now()),
+            ttl_ms: ttl.as_millis() as u64,
+            last_cleanup: std::sync::RwLock::new(now_ms()),
+        }
+    }
+
+    /// 创建自定义配置的管理器（毫秒版本）
+    pub fn from_config_ms(max_sessions: usize, ttl_ms: u64) -> Self {
+        Self {
+            sessions: DashMap::new(),
+            max_sessions,
+            ttl_ms,
+            last_cleanup: std::sync::RwLock::new(now_ms()),
         }
     }
 
@@ -123,7 +138,10 @@ impl ChatHistoryManager {
 
     /// 列出所有会话ID
     pub fn list_sessions(&self) -> Vec<String> {
-        self.sessions.iter().map(|entry| entry.key().clone()).collect()
+        self.sessions
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 
     /// 获取会话数量
@@ -139,13 +157,13 @@ impl ChatHistoryManager {
 
     /// 清理过期会话
     pub fn clear_expired(&self) -> usize {
-        let now = Instant::now();
+        let now = now_ms();
         let expired_keys: Vec<String> = self
             .sessions
             .iter()
             .filter(|entry| {
-                let elapsed = now.duration_since(entry.last_accessed());
-                elapsed > self.ttl
+                let elapsed = now.saturating_sub(entry.last_accessed());
+                elapsed > self.ttl_ms
             })
             .map(|entry| entry.key().clone())
             .collect();
@@ -165,18 +183,17 @@ impl ChatHistoryManager {
 
     /// 获取会话统计信息
     pub fn get_stats(&self, session_id: impl AsRef<str>) -> Option<SessionStats> {
-        self.sessions.get(session_id.as_ref()).map(|entry| {
-            let now = Instant::now();
-            SessionStats {
+        self.sessions
+            .get(session_id.as_ref())
+            .map(|entry| SessionStats {
                 session_id: entry.key().clone(),
                 message_count: entry.message_count(),
                 created_at: entry.created_at(),
                 last_accessed: entry.last_accessed(),
-                idle_duration: now.duration_since(entry.last_accessed()),
+                idle_duration_ms: entry.idle_duration_ms(),
                 access_count: entry.access_count(),
                 version: entry.version(),
-            }
-        })
+            })
     }
 
     /// 获取所有会话统计
@@ -206,17 +223,120 @@ impl ChatHistoryManager {
         }
     }
 
+    /// 添加用户文本消息
+    pub fn add_user_text(
+        &self,
+        session_id: impl AsRef<str>,
+        text: impl Into<String>,
+    ) -> Result<(), Error> {
+        self.add_message(session_id, UnifiedMessage::user_text(text))
+    }
+
+    /// 添加助手文本消息
+    pub fn add_assistant_text(
+        &self,
+        session_id: impl AsRef<str>,
+        text: impl Into<String>,
+    ) -> Result<(), Error> {
+        self.add_message(session_id, UnifiedMessage::assistant(text))
+    }
+
+    /// 添加系统文本消息
+    pub fn add_system_text(
+        &self,
+        session_id: impl AsRef<str>,
+        text: impl Into<String>,
+    ) -> Result<(), Error> {
+        self.add_message(session_id, UnifiedMessage::system(text))
+    }
+
+    /// 添加 Tool 结果消息
+    pub fn add_tool_result(
+        &self,
+        session_id: impl AsRef<str>,
+        call_id: impl Into<String>,
+        content: impl Into<String>,
+    ) -> Result<(), Error> {
+        self.add_message(session_id, UnifiedMessage::tool_result(call_id, content))
+    }
+
+    /// 获取会话消息列表
+    pub fn get_messages(&self, session_id: impl AsRef<str>) -> Option<Vec<UnifiedMessage>> {
+        self.sessions
+            .get(session_id.as_ref())
+            .map(|entry| entry.entries().to_vec())
+    }
+
+    /// 获取最后 n 条消息
+    pub fn get_last_n_messages(
+        &self,
+        session_id: impl AsRef<str>,
+        n: usize,
+    ) -> Option<Vec<UnifiedMessage>> {
+        self.sessions
+            .get(session_id.as_ref())
+            .map(|entry| entry.get_last_n(n))
+    }
+
+    /// 清空会话消息
+    pub fn clear_messages(&self, session_id: impl AsRef<str>) -> Result<(), Error> {
+        let session_id = session_id.as_ref();
+        if let Some(mut entry) = self.sessions.get_mut(session_id) {
+            entry.clear();
+            entry.increment_version();
+            Ok(())
+        } else {
+            Err(Error::CacheNotFound {
+                key: session_id.to_string(),
+            })
+        }
+    }
+
+    /// 获取会话中所有图片资源引用
+    pub fn get_image_references(&self, session_id: impl AsRef<str>) -> Vec<ImageSource> {
+        self.sessions
+            .get(session_id.as_ref())
+            .map(|entry| {
+                entry
+                    .entries()
+                    .iter()
+                    .flat_map(|msg| msg.get_image_sources().into_iter().cloned())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// 清理会话所有消息中的媒体标记
+    pub fn sanitize_media_markers(
+        &self,
+        session_id: impl AsRef<str>,
+        marker: &str,
+    ) -> Result<(), Error> {
+        let session_id = session_id.as_ref();
+        if let Some(mut entry) = self.sessions.get_mut(session_id) {
+            for msg in entry.entries_mut() {
+                msg.content = msg.sanitize_media_marker(marker);
+            }
+            entry.increment_version();
+            Ok(())
+        } else {
+            Err(Error::CacheNotFound {
+                key: session_id.to_string(),
+            })
+        }
+    }
+
     /// 私有：检查并执行清理
     fn maybe_cleanup(&self) {
         let should_cleanup = {
             let last = self.last_cleanup.read().unwrap();
-            Instant::now().duration_since(*last) > DEFAULT_CLEANUP_INTERVAL
+            now_ms().saturating_sub(*last) > DEFAULT_CLEANUP_INTERVAL_MS
         };
 
         if should_cleanup {
             self.clear_expired();
             if let Ok(mut last) = self.last_cleanup.write() {
-                *last = Instant::now();
+                *last = now_ms();
             }
         }
     }
@@ -249,9 +369,12 @@ impl ChatHistoryManager {
 pub struct SessionStats {
     pub session_id: String,
     pub message_count: usize,
-    pub created_at: Instant,
-    pub last_accessed: Instant,
-    pub idle_duration: Duration,
+    /// 创建时间（Unix 时间戳，毫秒）
+    pub created_at: u64,
+    /// 最后访问时间（Unix 时间戳，毫秒）
+    pub last_accessed: u64,
+    /// 空闲时长（毫秒）
+    pub idle_duration_ms: u64,
     pub access_count: u64,
     pub version: u64,
 }
@@ -267,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_chat_history_manager() {
-        let manager = ChatHistoryManager::with_config(10, Duration::from_secs(60));
+        let manager = ChatHistoryManager::from_config_ms(10, 60_000);
 
         // 创建会话
         let ctx = manager.get_or_create("test_session");
@@ -290,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_lru_eviction() {
-        let manager = ChatHistoryManager::with_config(3, Duration::from_secs(60));
+        let manager = ChatHistoryManager::from_config_ms(3, 60_000);
 
         manager.get_or_create("session_1");
         manager.get_or_create("session_2");
@@ -298,7 +421,7 @@ mod tests {
         assert_eq!(manager.session_count(), 3);
 
         // 访问 session_1 更新其访问时间
-        std::thread::sleep(Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(10));
         manager.get_or_create("session_1");
 
         // 创建第4个会话，应该淘汰最久未访问的 session_2
@@ -308,5 +431,117 @@ mod tests {
         assert!(!manager.exists("session_2"));
         assert!(manager.exists("session_3"));
         assert!(manager.exists("session_4"));
+    }
+
+    #[test]
+    fn test_chat_history_manager_api() {
+        let manager = chat_history();
+
+        // 清理
+        let _ = manager.remove("test_api");
+
+        // 创建会话
+        let ctx = manager.get_or_create("test_api");
+        assert_eq!(ctx.session_id(), "test_api");
+
+        // 获取统计
+        let stats = manager.get_stats("test_api").unwrap();
+        assert_eq!(stats.session_id, "test_api");
+        assert_eq!(stats.message_count, 0);
+
+        // 获取所有统计
+        let all_stats = manager.get_all_stats();
+        assert!(!all_stats.is_empty());
+
+        // 清理
+        manager.remove("test_api");
+    }
+
+    #[test]
+    fn test_add_messages() {
+        let manager = chat_history();
+        let session_id = "test_add_msgs";
+
+        // 清理测试会话
+        let _ = manager.remove(session_id);
+
+        // 先创建会话
+        let _ = manager.get_or_create(session_id);
+
+        // 添加消息
+        manager
+            .add_system_text(session_id, "You are a helpful assistant")
+            .unwrap();
+        manager.add_user_text(session_id, "Hello").unwrap();
+        manager.add_assistant_text(session_id, "Hi there!").unwrap();
+
+        let ctx = manager.get(session_id).unwrap();
+        assert_eq!(ctx.message_count(), 3);
+
+        // 清理
+        manager.remove(session_id);
+    }
+
+    #[test]
+    fn test_sanitize_media_markers() {
+        use crate::unified_message::ContentBlock;
+
+        let manager = chat_history();
+        let session_id = "test_sanitize";
+
+        // 清理测试会话
+        let _ = manager.remove(session_id);
+
+        // 创建会话并添加带媒体标记的消息
+        let _ = manager.get_or_create(session_id);
+        manager
+            .add_user_text(session_id, "Look at this image: [IMG]")
+            .unwrap();
+
+        // 清理媒体标记
+        manager.sanitize_media_markers(session_id, "[IMG]").unwrap();
+
+        // 验证标记被替换
+        let messages = manager.get_messages(session_id).unwrap();
+        if let ContentBlock::Text { text } = &messages[0].content[0] {
+            assert_eq!(text, "Look at this image: [图片]");
+        } else {
+            panic!("Expected text block");
+        }
+
+        // 清理
+        manager.remove(session_id);
+    }
+
+    #[test]
+    fn test_get_image_references() {
+        use crate::unified_message::{ImageSource, UnifiedMessage};
+
+        let manager = chat_history();
+        let session_id = "test_images";
+
+        // 清理测试会话
+        let _ = manager.remove(session_id);
+
+        // 创建会话
+        let _ = manager.get_or_create(session_id);
+
+        // 添加带图片的消息
+        let img_msg = UnifiedMessage::user_with_image(
+            "Describe this",
+            ImageSource::Url("http://example.com/img.png".to_string()),
+        );
+        manager.add_message(session_id, img_msg).unwrap();
+
+        // 获取图片引用
+        let images = manager.get_image_references(session_id);
+        assert_eq!(images.len(), 1);
+        match &images[0] {
+            ImageSource::Url(url) => assert_eq!(url, "http://example.com/img.png"),
+            _ => panic!("Expected URL image source"),
+        }
+
+        // 清理
+        manager.remove(session_id);
     }
 }

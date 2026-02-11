@@ -1,7 +1,7 @@
 //! 历史消息插件
 
 use crate::{
-    HistoryMessage,
+    chat_history,
     error::Error,
     message_plugins::{MessageContext, MessagePlugin},
     types::MessageRole,
@@ -35,20 +35,19 @@ impl HistoryPlugin {
         self
     }
 
-    /// 从历史记录创建统一消息
+    /// 从会话消息创建统一消息
     ///
     /// 过滤掉系统消息（由 SystemPlugin 处理）
     /// 清理媒体标记为描述文本
-    fn history_to_unified(
+    fn messages_to_unified(
         &self,
-        history: &HistoryMessage,
+        messages: &[UnifiedMessage],
         media_marker: &str,
     ) -> Vec<UnifiedMessage> {
-        let entries = history.entries();
         // 只取最近的 N 条
-        let start_idx = entries.len().saturating_sub(self.max_history);
+        let start_idx = messages.len().saturating_sub(self.max_history);
 
-        entries[start_idx..]
+        messages[start_idx..]
             .iter()
             .filter(|entry| entry.role != MessageRole::System)
             .cloned()
@@ -82,13 +81,13 @@ impl MessagePlugin for HistoryPlugin {
         };
 
         // 尝试加载历史
-        let history = match HistoryMessage::from_cache(session_id.clone()) {
-            Ok(h) => h,
-            Err(_) => return Ok(messages), // 没有历史记录，直接返回
+        let history_messages = match chat_history().get_messages(session_id) {
+            Some(msgs) => msgs,
+            None => return Ok(messages), // 没有历史记录，直接返回
         };
 
         // 转换历史消息
-        let history_msgs = self.history_to_unified(&history, &context.media_marker);
+        let history_msgs = self.messages_to_unified(&history_messages, &context.media_marker);
 
         if history_msgs.is_empty() {
             return Ok(messages);

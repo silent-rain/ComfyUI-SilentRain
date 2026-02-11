@@ -1,43 +1,25 @@
 //! 历史记录保存钩子
 
-use std::sync::Arc;
-
 use async_openai::types::chat::{
     ChatCompletionRequestMessage, ChatCompletionRequestUserMessageContent,
 };
 use async_trait::async_trait;
 use tracing::{debug, error};
 
-use crate::cache::{CacheManager, CacheType};
+use crate::chat_history;
 use crate::error::Error;
-use crate::history::HistoryMessage;
 use crate::hooks::{HookContext, InferenceHook};
 
 /// 历史记录保存钩子
 ///
 /// 在推理结束后自动保存对话历史到缓存
-#[derive(Debug, Clone)]
-pub struct HistoryHook {
-    cache: Arc<CacheManager>,
-}
+#[derive(Debug, Clone, Default)]
+pub struct HistoryHook;
 
 impl HistoryHook {
     /// 创建新的历史钩子
     pub fn new() -> Self {
-        Self {
-            cache: Arc::new(CacheManager::with_capacity(1000)),
-        }
-    }
-
-    /// 使用共享的缓存管理器创建
-    pub fn with_shared_cache(cache: Arc<CacheManager>) -> Self {
-        Self { cache }
-    }
-}
-
-impl Default for HistoryHook {
-    fn default() -> Self {
-        Self::new()
+        Self
     }
 }
 
@@ -70,11 +52,8 @@ impl InferenceHook for HistoryHook {
 
         debug!("Saving history for session: {}", session_id);
 
-        // 从缓存获取或创建历史记录
-        let mut history = match self.cache.get_data::<HistoryMessage>(session_id) {
-            Ok(Some(h)) => (*h).clone(),
-            _ => HistoryMessage::new(),
-        };
+        // 获取或创建会话
+        let _ = chat_history().get_or_create(session_id);
 
         // 添加用户消息
         for msg in &request.messages {
@@ -92,7 +71,9 @@ impl InferenceHook for HistoryHook {
                             .join("\n")
                     }
                 };
-                history.add_user_text(&content);
+                if let Err(e) = chat_history().add_user_text(session_id, &content) {
+                    error!("Failed to add user message: {}", e);
+                }
             }
         }
 
@@ -115,17 +96,8 @@ impl InferenceHook for HistoryHook {
         }
 
         // 添加助手回复
-        history.add_assistant_text(&assistant_content);
-
-        // 保存回缓存 - 使用 insert_or_update
-        let history_arc: Arc<dyn std::any::Any + Send + Sync> = Arc::new(history);
-        if let Err(e) = self.cache.insert_or_update(
-            session_id,
-            CacheType::Custom("history".to_string()),
-            &[session_id.to_string()],
-            history_arc,
-        ) {
-            error!("Failed to save history: {}", e);
+        if let Err(e) = chat_history().add_assistant_text(session_id, &assistant_content) {
+            error!("Failed to add assistant message: {}", e);
         } else {
             debug!("History saved successfully for session: {}", session_id);
         }
