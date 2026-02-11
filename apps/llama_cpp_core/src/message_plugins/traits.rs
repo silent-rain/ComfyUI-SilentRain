@@ -2,7 +2,7 @@
 //!
 //! 定义了消息处理插件的trait和相关功能
 
-use crate::{error::Error, message_plugins::unified_message::UnifiedMessage};
+use crate::{error::Error, unified_message::UnifiedMessage};
 
 /// 消息处理插件 trait
 ///

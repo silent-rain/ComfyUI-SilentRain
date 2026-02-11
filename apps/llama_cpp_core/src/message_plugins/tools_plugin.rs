@@ -3,12 +3,10 @@
 use std::collections::HashSet;
 
 use crate::{
-    MessageRole,
     error::Error,
-    message_plugins::{
-        MessageContext, MessagePlugin,
-        unified_message::{ContentBlock, UnifiedMessage},
-    },
+    message_plugins::{MessageContext, MessagePlugin},
+    types::MessageRole,
+    unified_message::{ContentBlock, UnifiedMessage},
 };
 
 /// Tool 调用消息插件

@@ -1,9 +1,11 @@
 //! 历史消息插件
 
 use crate::{
-    HistoryMessage, MessageRole,
+    HistoryMessage,
     error::Error,
-    message_plugins::{MessageContext, MessagePlugin, unified_message::UnifiedMessage},
+    message_plugins::{MessageContext, MessagePlugin},
+    types::MessageRole,
+    unified_message::UnifiedMessage,
 };
 
 /// 历史消息插件

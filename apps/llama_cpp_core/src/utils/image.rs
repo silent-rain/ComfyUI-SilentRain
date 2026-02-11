@@ -5,7 +5,7 @@ use base64::{Engine, engine::general_purpose};
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage, imageops::FilterType};
 use tracing::{error, info};
 
-use crate::{error::Error, message_plugins::ImageSource};
+use crate::{error::Error, unified_message::ImageSource};
 
 /// 图像处理工具
 #[derive(Debug, Default, Clone)]
@@ -278,4 +278,80 @@ async fn download_image(url: &str) -> Result<Vec<u8>, Error> {
 
     info!("Successfully downloaded {} bytes from URL", data.len());
     Ok(data.to_vec())
+}
+
+/// 从图片 URL 提取图片来源
+pub fn extract_image_source(url: &str) -> Option<ImageSource> {
+    if url.starts_with("http") || url.starts_with("https") {
+        Some(ImageSource::Url(url.to_string()))
+    } else if url.starts_with("data:") {
+        // 从 data URI 中提取 media_type 和 base64 数据
+        extract_base64_from_data_uri(url)
+            .map(|(media_type, base64_data)| ImageSource::Base64(media_type, base64_data))
+    } else {
+        None
+    }
+}
+
+/// 从 data URI 中提取 media_type 和 base64 数据
+///
+/// data URI 格式: data:[<mediatype>][;base64],<data>
+/// 示例: data:image/png;base64,iVBORw0KGgo...
+///
+/// # Returns
+/// - `Some((media_type, base64_data))` - 成功提取媒体类型和 base64 数据
+pub fn extract_base64_from_data_uri(data_uri: &str) -> Option<(String, String)> {
+    if !data_uri.starts_with("data:") {
+        return None;
+    }
+
+    // 找到逗号的位置，逗号后面才是真正的 base64 数据
+    data_uri.find(',').map(|comma_pos| {
+        let base64_data = data_uri[comma_pos + 1..].to_string();
+        // 解析媒体类型部分（data: 和 , 之间的内容）
+        let media_part = &data_uri[5..comma_pos];
+
+        // 分割 ; 来获取媒体类型和参数
+        let parts: Vec<&str> = media_part.split(';').collect();
+
+        let media_type = if parts.is_empty() || parts[0].is_empty() || parts[0] == "base64" {
+            // 没有指定媒体类型，使用默认值
+            "application/octet-stream".to_string()
+        } else {
+            parts[0].to_string()
+        };
+
+        (media_type, base64_data)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_base64_from_data_uri() {
+        // 标准 data URI
+        let data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+        let (media_type, base64_data) = extract_base64_from_data_uri(data_uri).unwrap();
+        assert_eq!(media_type, "image/png");
+        assert_eq!(
+            base64_data,
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        );
+
+        // 不带 media type 的 data URI
+        let data_uri2 = "data:base64,SGVsbG8gV29ybGQ=";
+        let (media_type2, base64_data2) = extract_base64_from_data_uri(data_uri2).unwrap();
+        assert_eq!(media_type2, "application/octet-stream");
+        assert_eq!(base64_data2, "SGVsbG8gV29ybGQ=");
+
+        // 普通 URL 应该返回 None
+        let url = "https://example.com/image.png";
+        assert!(extract_base64_from_data_uri(url).is_none());
+
+        // 普通 base64 字符串应该返回 None
+        let plain_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+        assert!(extract_base64_from_data_uri(plain_base64).is_none());
+    }
 }

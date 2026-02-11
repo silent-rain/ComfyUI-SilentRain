@@ -23,7 +23,7 @@ use tokio::sync::mpsc::{self, UnboundedReceiver};
 use crate::{
     context::{ContexParams, ContextWrapper},
     error::Error,
-    pipeline::ChatStreamBuilder,
+    response::ChatStreamBuilder,
 };
 
 /// State of the MTMD application.
@@ -276,8 +276,8 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, HistoryMessage, MessageRole, Model, Sampler, sampler::SamplerConfig,
-        types::MediaData,
+        Backend, HistoryMessage, Model, Sampler, sampler::SamplerConfig, types::MediaData,
+        types::MessageRole,
     };
 
     use super::*;

@@ -6,7 +6,8 @@ use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use base64::Engine;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
-    pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
+    request::{ChatMessagesBuilder, UserMessageBuilder},
+    response::response_extract_content,
     utils::log::init_logger,
 };
 

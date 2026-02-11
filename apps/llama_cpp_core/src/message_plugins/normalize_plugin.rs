@@ -2,10 +2,8 @@
 
 use crate::{
     error::Error,
-    message_plugins::{
-        MessageContext, MessagePlugin,
-        unified_message::{ContentBlock, UnifiedMessage},
-    },
+    message_plugins::{MessageContext, MessagePlugin},
+    unified_message::{ContentBlock, UnifiedMessage},
 };
 
 /// 标准化插件

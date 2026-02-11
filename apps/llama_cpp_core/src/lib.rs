@@ -7,27 +7,22 @@ pub mod cache;
 pub mod context;
 pub mod error;
 pub mod history;
+pub mod hooks;
 pub mod message_plugins;
 pub mod model;
 pub mod mtmd_context;
 pub mod pipeline;
+pub mod request;
+pub mod response;
 pub mod sampler;
 pub mod types;
+pub mod unified_message;
 pub mod utils;
-
-// Re-export llama_cpp_2 types for building history messages
-pub use llama_cpp_2::model::LlamaChatMessage;
 
 pub use backend::Backend;
 pub use cache::{CacheManager, global_cache};
 pub use context::ContexParams;
 pub use history::{HistoryMessage, MediaAsset};
 pub use model::Model;
-pub use pipeline::{ChatStreamBuilder, Pipeline, PipelineConfig};
+pub use pipeline::{Pipeline, PipelineConfig};
 pub use sampler::Sampler;
-
-// Re-export internal types
-pub use types::{
-    CreateChatCompletionRequest as Request, CreateChatCompletionResponse as Response, MediaData,
-    MediaType, MessageRole, PoolingTypeMode,
-};

@@ -7,7 +7,8 @@ use futures::future::join_all;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
     error::Error,
-    pipeline::{ChatMessagesBuilder, UserMessageBuilder, response_extract_content},
+    request::{ChatMessagesBuilder, UserMessageBuilder},
+    response::response_extract_content,
     utils::log::init_logger,
 };
 use tokio::sync::Semaphore;

@@ -5,21 +5,13 @@
 use llama_cpp_2::context::params::LlamaPoolingType;
 use serde::{Deserialize, Serialize};
 
-// Re-export async-openai types for OpenAI API compatibility
-pub use async_openai::types::chat::{
-    ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImage,
-    ChatCompletionRequestMessageContentPartText, ChatCompletionRequestUserMessage,
-    ChatCompletionRequestUserMessageContent, ChatCompletionRequestUserMessageContentPart,
-    ChatCompletionResponseMessage, CreateChatCompletionRequest, CreateChatCompletionResponse,
-    FunctionCall, FunctionObject, Role,
-};
-
 /// 消息角色枚举 - 清晰明确的角色定义
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MessageRole {
     /// 系统角色 - 用于系统提示和全局指令
     System,
     /// 用户角色 - 人类用户输入
+    #[default]
     User,
     /// 助手角色 - AI 生成的回复
     Assistant,
@@ -143,9 +135,3 @@ impl MediaData {
         }
     }
 }
-
-/// 请求结构别名 - 使用 async-openai 标准请求
-pub type Request = CreateChatCompletionRequest;
-
-/// 响应结构别名 - 使用 async-openai 标准响应
-pub type Response = CreateChatCompletionResponse;

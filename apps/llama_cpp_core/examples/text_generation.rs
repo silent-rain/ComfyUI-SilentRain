@@ -8,10 +8,10 @@ use async_openai::types::chat::{
 };
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
-    pipeline::{ChatMessagesBuilder, UserMessageBuilder},
-    types::{
+    request::{
         ChatCompletionRequestMessageContentPartImage, ChatCompletionRequestMessageContentPartText,
         ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageContent,
+        ChatMessagesBuilder, UserMessageBuilder,
     },
     utils::log::init_logger,
 };

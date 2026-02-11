@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tracing::{error, info};
 
-use crate::{error::Error, pipeline::ChatStreamBuilder, types::PoolingTypeMode};
+use crate::{error::Error, response::ChatStreamBuilder, types::PoolingTypeMode};
 
 use async_openai::types::chat::CreateChatCompletionStreamResponse;
 

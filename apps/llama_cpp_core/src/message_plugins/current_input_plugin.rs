@@ -2,7 +2,8 @@
 
 use crate::{
     error::Error,
-    message_plugins::{MessageContext, MessagePlugin, unified_message::UnifiedMessage},
+    message_plugins::{MessageContext, MessagePlugin},
+    unified_message::UnifiedMessage,
 };
 
 /// 当前输入插件

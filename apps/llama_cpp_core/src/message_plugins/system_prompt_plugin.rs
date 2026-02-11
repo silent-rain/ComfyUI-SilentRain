@@ -1,9 +1,10 @@
 //! 系统消息插件
 
 use crate::{
-    MessageRole,
     error::Error,
-    message_plugins::{MessageContext, MessagePlugin, unified_message::UnifiedMessage},
+    message_plugins::{MessageContext, MessagePlugin},
+    types::MessageRole,
+    unified_message::UnifiedMessage,
 };
 
 /// 系统消息处理策略

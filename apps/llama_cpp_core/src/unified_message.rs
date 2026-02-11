@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::{MessageRole, error::Error};
+use crate::{error::Error, types::MessageRole, utils::image::extract_image_source};
 
 /// 图片来源类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub enum ContentBlock {
 }
 
 /// 统一消息结构 - 扁平化设计
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct UnifiedMessage {
     /// 消息角色
     pub role: MessageRole,
@@ -279,7 +279,7 @@ use async_openai::types::chat::{
     ChatCompletionRequestSystemMessageContentPart, ChatCompletionRequestToolMessage,
     ChatCompletionRequestToolMessageContent, ChatCompletionRequestToolMessageContentPart,
     ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageContent,
-    ChatCompletionRequestUserMessageContentPart,
+    ChatCompletionRequestUserMessageContentPart, CreateChatCompletionRequest,
 };
 
 impl TryFrom<ChatCompletionRequestMessage> for UnifiedMessage {
@@ -299,6 +299,7 @@ impl TryFrom<ChatCompletionRequestMessage> for UnifiedMessage {
     }
 }
 
+/// 解析系统消息，支持文本内容
 fn parse_system_message(msg: ChatCompletionRequestSystemMessage) -> Result<UnifiedMessage, Error> {
     let mut blocks = Vec::new();
     match msg.content {
@@ -319,6 +320,7 @@ fn parse_system_message(msg: ChatCompletionRequestSystemMessage) -> Result<Unifi
     Ok(UnifiedMessage::system_with_blocks(blocks))
 }
 
+/// 解析用户消息，支持文本和图片（图片需要提取 URL 作为来源）
 fn parse_user_message(msg: ChatCompletionRequestUserMessage) -> Result<UnifiedMessage, Error> {
     let mut blocks = Vec::new();
     match msg.content {
@@ -351,6 +353,7 @@ fn parse_user_message(msg: ChatCompletionRequestUserMessage) -> Result<UnifiedMe
     Ok(UnifiedMessage::user_with_blocks(blocks))
 }
 
+/// 解析助手消息，支持文本和 Tool 调用（Tool 调用需要根据实际结构调整）
 fn parse_assistant_message(
     msg: ChatCompletionRequestAssistantMessage,
 ) -> Result<UnifiedMessage, Error> {
@@ -395,6 +398,7 @@ fn parse_assistant_message(
     Ok(UnifiedMessage::assistant_with_blocks(blocks))
 }
 
+/// 解析 Tool 消息（目前仅处理文本结果，Tool 调用消息需要根据实际结构调整）
 fn parse_tool_message(msg: ChatCompletionRequestToolMessage) -> Result<UnifiedMessage, Error> {
     let mut blocks = Vec::new();
 
@@ -425,49 +429,31 @@ fn parse_tool_message(msg: ChatCompletionRequestToolMessage) -> Result<UnifiedMe
     ))
 }
 
-/// 从图片 URL 提取图片来源
-fn extract_image_source(url: &str) -> Option<ImageSource> {
-    if url.starts_with("http") || url.starts_with("https") {
-        Some(ImageSource::Url(url.to_string()))
-    } else if url.starts_with("data:") {
-        // 从 data URI 中提取 media_type 和 base64 数据
-        extract_base64_from_data_uri(url)
-            .map(|(media_type, base64_data)| ImageSource::Base64(media_type, base64_data))
-    } else {
-        None
+/// 从请求中解析媒体资源
+pub fn extract_media_sources_from_request(
+    request: &CreateChatCompletionRequest,
+) -> Result<Vec<ImageSource>, Error> {
+    let mut sources = Vec::new();
+
+    for msg in &request.messages {
+        let unified_msg = UnifiedMessage::try_from(msg.clone())?;
+        sources.extend(unified_msg.get_image_sources().into_iter().cloned());
     }
+
+    Ok(sources)
 }
 
-/// 从 data URI 中提取 media_type 和 base64 数据
-///
-/// data URI 格式: data:[<mediatype>][;base64],<data>
-/// 示例: data:image/png;base64,iVBORw0KGgo...
-///
-/// # Returns
-/// - `Some((media_type, base64_data))` - 成功提取媒体类型和 base64 数据
-fn extract_base64_from_data_uri(data_uri: &str) -> Option<(String, String)> {
-    if !data_uri.starts_with("data:") {
-        return None;
+/// 检查请求是否包含图片（多模态请求）
+pub fn is_multimodal_request(request: &CreateChatCompletionRequest) -> bool {
+    for msg in &request.messages {
+        let unified_msg = UnifiedMessage::try_from(msg.clone());
+        if let Ok(msg) = unified_msg
+            && msg.has_image()
+        {
+            return true;
+        }
     }
-
-    // 找到逗号的位置，逗号后面才是真正的 base64 数据
-    data_uri.find(',').map(|comma_pos| {
-        let base64_data = data_uri[comma_pos + 1..].to_string();
-        // 解析媒体类型部分（data: 和 , 之间的内容）
-        let media_part = &data_uri[5..comma_pos];
-
-        // 分割 ; 来获取媒体类型和参数
-        let parts: Vec<&str> = media_part.split(';').collect();
-
-        let media_type = if parts.is_empty() || parts[0].is_empty() || parts[0] == "base64" {
-            // 没有指定媒体类型，使用默认值
-            "application/octet-stream".to_string()
-        } else {
-            parts[0].to_string()
-        };
-
-        (media_type, base64_data)
-    })
+    false
 }
 
 #[cfg(test)]
@@ -475,9 +461,8 @@ mod tests {
     use async_openai::types::chat::CreateChatCompletionRequestArgs;
     use llama_cpp_2::{model::LlamaChatMessage, mtmd::mtmd_default_marker};
 
-    use crate::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
-
     use super::*;
+    use crate::request::{ChatMessagesBuilder, UserMessageBuilder};
 
     #[test]
     fn test_create_system_message() {
@@ -520,31 +505,6 @@ mod tests {
         assert_eq!(msg.tool_call_id, Some("call_123".to_string()));
     }
 
-    #[test]
-    fn test_extract_base64_from_data_uri() {
-        // 标准 data URI
-        let data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-        let (media_type, base64_data) = extract_base64_from_data_uri(data_uri).unwrap();
-        assert_eq!(media_type, "image/png");
-        assert_eq!(
-            base64_data,
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        );
-
-        // 不带 media type 的 data URI
-        let data_uri2 = "data:base64,SGVsbG8gV29ybGQ=";
-        let (media_type2, base64_data2) = extract_base64_from_data_uri(data_uri2).unwrap();
-        assert_eq!(media_type2, "application/octet-stream");
-        assert_eq!(base64_data2, "SGVsbG8gV29ybGQ=");
-
-        // 普通 URL 应该返回 None
-        let url = "https://example.com/image.png";
-        assert!(extract_base64_from_data_uri(url).is_none());
-
-        // 普通 base64 字符串应该返回 None
-        let plain_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-        assert!(extract_base64_from_data_uri(plain_base64).is_none());
-    }
     #[test]
     fn test_chat_completion_request_message_to_unified_message() -> anyhow::Result<()> {
         let request = CreateChatCompletionRequestArgs::default()
@@ -618,6 +578,27 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()?;
 
         println!("llama_messages: {:#?}\n", llama_messages);
+        Ok(())
+    }
+
+    #[test]
+    fn test_extract_media_sources_from_request() -> anyhow::Result<()> {
+        let request = CreateChatCompletionRequestArgs::default()
+                    .max_tokens(2048u32)
+                    .model("Qwen3-VL-2B-Instruct")
+                    .messages(ChatMessagesBuilder::new()
+                        .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
+                        .users(
+                            UserMessageBuilder::new()
+                                .text("描述这张图片")
+                                .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg")
+                                .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
+                        )
+                    .build())
+                    .build()?;
+
+        let media_sources = extract_media_sources_from_request(&request)?;
+        println!("Extracted media sources: {:#?}", media_sources);
         Ok(())
     }
 }

@@ -6,6 +6,9 @@ use async_openai::types::chat::{
     FinishReason, Role,
 };
 
+/// 响应结构别名 - 使用 async-openai 标准响应
+pub type Response = CreateChatCompletionResponse;
+
 /// 流式聊天响应构建器
 /// 用于高效构建 OpenAI Chat Completions API 流式响应
 /// 复用共享字段，减少每次创建时的内存分配

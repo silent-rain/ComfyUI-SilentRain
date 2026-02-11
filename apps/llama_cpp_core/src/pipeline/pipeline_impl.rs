@@ -13,9 +13,7 @@ use async_openai::types::chat::{
     CreateChatCompletionRequest, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
     FinishReason,
 };
-use llama_cpp_2::{
-    LogOptions, llama_backend::LlamaBackend, model::LlamaChatMessage, send_logs_to_tracing,
-};
+use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaChatMessage};
 use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{error, info};
 
@@ -23,15 +21,15 @@ use crate::{
     Backend, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
+    hooks::{HookContext, HookRegistry, InferenceHook},
     message_plugins::{
         CurrentInputPlugin, HistoryPlugin, MessageContext, MessagePipeline, NormalizePlugin,
-        SystemPromptPlugin, ToolsPlugin, UnifiedMessage,
+        SystemPromptPlugin, ToolsPlugin,
     },
     mtmd_context::MtmdContextWrapper,
-    pipeline::{
-        ChatStreamBuilder,
-        request::{is_multimodal_request, parse_request_input},
-    },
+    request::extract_session_id,
+    response::ChatStreamBuilder,
+    unified_message::{UnifiedMessage, extract_media_sources_from_request, is_multimodal_request},
     utils::image::{Image, decode_image_sources},
 };
 
@@ -39,6 +37,7 @@ use crate::{
 pub struct Pipeline {
     backend: Arc<LlamaBackend>,
     config: PipelineConfig,
+    hooks: HookRegistry,
 }
 
 impl Pipeline {
@@ -50,18 +49,19 @@ impl Pipeline {
         Ok(Self {
             backend: Arc::new(backend),
             config,
+            hooks: HookRegistry::new(),
         })
     }
 
-    /// 将日志发送到 tracing
-    pub fn send_logs_to_tracing(enabled: bool) {
-        // llama.cpp 日志
-        send_logs_to_tracing(LogOptions::default().with_logs_enabled(enabled));
+    /// 注册钩子
+    pub fn with_hook(mut self, hook: impl InferenceHook + 'static) -> Self {
+        self.hooks.register(hook);
+        self
     }
 }
 
 impl Pipeline {
-    /// 根据请求准备消息（新版 - 使用插件系统）
+    /// 根据请求准备消息
     ///
     /// 流程：
     /// 1. 将 async_openai 消息转换为 UnifiedMessage
@@ -123,7 +123,7 @@ impl Pipeline {
         Ok(llama_messages)
     }
 
-    /// 同步推理包装
+    /// 阻塞推理包装
     pub fn generate_block(
         &self,
         request: &CreateChatCompletionRequest,
@@ -138,7 +138,7 @@ impl Pipeline {
 
         // 在运行时中阻塞执行生成任务
         rt.block_on(async {
-            let output = pipeline.generate(request).await?;
+            let output = pipeline.generate_with_hooks(request).await?;
             Ok(output)
         })
     }
@@ -148,21 +148,63 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<CreateChatCompletionResponse, Error> {
-        let mut rx = self.generate_stream(request).await?;
+        self.generate_with_hooks(request).await
+    }
+
+    /// 执行推理（带钩子）
+    async fn generate_with_hooks(
+        &self,
+        request: &CreateChatCompletionRequest,
+    ) -> Result<CreateChatCompletionResponse, Error> {
+        // 1. 创建上下文并执行推理前钩子
+        let mut ctx = HookContext::new().with_request_and_config(request, &self.config);
+
+        if let Err(e) = self.hooks.run_before(&mut ctx).await {
+            error!("Before inference hooks failed: {}", e);
+            let _ = self.hooks.run_on_error(&ctx, &e).await;
+            return Err(e);
+        }
+
+        // 2. 执行推理
+        let result = self.generate_internal(request).await;
+
+        // 3. 执行推理后钩子或错误钩子
+        match result {
+            Ok(response) => {
+                ctx.set_response(response.clone());
+
+                if let Err(e) = self.hooks.run_after(&mut ctx).await {
+                    error!("After inference hooks failed: {}", e);
+                    // 后处理钩子失败不中断流程
+                }
+
+                Ok(response)
+            }
+            Err(e) => {
+                let _ = self.hooks.run_on_error(&ctx, &e).await;
+                Err(e)
+            }
+        }
+    }
+
+    /// 执行内部推理（无钩子）
+    ///
+    /// 将流式推理结果收集成完整响应，适用于非流式接口
+    async fn generate_internal(
+        &self,
+        request: &CreateChatCompletionRequest,
+    ) -> Result<CreateChatCompletionResponse, Error> {
+        let mut rx = self.generate_multimodal_stream(request).await?;
+
+        let model = request.model.clone();
 
         let mut full_text = String::new();
         let mut finish_reason: Option<FinishReason> = None;
-        let mut response_model = String::new();
         let mut prompt_tokens: u32 = 0;
         let mut completion_tokens: u32 = 0;
 
         // 收集所有流式响应
         while let Some(chunk) = rx.recv().await {
-            // 保存响应元数据（从第一个 chunk 获取）
-            if response_model.is_empty() {
-                response_model = chunk.model.clone();
-            }
-
             // 提取 usage（通常在最后一个 chunk）
             if let Some(u) = &chunk.usage {
                 prompt_tokens = u.prompt_tokens;
@@ -183,15 +225,101 @@ impl Pipeline {
         }
 
         // 使用 ChatStreamBuilder 构建完整的非流式响应
-        let builder = ChatStreamBuilder::new(response_model).with_prompt_tokens(prompt_tokens);
+        let builder = ChatStreamBuilder::new(model).with_prompt_tokens(prompt_tokens);
         let response =
             builder.build_non_streaming_response(full_text, finish_reason, completion_tokens);
 
         Ok(response)
     }
 
-    /// 执行流式推理
+    /// 执行流式推理, 支持带钩子的流式生成
     pub async fn generate_stream(
+        &self,
+        request: &CreateChatCompletionRequest,
+    ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
+        // 如果没有钩子，直接返回原始流（零开销）
+        if !self.hooks.has_hooks() {
+            return self.generate_multimodal_stream(request).await;
+        }
+
+        // 有钩子时需要包装流
+        self.generate_stream_with_hooks(request).await
+    }
+
+    /// 带钩子的流式推理
+    async fn generate_stream_with_hooks(
+        &self,
+        request: &CreateChatCompletionRequest,
+    ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
+        use tokio::sync::mpsc;
+
+        // 1. 创建上下文并执行推理前钩子
+        let mut ctx = HookContext::new().with_request_and_config(request, &self.config);
+
+        if let Err(e) = self.hooks.run_before(&mut ctx).await {
+            error!("Before inference hooks failed: {}", e);
+            let _ = self.hooks.run_on_error(&ctx, &e).await;
+            return Err(e);
+        }
+
+        // 2. 获取原始流
+        let mut inner_rx = self.generate_multimodal_stream(request).await?;
+
+        // 3. 创建新通道
+        let (tx, rx) = mpsc::unbounded_channel();
+
+        // 4. 克隆必要的数据用于异步任务
+        let hooks = self.hooks.clone();
+        let request_clone = request.clone();
+        let config_clone = self.config.clone();
+
+        // 5. 启动中转任务
+        tokio::spawn(async move {
+            let mut full_text = String::new();
+            let mut last_chunk: Option<CreateChatCompletionStreamResponse> = None;
+            let mut success = true;
+
+            // 中转所有数据
+            while let Some(chunk) = inner_rx.recv().await {
+                // 收集完整响应文本
+                if let Some(choice) = chunk.choices.first()
+                    && let Some(content) = &choice.delta.content
+                {
+                    full_text.push_str(content);
+                }
+                last_chunk = Some(chunk.clone());
+
+                // 转发给外部通道
+                if tx.send(chunk).is_err() {
+                    tracing::warn!("Stream receiver dropped");
+                    success = false;
+                    break;
+                }
+            }
+
+            // 6. 流结束，执行推理后钩子
+            let mut ctx = HookContext::new().with_request_and_config(&request_clone, &config_clone);
+            ctx.set_stream_collected_text(full_text);
+
+            if let Some(chunk) = last_chunk {
+                ctx.set_stream_last_chunk(chunk);
+            }
+
+            if success && let Err(e) = hooks.run_after(&mut ctx).await {
+                error!("After inference hooks failed: {}", e);
+                // 后处理钩子失败不中断流程
+                let _ = hooks.run_on_error(&ctx, &e).await;
+            }
+        });
+
+        Ok(rx)
+    }
+}
+
+/// 流水线实现细节
+impl Pipeline {
+    /// 多模态流式推理
+    async fn generate_multimodal_stream(
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
@@ -209,9 +337,8 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        // TODO: 从 request 或配置中获取 session_id
-        let session_id = request.user.as_deref();
-        let msgs = self.prepare_messages(request, session_id)?;
+        let session_id = extract_session_id(request);
+        let msgs = self.prepare_messages(request, session_id.as_deref())?;
 
         // Load model
         let llama_model = Model::from_config(self.config.model.clone())
@@ -250,9 +377,8 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        // TODO: 从 request 或配置中获取 session_id
-        let session_id = request.user.as_deref();
-        let msgs = self.prepare_messages(request, session_id)?;
+        let session_id = extract_session_id(request);
+        let msgs = self.prepare_messages(request, session_id.as_deref())?;
 
         // Load model
         let model = Model::from_config(self.config.model.clone());
@@ -289,16 +415,14 @@ impl Pipeline {
                 })?;
 
         // Load media files
-        let parsed_input =
-            parse_request_input(request, Some(self.config.context.media_marker.clone()))?;
-        let decoded_images = decode_image_sources(&parsed_input.image_sources).await?;
+        let media_sources = extract_media_sources_from_request(request)?;
+        let decoded_images = decode_image_sources(&media_sources).await?;
 
-        // 图片缩放逻辑
-        let image_max_resolution = self.config.context.image_max_resolution;
-
+        // 将解码后的图像加载到 MTMD 上下文中
         for data in decoded_images {
             // 从二进制数据创建 Image 对象，并根据配置缩放
-            let img = Image::from_bytes(&data)?.resize_with_max_resolution(image_max_resolution)?;
+            let img = Image::from_bytes(&data)?
+                .resize_with_max_resolution(self.config.context.image_max_resolution)?;
             img.save("/home/one/Downloads/resized.jpg")?;
 
             // 将缩放后的图像转换为字节数据
@@ -327,7 +451,7 @@ mod tests {
     use base64::{Engine, engine::general_purpose};
 
     use crate::{
-        pipeline::{ChatMessagesBuilder, UserMessageBuilder},
+        request::{ChatMessagesBuilder, UserMessageBuilder},
         utils::log::init_logger,
     };
 

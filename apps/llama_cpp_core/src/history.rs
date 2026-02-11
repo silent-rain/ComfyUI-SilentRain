@@ -11,8 +11,8 @@ use crate::{
     cache::CacheType,
     error::Error,
     global_cache,
-    message_plugins::{ContentBlock, ImageSource, UnifiedMessage},
     types::MessageRole,
+    unified_message::{ContentBlock, ImageSource, UnifiedMessage},
 };
 
 /// 默认最大历史消息数（保留最近100条）
@@ -370,7 +370,7 @@ mod tests {
         // 添加带图片的消息
         let img_msg = UnifiedMessage::user_with_image(
             "Describe this",
-            crate::message_plugins::ImageSource::Url("http://example.com/img.png".to_string()),
+            ImageSource::Url("http://example.com/img.png".to_string()),
         );
         history.add_user(img_msg);
 

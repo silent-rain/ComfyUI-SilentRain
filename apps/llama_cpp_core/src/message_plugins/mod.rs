@@ -7,7 +7,6 @@
 //! - ToolsPlugin: Tool 调用消息处理
 
 mod traits;
-mod unified_message;
 
 mod current_input_plugin;
 mod history_plugin;
@@ -17,7 +16,6 @@ mod system_prompt_plugin;
 mod tools_plugin;
 
 pub use traits::{MessageContext, MessagePlugin};
-pub use unified_message::{ContentBlock, ImageSource, UnifiedMessage};
 
 pub use current_input_plugin::CurrentInputPlugin;
 pub use history_plugin::HistoryPlugin;
