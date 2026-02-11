@@ -241,6 +241,90 @@ impl ChatStreamBuilder {
     }
 }
 
+/// 非流式聊天响应构建器
+/// 用于构建标准的 OpenAI Chat Completions API 非流式响应
+#[derive(Debug, Clone)]
+pub struct ChatCompletionBuilder {
+    /// 响应 ID
+    id: String,
+    /// 模型名称
+    model: String,
+    /// 创建时间戳
+    created: u32,
+    /// choice 索引
+    choice_index: u32,
+    /// 输入 prompt tokens 数
+    prompt_tokens: u32,
+}
+
+impl ChatCompletionBuilder {
+    /// 创建新的非流式响应构建器
+    pub fn new(model: impl Into<String>) -> Self {
+        Self {
+            id: format!("chatcmpl-{}", uuid::Uuid::new_v4()),
+            model: model.into(),
+            created: chrono::Utc::now().timestamp() as u32,
+            choice_index: 0,
+            prompt_tokens: 0,
+        }
+    }
+
+    /// 设置 prompt tokens 数量（用于 usage 计算）
+    pub fn with_prompt_tokens(mut self, tokens: u32) -> Self {
+        self.prompt_tokens = tokens;
+        self
+    }
+
+    /// 设置 choice 索引
+    pub fn with_choice_index(mut self, index: u32) -> Self {
+        self.choice_index = index;
+        self
+    }
+
+    /// 构建完整的非流式响应
+    pub fn build(
+        self,
+        content: impl Into<String>,
+        finish_reason: Option<FinishReason>,
+        completion_tokens: u32,
+    ) -> CreateChatCompletionResponse {
+        let content = content.into();
+        let finish_reason = finish_reason.unwrap_or(FinishReason::Stop);
+
+        CreateChatCompletionResponse {
+            id: self.id,
+            object: "chat.completion".to_string(),
+            created: self.created,
+            model: self.model,
+            choices: vec![ChatChoice {
+                index: self.choice_index,
+                message: ChatCompletionResponseMessage {
+                    role: Role::Assistant,
+                    content: Some(content),
+                    #[allow(deprecated)]
+                    function_call: None,
+                    tool_calls: None,
+                    refusal: None,
+                    annotations: None,
+                    audio: None,
+                },
+                finish_reason: Some(finish_reason),
+                logprobs: None,
+            }],
+            usage: Some(CompletionUsage {
+                prompt_tokens: self.prompt_tokens,
+                completion_tokens,
+                total_tokens: self.prompt_tokens + completion_tokens,
+                prompt_tokens_details: None,
+                completion_tokens_details: None,
+            }),
+            #[allow(deprecated)]
+            system_fingerprint: None,
+            service_tier: None,
+        }
+    }
+}
+
 /// 从响应中提取内容文本
 pub fn response_extract_content(response: &CreateChatCompletionResponse) -> String {
     response

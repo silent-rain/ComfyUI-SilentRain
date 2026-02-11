@@ -28,7 +28,7 @@ use crate::{
     },
     mtmd_context::MtmdContextWrapper,
     request::extract_session_id,
-    response::ChatStreamBuilder,
+    response::ChatCompletionBuilder,
     unified_message::{UnifiedMessage, extract_media_sources_from_request, is_multimodal_request},
     utils::image::{Image, decode_image_sources},
 };
@@ -224,10 +224,10 @@ impl Pipeline {
             }
         }
 
-        // 使用 ChatStreamBuilder 构建完整的非流式响应
-        let builder = ChatStreamBuilder::new(model).with_prompt_tokens(prompt_tokens);
-        let response =
-            builder.build_non_streaming_response(full_text, finish_reason, completion_tokens);
+        // 构建完整的非流式响应
+        let response = ChatCompletionBuilder::new(model)
+            .with_prompt_tokens(prompt_tokens)
+            .build(full_text, finish_reason, completion_tokens);
 
         Ok(response)
     }

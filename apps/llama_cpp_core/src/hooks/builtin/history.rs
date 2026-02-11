@@ -102,9 +102,9 @@ impl InferenceHook for HistoryHook {
             .clone()
             .or_else(|| {
                 ctx.response.as_ref().and_then(|resp| {
-                    resp.choices.first().and_then(|choice| {
-                        choice.message.content.clone()
-                    })
+                    resp.choices
+                        .first()
+                        .and_then(|choice| choice.message.content.clone())
                 })
             })
             .unwrap_or_default();
