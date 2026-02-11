@@ -59,3 +59,4 @@ infer = { workspace = true }
 base64 = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 reqwest = { workspace = true, features = [] }
+dashmap = "6"

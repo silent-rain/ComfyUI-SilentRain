@@ -1,19 +1,19 @@
-//! History Context - UnifiedMessage 版本
+//! 历史消息管理
 //!
-//! 使用 UnifiedMessage 作为内部存储格式，支持多模态和 Tool 调用
+//! 提供 HistoryMessage 结构体，支持多模态和 Tool 调用
+//! 底层使用 ChatHistoryManager 进行持久化
 
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
-use crate::{
-    cache::CacheType,
-    error::Error,
-    global_cache,
-    types::MessageRole,
-    unified_message::{ImageSource, UnifiedMessage},
-};
+use crate::error::Error;
+use crate::types::MessageRole;
+use crate::unified_message::{ImageSource, UnifiedMessage};
+
+use super::manager::chat_history;
+use super::session::SessionContext;
 
 /// 默认最大历史消息数（保留最近100条）
 const DEFAULT_MAX_HISTORY_MESSAGES: usize = 100;
@@ -56,6 +56,23 @@ impl HistoryMessage {
         }
     }
 
+    /// 从 SessionContext 创建
+    pub(crate) fn from_session(ctx: &SessionContext) -> Self {
+        Self {
+            entries: ctx.entries().to_vec(),
+            max_entries: ctx.max_entries(),
+        }
+    }
+
+    /// 转换为 SessionContext
+    pub(crate) fn to_session(&self, session_id: impl Into<String>) -> SessionContext {
+        let mut ctx = SessionContext::with_capacity(session_id, self.max_entries);
+        for entry in &self.entries {
+            ctx.add_message(entry.clone());
+        }
+        ctx
+    }
+
     /// 添加消息条目
     ///
     /// 当超过最大限制时，移除最旧的消息（保留系统消息）
@@ -78,8 +95,6 @@ impl HistoryMessage {
     }
 
     /// 添加条目列表
-    ///
-    /// 当超过最大限制时，移除最旧的消息（保留系统消息）
     pub fn add_messages(&mut self, messages: Vec<UnifiedMessage>) {
         for msg in messages {
             self.add_message(msg);
@@ -135,7 +150,6 @@ impl HistoryMessage {
 
     /// 淘汰最旧的消息（保留系统消息）
     fn truncate_oldest(&mut self) {
-        // 找到第一个非系统消息的索引
         let first_non_system = self
             .entries
             .iter()
@@ -143,7 +157,6 @@ impl HistoryMessage {
             .unwrap_or(0);
 
         if first_non_system < self.entries.len() {
-            // 移除最旧的非系统消息
             let removed = self.entries.remove(first_non_system);
             info!(
                 "History truncated: removed oldest {:?} message (count: {})",
@@ -151,12 +164,11 @@ impl HistoryMessage {
                 self.entries.len()
             );
         } else {
-            // 如果只有系统消息，移除最旧的
             self.entries.remove(0);
         }
     }
 
-    /// 获取所有消息条目（UnifiedMessage 格式）
+    /// 获取所有消息条目
     pub fn entries(&self) -> &[UnifiedMessage] {
         &self.entries
     }
@@ -180,7 +192,6 @@ impl HistoryMessage {
     /// 设置最大消息数限制
     pub fn set_max_entries(&mut self, max_entries: usize) {
         self.max_entries = max_entries;
-        // 如果当前消息数超过新限制，立即截断
         while self.entries.len() > self.max_entries {
             self.truncate_oldest();
         }
@@ -197,15 +208,13 @@ impl HistoryMessage {
     }
 
     /// 清理所有消息中的媒体标记
-    ///
-    /// 用于将历史消息中的媒体占位符替换为描述文本
     pub fn sanitize_media_markers(&mut self, marker: &str) {
         for msg in &mut self.entries {
             msg.content = msg.sanitize_media_marker(marker);
         }
     }
 
-    /// 过滤掉包含图片的消息（获取纯文本历史）
+    /// 过滤掉包含图片的消息
     pub fn to_text_only_history(&self) -> Vec<UnifiedMessage> {
         self.entries
             .iter()
@@ -232,7 +241,7 @@ impl HistoryMessage {
         serde_json::from_str(json).map_err(Error::Serde)
     }
 
-    /// 计算内容哈希，用于缓存参数
+    /// 计算内容哈希
     fn compute_content_hash(&self) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -241,7 +250,6 @@ impl HistoryMessage {
         self.entries.len().hash(&mut hasher);
         for entry in &self.entries {
             entry.role.to_string().hash(&mut hasher);
-            // 序列化内容块进行哈希
             let content_str = serde_json::to_string(&entry.content).unwrap_or_default();
             content_str.hash(&mut hasher);
         }
@@ -249,59 +257,61 @@ impl HistoryMessage {
     }
 }
 
-/// 缓存操作
+/// 缓存操作（使用 ChatHistoryManager）
 impl HistoryMessage {
     /// 从缓存加载历史消息
     pub fn from_cache(session_id: impl AsRef<str>) -> Result<Arc<Self>, Error> {
-        let cache = global_cache();
         let session_id = session_id.as_ref();
+        let manager = chat_history();
 
-        cache
-            .get_data::<HistoryMessage>(session_id)
-            .map_err(|e| {
-                error!("Failed to get history from cache: {}", e);
-                e
-            })?
-            .ok_or_else(|| Error::CacheNotFound {
-                key: session_id.to_string(),
-            })
+        match manager.get(session_id) {
+            Some(ctx) => {
+                info!("Loaded history from cache for session: {}", session_id);
+                Ok(Arc::new(HistoryMessage::from_session(&ctx)))
+            }
+            None => {
+                error!("History not found in cache for session: {}", session_id);
+                Err(Error::CacheNotFound {
+                    key: session_id.to_string(),
+                })
+            }
+        }
     }
 
     /// 强制更新缓存
     pub fn force_update_cache(&mut self, session_id: impl AsRef<str>) -> Result<(), Error> {
-        let cache = global_cache();
         let session_id = session_id.as_ref();
+        let manager = chat_history();
 
-        let content_hash = self.compute_content_hash();
-        let params = vec![content_hash, self.entries.len().to_string()];
-
-        cache.force_update(
-            session_id,
-            CacheType::MessageContext,
-            &params,
-            Arc::new(self.clone()),
-        )?;
+        // 转换为 SessionContext 并保存
+        let ctx = self.to_session(session_id);
+        manager.save(session_id, ctx)?;
 
         info!("History saved to cache for session: {}", session_id);
         Ok(())
     }
 
-    /// 保存到缓存（自动计算参数）
+    /// 保存到缓存
     pub fn save_to_cache(&mut self, session_id: impl AsRef<str>) -> Result<(), Error> {
         self.force_update_cache(session_id)
     }
 
     /// 从缓存删除
     pub fn remove_from_cache(session_id: impl AsRef<str>) -> Result<(), Error> {
-        let cache = global_cache();
-        let cache_key = format!("history_message_{}", session_id.as_ref());
-        cache.remove(&cache_key)?;
+        let session_id = session_id.as_ref();
+        let manager = chat_history();
+
+        if manager.remove(session_id).is_some() {
+            info!("Removed history from cache for session: {}", session_id);
+        } else {
+            warn!("No history found to remove for session: {}", session_id);
+        }
         Ok(())
     }
 
     /// 检查缓存是否存在
     pub fn exists_in_cache(session_id: impl AsRef<str>) -> bool {
-        HistoryMessage::from_cache(session_id).is_ok()
+        chat_history().exists(session_id)
     }
 }
 
@@ -315,8 +325,7 @@ impl HistoryMessage {
 
     /// 获取所有会话ID列表（从缓存）
     pub fn list_session_ids() -> Result<Vec<String>, Error> {
-        let cache = global_cache();
-        cache.get_keys_by_type(CacheType::MessageContext)
+        Ok(chat_history().list_sessions())
     }
 
     /// 合并另一个历史记录到当前记录
@@ -349,10 +358,9 @@ mod tests {
         history.add_system_text("System prompt");
         history.add_user_text("Message 1");
         history.add_assistant_text("Response 1");
-        history.add_user_text("Message 2"); // 应该触发截断
+        history.add_user_text("Message 2");
 
         assert_eq!(history.message_count(), 3);
-        // 系统消息应该保留，最旧的用户消息被移除
         assert_eq!(history.entries[0].role, MessageRole::System);
     }
 
@@ -361,7 +369,6 @@ mod tests {
         let mut history = HistoryMessage::new();
 
         history.add_user_text("Hello");
-        // 添加带图片的消息
         let img_msg = UnifiedMessage::user_with_image(
             "Describe this",
             ImageSource::Url("http://example.com/img.png".to_string()),
@@ -383,5 +390,21 @@ mod tests {
         let restored = HistoryMessage::from_json(&json).unwrap();
 
         assert_eq!(restored.message_count(), history.message_count());
+    }
+
+    #[test]
+    fn test_session_conversion() {
+        let mut history = HistoryMessage::with_capacity(50);
+        history.add_system_text("System");
+        history.add_user_text("User");
+        history.add_assistant_text("Assistant");
+
+        let ctx = history.to_session("test_session");
+        assert_eq!(ctx.session_id(), "test_session");
+        assert_eq!(ctx.message_count(), 3);
+        assert_eq!(ctx.max_entries(), 50);
+
+        let restored = HistoryMessage::from_session(&ctx);
+        assert_eq!(restored.message_count(), 3);
     }
 }
