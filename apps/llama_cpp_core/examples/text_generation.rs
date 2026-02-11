@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 原始请求体构建
     {
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages([
                 // Can also use ChatCompletionRequest<Role>MessageArgs for builder pattern
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
            .build();
 
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(messages)
             .build()?;

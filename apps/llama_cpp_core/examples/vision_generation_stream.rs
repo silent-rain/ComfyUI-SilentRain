@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build();
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(2048u32)
+        .max_completion_tokens(2048u32)
         .model("Qwen3-VL-2B-Instruct")
         .messages(messages)
         .build()?;

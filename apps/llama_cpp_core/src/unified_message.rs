@@ -182,7 +182,7 @@ impl UnifiedMessage {
     }
 
     /// 清理内容中的媒体标记
-    pub fn sanitize_media_marker(&mut self, marker: &str) -> Vec<ContentBlock> {
+    pub fn sanitize_media_marker(&self, marker: &str) -> Vec<ContentBlock> {
         self.content
             .clone()
             .iter()
@@ -490,7 +490,7 @@ mod tests {
 
     #[test]
     fn test_sanitize_media_marker() {
-        let mut msg = UnifiedMessage::user_text("See this image: <image> what is it?");
+        let msg = UnifiedMessage::user_text("See this image: <image> what is it?");
         let new_content = msg.sanitize_media_marker("<image>");
         assert_eq!(new_content.len(), 1);
         if let ContentBlock::Text { text } = &new_content[0] {
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn test_chat_completion_request_message_to_unified_message() -> anyhow::Result<()> {
         let request = CreateChatCompletionRequestArgs::default()
-                    .max_tokens(2048u32)
+                    .max_completion_tokens(2048u32)
                     .model("Qwen3-VL-2B-Instruct")
                     .messages(ChatMessagesBuilder::new()
                         .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     fn test_unified_message_to_llama_messages() -> anyhow::Result<()> {
         let request = CreateChatCompletionRequestArgs::default()
-                    .max_tokens(2048u32)
+                    .max_completion_tokens(2048u32)
                     .model("Qwen3-VL-2B-Instruct")
                     .messages(ChatMessagesBuilder::new()
                         .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn test_extract_media_sources_from_request() -> anyhow::Result<()> {
         let request = CreateChatCompletionRequestArgs::default()
-                    .max_tokens(2048u32)
+                    .max_completion_tokens(2048u32)
                     .model("Qwen3-VL-2B-Instruct")
                     .messages(ChatMessagesBuilder::new()
                         .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")

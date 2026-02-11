@@ -114,7 +114,7 @@ impl MtmdContextWrapper {
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut decoder = encoding_rs::UTF_8.new_decoder();
-        let max_tokens = self.contex_params.max_predict();
+        let max_completion_tokens = self.contex_params.max_predict();
         let verbose = self.contex_params.verbose;
         let t_main_start = ggml_time_us();
 
@@ -126,8 +126,8 @@ impl MtmdContextWrapper {
         // 创建流式响应构建器
         let mut builder = ChatStreamBuilder::new(model_id).with_prompt_tokens(prompt_tokens);
 
-        // 循环生成 token，直到达到最大长度 max_tokens
-        while n_cur < max_tokens {
+        // 循环生成 token，直到达到最大长度 max_completion_tokens
+        while n_cur < max_completion_tokens {
             // 采样下一个 token
             let token = sampler.sample(&self.base_context.context, -1);
             sampler.accept(token);
@@ -199,7 +199,7 @@ impl MtmdContextWrapper {
             n_cur += 1;
 
             // 检查是否达到最大 token 数
-            if n_cur >= max_tokens {
+            if n_cur >= max_completion_tokens {
                 // 发送长度限制停止 chunk
                 if let Err(e) = tx.send(builder.build_length_chunk()) {
                     error!("Failed to send length chunk: {}", e);
@@ -353,7 +353,7 @@ mod tests {
 
         // 将上下文信息添加到历史消息中
         {
-            history_message.add_system(system_prompt); // 仅添加系统提示
+            history_message.add_system_text(system_prompt); // 仅添加系统提示
 
             // 每轮聊天都添加用户提示和助手响应
             history_message.add_user_text(user_prompt);

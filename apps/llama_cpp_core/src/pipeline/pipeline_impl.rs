@@ -470,7 +470,7 @@ mod tests {
         let pipeline = Pipeline::try_new(pipeline_config)?;
 
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(
                 ChatMessagesBuilder::new()
@@ -509,7 +509,7 @@ mod tests {
 
         // 反推图片
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(
                 ChatMessagesBuilder::new()
@@ -554,7 +554,7 @@ mod tests {
 
         // 反推图片
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(
                 ChatMessagesBuilder::new()
@@ -593,7 +593,7 @@ mod tests {
 
         // 反推图片
         let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(2048u32)
+            .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(
                 ChatMessagesBuilder::new()

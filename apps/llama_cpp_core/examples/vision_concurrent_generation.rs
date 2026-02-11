@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })?;
 
                  let request1 = CreateChatCompletionRequestArgs::default()
-                    .max_tokens(2048u32)
+                    .max_completion_tokens(2048u32)
                     .model("Qwen3-VL-2B-Instruct")
                     .messages(ChatMessagesBuilder::new()
                         .system("你是专注生成套图模特提示词专家，用于生成9个同人物，同场景，同服装，不同的模特照片，需要保持专业性。")

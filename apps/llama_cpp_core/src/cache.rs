@@ -498,11 +498,12 @@ mod tests {
         let cache = CacheManager::global();
 
         let params = &[1, 2, 4];
+        let key = "model1_get_or_insert";
 
         // 第一次调用，初始化模型
         {
             let model = cache
-                .get_or_insert("model1", CacheType::Model, params, || {
+                .get_or_insert(key, CacheType::Model, params, || {
                     Ok(Arc::new(MyModel { value: 42 }))
                 })
                 .unwrap();
@@ -512,7 +513,7 @@ mod tests {
         // 第二次调用，hash 一致，返回现有模型
         {
             let model = cache
-                .get_or_insert("model1", CacheType::Model, params, || {
+                .get_or_insert(key, CacheType::Model, params, || {
                     println!("This should not be printed!");
                     Ok(Arc::new(MyModel { value: 80 }))
                 })
@@ -525,7 +526,7 @@ mod tests {
             let params = &[1, 2, 3];
 
             let model = cache
-                .get_or_insert("model1", CacheType::Model, params, || {
+                .get_or_insert(key, CacheType::Model, params, || {
                     Ok(Arc::new(MyModel { value: 100 }))
                 })
                 .unwrap();

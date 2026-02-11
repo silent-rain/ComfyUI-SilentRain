@@ -54,7 +54,7 @@ impl HistoryPlugin {
             .cloned()
             .map(|mut msg| {
                 // 清理媒体标记
-                msg.sanitize_media_marker(media_marker);
+                msg.content = msg.sanitize_media_marker(media_marker);
                 msg
             })
             .collect()

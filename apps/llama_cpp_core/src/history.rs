@@ -12,7 +12,7 @@ use crate::{
     error::Error,
     global_cache,
     types::MessageRole,
-    unified_message::{ContentBlock, ImageSource, UnifiedMessage},
+    unified_message::{ImageSource, UnifiedMessage},
 };
 
 /// 默认最大历史消息数（保留最近100条）
@@ -32,22 +32,6 @@ pub struct HistoryMessage {
     entries: Vec<UnifiedMessage>,
     /// 最大消息数限制
     max_entries: usize,
-    /// 关联的媒体资源（图片等）- 可选存储
-    #[serde(skip_serializing_if = "Option::is_none")]
-    media_assets: Option<Vec<MediaAsset>>,
-}
-
-/// 媒体资源元数据（用于历史记录中的图片引用）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MediaAsset {
-    /// 资源ID
-    pub id: String,
-    /// 媒体类型
-    pub mime_type: String,
-    /// 存储路径或URL
-    pub source: String,
-    /// 创建时间戳
-    pub created_at: u64,
 }
 
 impl Default for HistoryMessage {
@@ -55,7 +39,6 @@ impl Default for HistoryMessage {
         Self {
             entries: Vec::new(),
             max_entries: DEFAULT_MAX_HISTORY_MESSAGES,
-            media_assets: None,
         }
     }
 }
@@ -70,7 +53,6 @@ impl HistoryMessage {
         Self {
             entries: Vec::new(),
             max_entries,
-            media_assets: None,
         }
     }
 
@@ -93,6 +75,15 @@ impl HistoryMessage {
         }
 
         self.entries.push(message);
+    }
+
+    /// 添加条目列表
+    ///
+    /// 当超过最大限制时，移除最旧的消息（保留系统消息）
+    pub fn add_messages(&mut self, messages: Vec<UnifiedMessage>) {
+        for msg in messages {
+            self.add_message(msg);
+        }
     }
 
     /// 添加用户文本消息
@@ -124,13 +115,17 @@ impl HistoryMessage {
     }
 
     /// 添加系统消息
-    pub fn add_system(&mut self, text: impl Into<String>) {
+    pub fn add_system_text(&mut self, text: impl Into<String>) {
         self.add_message(UnifiedMessage::system(text));
     }
 
     /// 添加系统消息（支持内容块）
-    pub fn add_system_with_blocks(&mut self, blocks: Vec<ContentBlock>) {
-        self.add_message(UnifiedMessage::system_with_blocks(blocks));
+    pub fn add_system(&mut self, message: UnifiedMessage) {
+        assert!(
+            message.role == MessageRole::System,
+            "Expected system role message"
+        );
+        self.add_message(message);
     }
 
     /// 添加 Tool 结果消息
@@ -199,7 +194,6 @@ impl HistoryMessage {
     /// 清空历史
     pub fn clear(&mut self) {
         self.entries.clear();
-        self.media_assets = None;
     }
 
     /// 清理所有消息中的媒体标记
@@ -207,7 +201,7 @@ impl HistoryMessage {
     /// 用于将历史消息中的媒体占位符替换为描述文本
     pub fn sanitize_media_markers(&mut self, marker: &str) {
         for msg in &mut self.entries {
-            msg.sanitize_media_marker(marker);
+            msg.content = msg.sanitize_media_marker(marker);
         }
     }
 
@@ -341,7 +335,7 @@ mod tests {
     fn test_add_messages() {
         let mut history = HistoryMessage::new();
 
-        history.add_system("You are a helpful assistant");
+        history.add_system_text("You are a helpful assistant");
         history.add_user_text("Hello");
         history.add_assistant_text("Hi there!");
 
@@ -352,7 +346,7 @@ mod tests {
     fn test_truncate_oldest() {
         let mut history = HistoryMessage::with_capacity(3);
 
-        history.add_system("System prompt");
+        history.add_system_text("System prompt");
         history.add_user_text("Message 1");
         history.add_assistant_text("Response 1");
         history.add_user_text("Message 2"); // 应该触发截断
@@ -381,7 +375,7 @@ mod tests {
     #[test]
     fn test_serde_roundtrip() {
         let mut history = HistoryMessage::new();
-        history.add_system("System");
+        history.add_system_text("System");
         history.add_user_text("User message");
         history.add_assistant_text("Assistant response");
 

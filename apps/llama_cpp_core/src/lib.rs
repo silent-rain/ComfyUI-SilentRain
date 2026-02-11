@@ -22,7 +22,7 @@ pub mod utils;
 pub use backend::Backend;
 pub use cache::{CacheManager, global_cache};
 pub use context::ContexParams;
-pub use history::{HistoryMessage, MediaAsset};
+pub use history::HistoryMessage;
 pub use model::Model;
 pub use pipeline::{Pipeline, PipelineConfig};
 pub use sampler::Sampler;

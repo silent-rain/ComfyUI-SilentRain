@@ -195,14 +195,14 @@ let request = GenerateRequest::text("Hello, how are you?")
     .with_system("You are a helpful assistant.")
     .with_model("gpt-4")
     .with_temperature(0.7)
-    .with_max_tokens(500);
+    .with_max_completion_tokens(500);
 ```
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `model` | `String` | 模型名称 |
 | `temperature` | `f32` | 采样温度 (默认 0.7) |
-| `max_tokens` | `u32` | 最大生成 token 数 |
+| `max_completion_tokens` | `u32` | 最大完成令牌数|
 | `stream` | `bool` | 是否流式输出 |
 | `session_id` | `String` | 会话ID（用于历史管理） |
 | `keep_context` | `bool` | 是否保留上下文 |

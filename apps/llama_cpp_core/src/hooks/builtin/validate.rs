@@ -74,30 +74,30 @@ impl InferenceHook for ValidateHook {
             });
         }
 
-        // 验证 max_tokens
-        if let Some(max_tokens) = request.max_completion_tokens {
+        // 验证 max_completion_tokens
+        if let Some(max_completion_tokens) = request.max_completion_tokens {
             // 检查最大值
             if let Some(max_allowed) = self.max_allowed_tokens
-                && max_tokens > max_allowed
+                && max_completion_tokens > max_allowed
             {
                 return Err(Error::InvalidInput {
-                    field: "max_tokens".to_string(),
+                    field: "max_completion_tokens".to_string(),
                     message: format!(
-                        "max_tokens ({}) exceeds maximum allowed ({})",
-                        max_tokens, max_allowed
+                        "max_completion_tokens ({}) exceeds maximum allowed ({})",
+                        max_completion_tokens, max_allowed
                     ),
                 });
             }
 
             // 检查最小值
             if let Some(min_allowed) = self.min_allowed_tokens
-                && max_tokens < min_allowed
+                && max_completion_tokens < min_allowed
             {
                 return Err(Error::InvalidInput {
-                    field: "max_tokens".to_string(),
+                    field: "max_completion_tokens".to_string(),
                     message: format!(
-                        "max_tokens ({}) is less than minimum allowed ({})",
-                        max_tokens, min_allowed
+                        "max_completion_tokens ({}) is less than minimum allowed ({})",
+                        max_completion_tokens, min_allowed
                     ),
                 });
             }
@@ -154,7 +154,7 @@ mod tests {
         // 应该通过的请求
         let request = CreateChatCompletionRequestArgs::default()
             .model("test")
-            .max_tokens(50u32)
+            .max_completion_tokens(50u32)
             .messages(vec![async_openai::types::chat::ChatCompletionRequestMessage::User(
                 async_openai::types::chat::ChatCompletionRequestUserMessage {
                     content: async_openai::types::chat::ChatCompletionRequestUserMessageContent::Text("Hello".to_string()),
@@ -170,7 +170,7 @@ mod tests {
         // 应该失败的请求
         let request = CreateChatCompletionRequestArgs::default()
             .model("test")
-            .max_tokens(200u32)
+            .max_completion_tokens(200u32)
             .messages(vec![async_openai::types::chat::ChatCompletionRequestMessage::User(
                 async_openai::types::chat::ChatCompletionRequestUserMessage {
                     content: async_openai::types::chat::ChatCompletionRequestUserMessageContent::Text("Hello".to_string()),

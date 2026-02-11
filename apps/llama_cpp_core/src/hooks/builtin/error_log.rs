@@ -68,7 +68,7 @@ impl InferenceHook for ErrorLogHook {
             if let Some(req) = &ctx.request {
                 warn!(
                     message_count = req.messages.len(),
-                    max_tokens = ?req.max_completion_tokens,
+                    max_completion_tokens = ?req.max_completion_tokens,
                     temperature = ?req.temperature,
                     "Request details"
                 );
