@@ -7,15 +7,18 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyDict, PyDictMethods, PyType},
+    types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
 };
 use pythonize::depythonize;
 use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, Pipeline, PipelineConfig, global_cache, model::ModelConfig,
-    pipeline::response_extract_content, sampler::SamplerConfig,
+    ContexParams, Pipeline, PipelineConfig, global_cache,
+    model::ModelConfig,
+    request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Request},
+    response::response_extract_content,
+    sampler::SamplerConfig,
 };
 
 use crate::{
@@ -87,7 +90,6 @@ impl LlamaCppPromptHelperv2 {
         let sampler_config = SamplerConfig::default();
         let model_config = ModelConfig::default();
         let context_config = ContexParams::default();
-        let generate_request = GenerateRequest::default();
         let session_id = Uuid::new_v4().to_string();
 
         InputSpec::new()
@@ -107,13 +109,13 @@ impl LlamaCppPromptHelperv2 {
                 "system_prompt",
                 InputType::string()
                     .multiline(true)
-                    .default(generate_request.system_prompt.unwrap_or_default())
+                    .default("")
                     .tooltip("System prompt for the request"),
             )
             .with_required(
                 "user_prompt",
                 InputType::string()
-                    .default(generate_request.user_prompt)
+                    .default("")
                     .multiline(true)
                     .tooltip("User prompt for the request"),
             )
@@ -207,29 +209,33 @@ impl LlamaCppPromptHelperv2 {
                 "session_id",
                 InputType::string()
                     .default(session_id)
-                    .default(generate_request.session_id)
                     .tooltip("Session ID for the request, Used for context isolation"),
             )
             .with_required(
                 "keep_context",
                 InputType::bool()
-                    .default(generate_request.keep_context)
+                    .default(false)
                     .tooltip("Maintain multiple rounds of conversation context. Context is not supported when concurrent limit is greater than 1"),
             )
             .build()
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (model, options, **kwargs))]
+    #[pyo3(name = "execute", signature = (model, options, system_prompt, user_prompt, session_id, keep_context, **kwargs))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
         model: Bound<'py, PyDict>,
         options: Option<Bound<'py, PyDict>>,
+        system_prompt: String,
+        user_prompt: String,
+        session_id: String,
+        keep_context: bool,
         kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(String,)> {
-        let (pipeline_config, generate_request) =
-            self.options_parser(model, options, kwargs).map_err(|e| {
+        let (pipeline_config, request, cache_model) = self
+            .options_parser(model, options, system_prompt, user_prompt, kwargs)
+            .map_err(|e| {
                 error!("LlamaCppPromptHelperv2 options parser: {e}");
                 if let Err(e) =
                     self.send_error(py, "LlamaCppPromptHelperv2".to_string(), e.to_string())
@@ -239,7 +245,13 @@ impl LlamaCppPromptHelperv2 {
                 PyErr::new::<PyRuntimeError, _>(e.to_string())
             })?;
 
-        let futures = self.generate(pipeline_config, generate_request);
+        let futures = self.generate(
+            pipeline_config,
+            request,
+            session_id,
+            keep_context,
+            cache_model,
+        );
 
         // 使用 allow_threads 释放 GIL，然后在内部运行异步代码
         py.detach(move || {
@@ -269,8 +281,10 @@ impl LlamaCppPromptHelperv2 {
         &self,
         model: Bound<'py, PyDict>,
         options: Option<Bound<'py, PyDict>>,
+        system_prompt: String,
+        user_prompt: String,
         kwargs: Option<Bound<'py, PyDict>>,
-    ) -> Result<(PipelineConfig, GenerateRequest), Error> {
+    ) -> Result<(PipelineConfig, Request, String), Error> {
         let kwargs =
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
 
@@ -286,6 +300,13 @@ impl LlamaCppPromptHelperv2 {
             Error::InvalidParameter(format!("update model kwargs error: {e}"))
         })?;
 
+        let cache_model: String = kwargs
+            .get_item("verbose")
+            .ok()
+            .flatten()
+            .map(|v| v.extract().unwrap_or("".to_string()))
+            .unwrap_or("".to_string());
+
         let model_config: ModelConfig = depythonize(&kwargs)?;
         let sampler_config: SamplerConfig = depythonize(&kwargs)?;
         let context_config: ContexParams = depythonize(&kwargs)?;
@@ -294,27 +315,45 @@ impl LlamaCppPromptHelperv2 {
             context: context_config,
             sampling: sampler_config,
         };
-        let generate_request: GenerateRequest = depythonize(&kwargs)?;
+
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_completion_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages(
+                ChatMessagesBuilder::new()
+                    .system(system_prompt)
+                    .user(user_prompt)
+                    .build(),
+            )
+            .build()
+            .map_err(|e| {
+                error!("CreateChatCompletionRequestArgs error: {e}");
+                Error::OpenAIError(e.to_string())
+            })?;
 
         info!("pipeline_config: {pipeline_config:#?}");
-        info!("generate_request: {generate_request:#?}");
+        info!("request: {request:#?}");
 
-        Ok((pipeline_config, generate_request))
+        Ok((pipeline_config, request, cache_model))
     }
 
     /// 生成聊天响应
     async fn generate(
         &self,
         pipeline_config: PipelineConfig,
-        generate_request: GenerateRequest,
+        request: Request,
+
+        session_id: String,
+        keep_context: bool,
+        cache_model: String,
     ) -> Result<(String,), Error> {
-        if !generate_request.keep_context {
+        if !keep_context && !cache_model.is_empty() {
             let cache = global_cache();
-            cache.remove(&generate_request.session_id)?;
+            cache.remove(&session_id)?;
         }
 
         let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
-        let output = pipeline.generate(&generate_request).await?;
+        let output = pipeline.generate(&request).await?;
 
         Ok((response_extract_content(&output),))
     }
