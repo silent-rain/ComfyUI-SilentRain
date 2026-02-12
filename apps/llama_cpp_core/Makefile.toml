@@ -1,0 +1,177 @@
+# Rust MakeFile
+# 
+# github: https://github.com/sagiegurari/cargo-make
+# 
+# install: cargo install cargo-make
+# 
+# menu: cargo make list
+# run task: cargo make android-build
+
+[env]
+# NDK_HOME = "/home/user/.Android/Sdk/ndk/28.0.12433566" # Android NDK HOME, 支持直接读取系统环境变量
+ANDROID_NDK = "${NDK_HOME}"
+CC_aarch64_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
+CC_armv7_linux_androideabi = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang"
+CC_x86_64_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang"
+CC_i686_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang"
+CXX_aarch64_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++"
+CXX_armv7_linux_androideabi = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang++"
+CXX_x86_64_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang++"
+CXX_i686_linux_android = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang++"
+
+
+# ============= 功能列表 =============
+[tasks.list]
+description = "List all tasks."
+category = "menu"
+script = [
+    "cargo make --quiet --list-category-steps deps",
+    "cargo make --quiet --list-category-steps run",
+    "cargo make --quiet --list-category-steps build",
+    "cargo make --quiet --list-category-steps utils",
+]
+
+
+# ============= 安装依赖 =============
+[tasks.install-linux-sys-deps]
+private = true
+description = "Install linux sys deps."
+category = "deps"
+command = "sudo"
+args = [
+    "pacman",
+    "-S",
+    "--needed",
+    "binutils",
+    "gcc",
+    "lld",       # 链接器
+    "llvm",      # 链接器
+    "xdg-utils",
+]
+
+[tasks.install-cargo-deps]
+private = true
+description = "Install cargo deps."
+category = "deps"
+command = "cargo"
+args = [
+    "install",
+    "sea-orm-cli", # Sea-Orm Cli 工具
+    "cargo-udeps", # 分析依赖
+]
+
+[tasks.install-rustup-linux-deps]
+private = true
+description = "Install rustup add linux deps."
+category = "deps"
+command = "rustup"
+args = [
+    "target",
+    "add",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-gnu",
+    # "x86_64-pc-windows-msvc",
+]
+
+[tasks.install-rustup-android-deps]
+# private = true
+description = "Install rustup add android deps."
+category = "deps"
+command = "rustup"
+args = [
+    "target",
+    "add",
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "i686-linux-android",
+    "x86_64-linux-android",
+]
+
+[tasks.install-rustup-ios-deps]
+private = true
+description = "Install rustup add ios deps."
+category = "deps"
+command = "rustup"
+args = [
+    "target",
+    "add",
+    "aarch64-apple-ios",
+    "x86_64-apple-ios",
+    "aarch64-apple-ios-sim",
+]
+
+
+[tasks.install]
+description = "Init all deps."
+category = "deps"
+run_task = [
+    { name = [
+        "install-linux-sys-deps",
+        "install-cargo-deps",
+        "install-rustup-linux-deps",
+        "install-rustup-android-deps",
+        # "install-rustup-ios-deps",
+    ] },
+]
+
+# ============= 工具 =============
+[tasks.clean-cargo]
+description = "Clean cargo build"
+category = "utils"
+command = "cargo"
+args = ["clean"]
+
+
+[tasks.fmt]
+description = "Cargo fmt all"
+category = "utils"
+command = "cargo"
+args = ["fmt", "--all"]
+
+
+# ============= 开发调式 =============
+[tasks.dev]
+description = "Run dev build"
+category = "dev"
+command = "cargo"
+args = ["build", "-p", "llama_cpp_core"]
+
+
+[tasks.dev-aarch64-android]
+description = "Run android dev build."
+category = "run"
+# env = { "CC_aarch64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang", "CC_armv7_linux_androideabi" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang", "CC_x86_64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang", "CC_i686_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang", "CXX_aarch64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++", "CXX_armv7_linux_androideabi" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang++", "CXX_x86_64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang++", "CXX_i686_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang++"}
+command = "cargo"
+args = ["build", "-p", "llama_cpp_core", "--target=aarch64-linux-android"]
+
+[tasks.dev-armv7-android]
+description = "Run android dev build."
+category = "run"
+command = "cargo"
+args = ["build", "-p", "llama_cpp_core", "--target=armv7-linux-androideabi"]
+
+[tasks.dev-x86_64-android]
+description = "Run android dev build."
+category = "run"
+command = "cargo"
+args = ["build", "-p", "llama_cpp_core", "--target=x86_64-linux-android"]
+
+
+[tasks.dev-i686-android]
+description = "Run android dev build."
+category = "run"
+command = "cargo"
+args = ["build", "-p", "llama_cpp_core", "--target=i686-linux-android"]
+
+
+[tasks.dev-android]
+description = "Run android dev build for all targets"
+category = "run"
+run_task = [
+    { name = [
+        "dev-aarch64-android",
+        # "dev-armv7-android",
+        "dev-x86_64-android",
+        "dev-i686-android",
+    ] },
+]

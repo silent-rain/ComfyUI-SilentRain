@@ -57,7 +57,7 @@ indexmap = "2.13"                          # 有序的 HashMap
 infer = "0.19"                             # 推断文件和MIME类型的轻量级工具
 uuid = "1.20"
 async-openai = "0.32"
-open-ai-rust-responses-by-sshift = "0.4.3"
+# open-ai-rust-responses-by-sshift = "0.4"
 chrono = "0.4"
 
 anyhow = "1.0"

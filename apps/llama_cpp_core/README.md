@@ -266,3 +266,74 @@ cargo run --package llama_cpp_core --example check_gpu --features vulkan
 cargo run --package llama_cpp_core --example text_generation --features vulkan
 cargo run --package llama_cpp_core --example vision_generation --features vulkan
 ```
+
+## 编译
+
+### Rust 编译
+
+确保你已经安装了 Rust 和 Cargo。然后可以使用以下命令编译项目：
+
+```bash
+cargo build -p llama_cpp_core
+```
+
+### 安卓编译
+
+- 通过脚本进行编译
+
+```sh
+cd apps/llama_cpp_core
+
+# install: cargo install cargo-make
+
+cargo make dev-android
+```
+
+- 设置环境变量
+
+```sh
+# 设置 Android NDK 路径
+export ANDROID_NDK=$NDK_HOME
+export NDK_ROOT=$NDK_HOME
+export ANDROID_NDK_ROOT=$NDK_HOME
+ 
+# C 编译器
+export CC_aarch64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
+export CC_armv7_linux_androideabi=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang
+export CC_x86_64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang
+export CC_i686_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang
+
+# C++ 编译器
+export CXX_aarch64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++
+export CXX_armv7_linux_androideabi=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang++
+export CXX_x86_64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang++
+export CXX_i686_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang++
+
+cargo build -p llama_cpp_core --target aarch64-linux-android
+# cargo build -p llama_cpp_core --target armv7-linux-androideabi # 32 位架构（armv7）支持不完整。bindgen 生成的绑定代码包含硬编码的 64 位结构体大小断言，在 32 位系统上会失败。
+cargo build -p llama_cpp_core --target x86_64-linux-android
+cargo build -p llama_cpp_core --target i686-linux-android
+```
+
+- 变量无法透传，失败的示例
+
+```sh
+# 设置 Android NDK 路径
+export ANDROID_NDK=$NDK_HOME
+export NDK_ROOT=$NDK_HOME
+export ANDROID_NDK_ROOT=$NDK_HOME
+export API_LEVEL=35
+
+
+# C 编译器
+CC_aarch64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang \
+CC_armv7_linux_androideabi=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang \
+CC_x86_64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang \
+CC_i686_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang \
+# C++ 编译器
+CXX_aarch64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++ \
+CXX_armv7_linux_androideabi=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang++ \
+CXX_x86_64_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang++ \
+CXX_i686_linux_android=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang++ \
+cargo build -p llama_cpp_core --target=aarch64-linux-android
+```

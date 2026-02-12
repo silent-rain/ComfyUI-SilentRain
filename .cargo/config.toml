@@ -14,6 +14,31 @@ rustflags = [
 ]
 
 
+[target.aarch64-linux-android]
+linker = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
+ar = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+[target.armv7-linux-androideabi]
+linker = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang"
+ar = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+[target.x86_64-linux-android]
+linker = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang"
+ar = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+[target.i686-linux-android]
+linker = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang"
+ar = "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+
+[target.'cfg(any(target_arch = "arm", target_arch = "aarch64"))']
+rustflags = [
+    "-C",
+    # https://github.com/huggingface/candle/issues/1625
+    "target-feature=+fp16",
+]
+
+
 [alias]
 t = "test -- --nocapture" # 单元测试显示println!宏的打印信息
 
