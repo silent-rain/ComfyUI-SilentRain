@@ -13,7 +13,11 @@ use async_openai::types::chat::{
     CreateChatCompletionRequest, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
     FinishReason,
 };
-use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaChatMessage};
+use llama_cpp_2::{
+    llama_backend::LlamaBackend,
+    model::{LlamaChatMessage, LlamaModel},
+    mtmd::MtmdContext,
+};
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 use tracing::{error, info, warn};
 
@@ -36,29 +40,57 @@ use crate::{
 /// 推理流水线
 pub struct Pipeline {
     backend: Arc<LlamaBackend>,
+    llama_model: Arc<LlamaModel>,
+    mtmd_context: Option<Arc<MtmdContext>>,
     config: PipelineConfig,
     hooks: Vec<DynHook>,
 }
+
+unsafe impl Send for Pipeline {}
+unsafe impl Sync for Pipeline {}
 
 impl Pipeline {
     /// 创建新的流水线
     pub fn try_new(config: PipelineConfig) -> Result<Self, Error> {
         // 初始化后端
-        let backend = Backend::init_backend()?;
+        let backend = Arc::new(Backend::init_backend()?);
+
+        // Load model
+        let model = Model::from_config(config.model.clone());
+        let llama_model = model.load_llama_model(&backend).map_err(|e| {
+            error!("Failed to load model: {}", e);
+            e
+        })?;
+
+        // Load mtmd model
+        let mtmd_context = if !config.model.mmproj_path.is_empty() {
+            let mtmd_context = model.load_mtmd_context(llama_model.clone()).map_err(|e| {
+                error!("Failed to load mtmd context: {}", e);
+                e
+            })?;
+
+            Some(mtmd_context)
+        } else {
+            None
+        };
+
+        // load hooks
+        let hooks: Vec<DynHook> = vec![
+            Arc::new(NormalizeHook::new().with_trim(true).with_remove_empty(true)), // 消息标准化（优先级 10）
+            Arc::new(
+                SystemPromptHook::keep_first().with_default_system("You are a helpful assistant."),
+            ), // 系统提示词处理（优先级 20）
+            Arc::new(LoadHistoryHook::new().with_max_history(100)), // 加载历史消息（优先级 30）
+            Arc::new(AssembleMessagesHook::new()),                  // 组装最终消息（优先级 40）
+            Arc::new(SaveHistoryHook::new()),                       // 保存历史（优先级 60）
+        ];
 
         Ok(Self {
-            backend: Arc::new(backend),
+            backend,
+            llama_model,
+            mtmd_context,
             config,
-            hooks: vec![
-                Arc::new(NormalizeHook::new().with_trim(true).with_remove_empty(true)), // 消息标准化（优先级 10）
-                Arc::new(
-                    SystemPromptHook::keep_first()
-                        .with_default_system("You are a helpful assistant."),
-                ), // 系统提示词处理（优先级 20）
-                Arc::new(LoadHistoryHook::new().with_max_history(100)), // 加载历史消息（优先级 30）
-                Arc::new(AssembleMessagesHook::new()),                  // 组装最终消息（优先级 40）
-                Arc::new(SaveHistoryHook::new()),                       // 保存历史（优先级 60）
-            ],
+            hooks,
         })
     }
 
@@ -389,14 +421,6 @@ impl Pipeline {
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let msgs = self.prepare_messages(request, hook_ctx).await?;
 
-        // Load model
-        let llama_model = Model::from_config(self.config.model.clone())
-            .load_llama_model(&self.backend)
-            .map_err(|e| {
-                error!("Failed to load model: {}", e);
-                e
-            })?;
-
         // Load sampler
         let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
             error!("Failed to load sampler: {}", e);
@@ -405,11 +429,12 @@ impl Pipeline {
 
         // 创建上下文
         let contex_params: ContexParams = self.config.context.clone();
-        let mut ctx = ContextWrapper::try_new(llama_model.clone(), &self.backend, &contex_params)
-            .map_err(|e| {
-            error!("Failed to create context: {}", e);
-            e
-        })?;
+        let mut ctx =
+            ContextWrapper::try_new(self.llama_model.clone(), &self.backend, &contex_params)
+                .map_err(|e| {
+                    error!("Failed to create context: {}", e);
+                    e
+                })?;
 
         // 评估消息
         ctx.eval_messages(msgs.to_vec()).map_err(|e| {
@@ -432,15 +457,17 @@ impl Pipeline {
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let msgs = self.prepare_messages(request, hook_ctx).await?;
 
-        // Load model
-        let model = Model::from_config(self.config.model.clone());
-        let llama_model = model.load_llama_model(&self.backend).map_err(|e| {
-            error!("Failed to load llama model: {}", e);
-            e
-        })?;
-        let mtmd_context = model.load_mtmd_context(llama_model.clone()).map_err(|e| {
-            error!("Failed to load mtmd context: {}", e);
-            e
+        // let mtmd_context = match self.mtmd_context {
+        //     Some(mtmd_context) => mtmd_context,
+        //     None => {
+        //         error!("MTMD context is not initialized");
+        //         Error
+        //     },
+        // };
+
+        let mtmd_context = self.mtmd_context.clone().ok_or_else(|| {
+            error!("MTMD context is not initialized");
+            Error::MtmdContextNotInitialized
         })?;
 
         // Load sampler
@@ -451,18 +478,22 @@ impl Pipeline {
 
         // 上下文
         let contex_params: ContexParams = self.config.context.clone();
-        let ctx = ContextWrapper::try_new(llama_model.clone(), &self.backend, &contex_params)
+        let ctx = ContextWrapper::try_new(self.llama_model.clone(), &self.backend, &contex_params)
             .map_err(|e| {
                 error!("Failed to create context: {}", e);
                 e
             })?;
 
-        let mut mtmd_ctx =
-            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)
-                .map_err(|e| {
-                    error!("Failed to create mtmd context: {}", e);
-                    e
-                })?;
+        let mut mtmd_ctx = MtmdContextWrapper::try_new(
+            self.llama_model.clone(),
+            ctx,
+            mtmd_context,
+            &contex_params,
+        )
+        .map_err(|e| {
+            error!("Failed to create mtmd context: {}", e);
+            e
+        })?;
 
         // Load media files
         let media_sources = extract_media_sources_from_request(request)?;

@@ -75,6 +75,9 @@ pub enum Error {
     #[error("Model already loaded: {path}")]
     ModelAlreadyLoaded { path: String },
 
+    #[error("MTMD context not initialized")]
+    MtmdContextNotInitialized,
+
     // ==================== 推理错误 ====================
     #[error("Generation failed: {reason}")]
     Generation { reason: String },
