@@ -70,12 +70,12 @@ impl Pipeline {
     ///
     /// # Arguments
     /// * `request` - OpenAI 标准请求
-    /// * `session_id` - 可选的会话 ID，用于加载历史上下文
     pub fn prepare_messages(
         &self,
         request: &CreateChatCompletionRequest,
-        session_id: Option<&str>,
     ) -> Result<Vec<LlamaChatMessage>, Error> {
+        let session_id = extract_session_id(request).unwrap_or_default();
+
         // 1. 将请求消息转换为 UnifiedMessage
         let unified_messages: Vec<UnifiedMessage> = request
             .messages
@@ -98,7 +98,7 @@ impl Pipeline {
 
         // 3. 构建处理上下文
         let context = MessageContext::default()
-            .with_session_id(session_id.unwrap_or(""))
+            .with_session_id(session_id)
             .with_media_marker(&self.config.context.media_marker)
             .with_max_history(self.config.context.max_history);
 
@@ -337,8 +337,7 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let session_id = extract_session_id(request);
-        let msgs = self.prepare_messages(request, session_id.as_deref())?;
+        let msgs = self.prepare_messages(request)?;
 
         // Load model
         let llama_model = Model::from_config(self.config.model.clone())
@@ -377,8 +376,7 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let session_id = extract_session_id(request);
-        let msgs = self.prepare_messages(request, session_id.as_deref())?;
+        let msgs = self.prepare_messages(request)?;
 
         // Load model
         let model = Model::from_config(self.config.model.clone());
