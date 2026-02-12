@@ -179,6 +179,9 @@ pub struct ContextWrapper {
     pub batch: LlamaBatch<'static>,
 }
 
+unsafe impl Send for ContextWrapper {}
+unsafe impl Sync for ContextWrapper {}
+
 impl ContextWrapper {
     /// Creates a new context
     pub fn try_new(
