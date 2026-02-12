@@ -402,21 +402,13 @@ impl LlamaCppImageCaptionv2 {
             info!("Image processing completed ...");
         }
 
-        let mut metadata = Metadata {
+        let metadata = Metadata {
             session_id: Some(session_id),
             ..Default::default()
         };
 
         let mut requests = Vec::new();
         for media in &medias {
-            if medias.len() > 1 {
-                let session_id = Uuid::new_v4().to_string();
-                metadata = Metadata {
-                    session_id: Some(session_id),
-                    ..Default::default()
-                };
-            }
-
             let request = CreateChatCompletionRequestArgs::default()
                 .metadata(metadata.clone())
                 .max_completion_tokens(2048u32)
@@ -461,12 +453,6 @@ impl LlamaCppImageCaptionv2 {
         session_id: String,
         keep_context: bool,
     ) -> Result<(Vec<String>,), Error> {
-        // 移除上下文
-        if !keep_context {
-            let chat_history = chat_history();
-            chat_history.remove(&session_id);
-        }
-
         let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
         let pipeline =
             LlamaCppPromptHelperv2::load_pipeline(pipeline_config, llama_cpp_model_params)?;
@@ -479,6 +465,7 @@ impl LlamaCppImageCaptionv2 {
                 let semaphore = Arc::clone(&semaphore);
                 let pipeline_clone = pipeline.clone();
                 let progress_tx_clone = progress_tx.clone();
+                let session_id_clone = session_id.clone();
 
                 tokio::spawn(async move {
                     let _permit = semaphore.acquire().await.map_err(|e| {
@@ -487,6 +474,12 @@ impl LlamaCppImageCaptionv2 {
                     })?;
 
                     let output = pipeline_clone.generate(&request).await?;
+
+                    // 移除上下文
+                    if !keep_context {
+                        let chat_history = chat_history();
+                        chat_history.remove(&session_id_clone);
+                    }
 
                     // 任务完成，发送进度信号
                     if let Err(e) = progress_tx_clone.send(()) {
