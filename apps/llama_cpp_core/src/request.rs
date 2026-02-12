@@ -16,8 +16,8 @@ pub use async_openai::types::chat::{
     ChatCompletionRequestMessageContentPartImage, ChatCompletionRequestMessageContentPartText,
     ChatCompletionRequestSystemMessage, ChatCompletionRequestUserMessage,
     ChatCompletionRequestUserMessageContent, ChatCompletionRequestUserMessageContentPart,
-    ChatCompletionResponseMessage, CreateChatCompletionRequest, CreateChatCompletionResponse,
-    FunctionCall, FunctionObject, ImageDetail, ImageUrl, Role,
+    ChatCompletionResponseMessage, CreateChatCompletionRequest, CreateChatCompletionRequestArgs,
+    CreateChatCompletionResponse, FunctionCall, FunctionObject, ImageDetail, ImageUrl, Role,
 };
 
 use crate::error::Error;
