@@ -21,7 +21,12 @@ use crate::{
     Backend, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
-    hooks::{DynHook, HookContext, InferenceHook},
+    hooks::{
+        DynHook, HookContext, InferenceHook,
+        builtin::{
+            AssembleMessagesHook, LoadHistoryHook, NormalizeHook, SaveHistoryHook, SystemPromptHook,
+        },
+    },
     mtmd_context::MtmdContextWrapper,
     response::ChatCompletionBuilder,
     unified_message::{extract_media_sources_from_request, is_multimodal_request},
@@ -44,7 +49,16 @@ impl Pipeline {
         Ok(Self {
             backend: Arc::new(backend),
             config,
-            hooks: Vec::new(),
+            hooks: vec![
+                Arc::new(NormalizeHook::new().with_trim(true).with_remove_empty(true)), // 消息标准化（优先级 10）
+                Arc::new(
+                    SystemPromptHook::keep_first()
+                        .with_default_system("You are a helpful assistant."),
+                ), // 系统提示词处理（优先级 20）
+                Arc::new(LoadHistoryHook::new().with_max_history(100)), // 加载历史消息（优先级 30）
+                Arc::new(AssembleMessagesHook::new()),                  // 组装最终消息（优先级 40）
+                Arc::new(SaveHistoryHook::new()),                       // 保存历史（优先级 60）
+            ],
         })
     }
 
@@ -347,6 +361,8 @@ impl Pipeline {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        info!("Prepared messages: {:?}", llama_messages);
+
         Ok(llama_messages)
     }
 
@@ -375,11 +391,12 @@ impl Pipeline {
 
         // Load model
         let llama_model = Model::from_config(self.config.model.clone())
-            .load_cache_llama_model(&self.backend)
+            .load_llama_model(&self.backend)
             .map_err(|e| {
                 error!("Failed to load model: {}", e);
                 e
             })?;
+        let llama_model = Arc::new(llama_model);
 
         // Load sampler
         let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
@@ -418,12 +435,13 @@ impl Pipeline {
 
         // Load model
         let model = Model::from_config(self.config.model.clone());
-        let llama_model = model.load_cache_llama_model(&self.backend).map_err(|e| {
+        let llama_model = model.load_llama_model(&self.backend).map_err(|e| {
             error!("Failed to load llama model: {}", e);
             e
         })?;
+        let llama_model = Arc::new(llama_model);
         let mtmd_context = model
-            .load_cache_mtmd_context(llama_model.clone())
+            .load_mtmd_mtmd_context(llama_model.clone())
             .map_err(|e| {
                 error!("Failed to load mtmd context: {}", e);
                 e
@@ -443,12 +461,16 @@ impl Pipeline {
                 e
             })?;
 
-        let mut mtmd_ctx =
-            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)
-                .map_err(|e| {
-                    error!("Failed to create mtmd context: {}", e);
-                    e
-                })?;
+        let mut mtmd_ctx = MtmdContextWrapper::try_new(
+            llama_model.clone(),
+            ctx,
+            mtmd_context.into(),
+            &contex_params,
+        )
+        .map_err(|e| {
+            error!("Failed to create mtmd context: {}", e);
+            e
+        })?;
 
         // Load media files
         let media_sources = extract_media_sources_from_request(request)?;

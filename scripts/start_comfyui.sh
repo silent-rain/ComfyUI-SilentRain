@@ -3,7 +3,7 @@
 
 
 # ComfyUI 部署路径
-ComfyUI=/home/one/code/ComfyUI
+ComfyUI=/data/ComfyUI
 
 
 # switch ComfyUI dir

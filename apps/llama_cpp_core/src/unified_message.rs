@@ -254,6 +254,27 @@ impl UnifiedMessage {
 
         serde_json::to_string(&parts).map_err(Error::Serde)
     }
+
+    /// 转换为 llama.cpp 需要的格式字符串
+    pub fn to_llama_format2(&self, media_marker: &str) -> Result<String, Error> {
+        let mut results = Vec::new();
+
+        for block in self.content.iter() {
+            match block {
+                ContentBlock::Text { text } => {
+                    results.push(text.clone());
+                }
+                ContentBlock::Image { .. } => {
+                    results.push(media_marker.to_owned());
+                }
+                _ => {
+                    unreachable!("Unsupported content block type: {:?}", block)
+                }
+            }
+        }
+
+        Ok(results.join(""))
+    }
 }
 
 // ========== async_openai 类型转换 ==========

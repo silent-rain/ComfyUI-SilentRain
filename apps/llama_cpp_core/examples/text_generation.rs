@@ -4,17 +4,17 @@ use std::sync::Arc;
 
 use async_openai::types::chat::{
     ChatCompletionRequestAssistantMessage, ChatCompletionRequestSystemMessage,
-    CreateChatCompletionRequestArgs, ImageDetail, ImageUrl,
+    CreateChatCompletionRequestArgs,
 };
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
     request::{
-        ChatCompletionRequestMessageContentPartImage, ChatCompletionRequestMessageContentPartText,
-        ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageContent,
-        ChatMessagesBuilder, UserMessageBuilder,
+        ChatCompletionRequestMessageContentPartText, ChatCompletionRequestUserMessage,
+        ChatCompletionRequestUserMessageContent, ChatMessagesBuilder, UserMessageBuilder,
     },
     utils::log::init_logger,
 };
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -44,11 +44,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     content: ChatCompletionRequestUserMessageContent::Array(vec![
                         ChatCompletionRequestMessageContentPartText::from("Where was it played?")
                             .into(),
-                        ChatCompletionRequestMessageContentPartImage::from(ImageUrl {
-                            url: "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png".to_string(),
-                            detail: Some(ImageDetail::Auto),
-                        })
-                        .into(),
                     ]),
                     ..Default::default()
                 }
@@ -56,21 +51,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ])
             .build()?;
 
-        println!("{}", serde_json::to_string(&request).unwrap());
+        info!("{}", serde_json::to_string(&request).unwrap());
 
         let results = pipeline.generate(&request).await?;
 
-        println!("{results:?}");
+        info!("{results:?}");
     }
 
     // 原始请求体包装
     {
-        let  messages = ChatMessagesBuilder::new()
+        let messages = ChatMessagesBuilder::new()
             .system("You are a helpful assistant.")
             .users(UserMessageBuilder::new().text("Who won the world series in 2020?"))
             .assistant("The Los Angeles Dodgers won the World Series in 2020.")
-            .users(UserMessageBuilder::new().text("Where was it played?").image_url("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"))
-           .build();
+            .users(UserMessageBuilder::new().text("Where was it played?"))
+            .build();
 
         let request = CreateChatCompletionRequestArgs::default()
             .max_completion_tokens(2048u32)
@@ -78,11 +73,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .messages(messages)
             .build()?;
 
-        println!("{}", serde_json::to_string(&request).unwrap());
+        info!("{}", serde_json::to_string(&request).unwrap());
 
         let results = pipeline.generate(&request).await?;
 
-        println!("{results:?}");
+        info!("{results:?}");
     }
     Ok(())
 }

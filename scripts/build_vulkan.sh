@@ -38,8 +38,8 @@ fi
 
 # switch venv
 echo "switch venv ..."
-# source /data/ComfyUI/.venv/bin/activate
-source .venv/bin/activate
+source /data/ComfyUI/.venv/bin/activate
+# source .venv/bin/activate
 
 # GUP 编译参数
 export NVCC_FLAGS="-D__CORRECT_ISO_CPP_MATH_H_PROTO"

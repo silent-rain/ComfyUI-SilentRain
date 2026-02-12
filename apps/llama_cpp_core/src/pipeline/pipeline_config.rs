@@ -125,7 +125,9 @@ impl PipelineConfig {
 
     /// 设置媒体标记
     pub fn with_media_marker(mut self, marker: impl Into<String>) -> Self {
-        self.context.media_marker = marker.into();
+        let marker = marker.into();
+        self.context.media_marker = marker.clone();
+        self.model.media_marker = Some(marker);
         self
     }
 

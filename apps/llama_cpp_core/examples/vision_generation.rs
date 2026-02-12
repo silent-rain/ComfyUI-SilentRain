@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
     // 读取图片文件
-    let image_path = "/path/to/your/image.jpg"; // 请替换为实际图片路径
+    let image_path = "/data/cy/ComfyUI_01908_.png"; // 请替换为实际图片路径
     let image_data = std::fs::read(image_path)?;
     let base64_data = base64::engine::general_purpose::STANDARD.encode(&image_data);
     let mime_type = infer::get_from_path(image_path)
@@ -42,68 +42,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|t| t.mime_type().to_string())
         .unwrap_or_else(|| "image/jpeg".to_string());
 
-    let user_prompt = {
-        r#"
-任务：根据提供的单张人物图片，生成9个结构化的提示词，要求人物一致性不变，场景不变，服装不变，生成的照片要风格写实，符合专业摄影，光线和原图一致
-
-### 提示词生成规则
-获取图片内容，按照整体规则生成合适的提示词；
-
-按以下模板生成9条不重复提示词，每条包含以下部分，同时保证摄影的专业性和观赏性：  
-
-【修改指令】
-
-##修改表情：
-
-示例：
-
-如：魅惑地笑/捂嘴偷笑/平静地笑容等
-要求9个图像都有不同的表情
-
-##修改姿势：
-
-示例：
-
-如：双手叉腰，比心的手势等
-要求9个图像都有不同的动作，动作变化幅度不应很小
-
-
-##修改拍摄景别：
-
-示例
-
-如：特写，中景等
-要求9个图像根据不同动作有合适的拍摄景别
-
-##修改拍摄角度
-
-示例
-
-如：微俯拍30度，正面拍摄等
-要求9个图像根据不同动作有合适的拍摄角度
-
-
-写实风格，人物轮廓与原图一致，光线柔和无畸变，背景细节保留原图特征。  
-
-
-### 输出要求  
-仅返回10条提示词，每条独立成段，用换行分隔，无其他内容。  
-输出格式：【prompt_1】,【prompt_2】,【prompt_3】...
-
-
-### 示例如下：
-
-【prompt_1】同一角色、服装、场景一致，写实风格，光影一致，仅改表情/姿势/视角：中景拍摄+抿嘴偷笑+眼睛弯弯+双手背后+微俯拍30度，8K
-
-...（共9条）"#
-    };
-
     // 使用新的构建器 API 构建请求
     let messages = ChatMessagesBuilder::new()
         .system("你是专注生成套图模特提示词专家，用于生成3同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
         .users(
             UserMessageBuilder::new()
-                .text(user_prompt)
+                .text("请描述这张图片中的人物")
                 .image_base64(mime_type, base64_data),
         )
         .build();
