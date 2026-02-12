@@ -14,7 +14,7 @@ use async_openai::types::chat::{
     FinishReason,
 };
 use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaChatMessage};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -201,8 +201,6 @@ impl Pipeline {
         request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        use tokio::sync::mpsc;
-
         // 1. 执行 on_prepare
         self.on_prepare(hook_ctx).await?;
 
@@ -210,7 +208,7 @@ impl Pipeline {
         let mut inner_rx = self.generate_multimodal_stream(request, hook_ctx).await?;
 
         // 3. 创建新通道
-        let (tx, rx) = mpsc::unbounded_channel();
+        let (tx, rx) = unbounded_channel();
 
         // 4. 克隆必要的数据用于异步任务
         let hooks_clone = self.sorted_hooks();

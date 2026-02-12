@@ -2,6 +2,7 @@
 //!
 //! 使用组合模式，直接包含子配置模块
 
+use async_openai::types::chat::CreateChatCompletionRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::{context::ContexParams as ContextConfig, model::ModelConfig, sampler::SamplerConfig};
@@ -171,6 +172,57 @@ impl PipelineConfig {
     pub fn with_max_completion_tokens(mut self, max_completion_tokens: i32) -> Self {
         self.context.n_predict = max_completion_tokens;
         self
+    }
+}
+
+/// 从 OpenAI 标准请求初始化配置
+impl PipelineConfig {
+    /// 从请求中提取并应用参数到现有配置
+    ///
+    /// 这个方法可以多次调用，用于动态更新配置。
+    /// 适合在需要合并多个来源参数时使用。
+    ///
+    /// # Arguments
+    /// * `request` - OpenAI 标准聊天完成请求
+    ///
+    /// # Example
+    /// ```rust, no_run
+    /// let mut config = PipelineConfig::new("model.gguf");
+    /// // 先应用基础配置...
+    /// config.apply_request_params(&request);
+    /// // 再应用请求特定的参数...
+    /// config.apply_request_params(&override_request);
+    /// ```
+    pub fn apply_request_params(&mut self, request: &CreateChatCompletionRequest) {
+        // 提取 max_completion_tokens -> n_predict
+        if let Some(max_completion_tokens) = request.max_completion_tokens {
+            self.context.n_predict = max_completion_tokens as i32;
+        }
+
+        // 提取 temperature
+        if let Some(temperature) = request.temperature {
+            self.sampling.temperature = temperature;
+        }
+
+        // 提取 top_p
+        if let Some(top_p) = request.top_p {
+            self.sampling.top_p = top_p;
+        }
+
+        // 提取 presence_penalty -> penalty_present
+        if let Some(presence_penalty) = request.presence_penalty {
+            self.sampling.penalty_present = presence_penalty;
+        }
+
+        // 提取 frequency_penalty -> penalty_freq
+        if let Some(frequency_penalty) = request.frequency_penalty {
+            self.sampling.penalty_freq = frequency_penalty;
+        }
+
+        // 注意：以下参数在标准 OpenAI API 中没有直接对应，保持默认值
+        // - top_k (OpenAI 不支持)
+        // - n_gpu_layers (基础设施参数)
+        // - n_ctx (基础设施参数)
     }
 }
 
