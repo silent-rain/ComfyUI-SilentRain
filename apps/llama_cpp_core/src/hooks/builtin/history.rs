@@ -1,35 +1,50 @@
-//! 历史记录保存钩子
+//! 历史记录保存 Hook
 
-use async_trait::async_trait;
 use tracing::{debug, error};
 
 use crate::{
     chat_history,
     error::Error,
-    hooks::{HookContext, InferenceHook},
+    hooks::{HookContext, InferenceHook, priorities},
 };
 
-/// 历史记录保存钩子
+/// 历史记录保存 Hook
 ///
-/// 在推理结束后自动保存对话历史到缓存
-#[derive(Debug, Clone, Default)]
-pub struct HistoryHook;
+/// 在推理前保存当前输入，在推理后保存助手回复
+#[derive(Debug, Clone)]
+pub struct HistoryHook {
+    priority: i32,
+}
+
+impl Default for HistoryHook {
+    fn default() -> Self {
+        Self {
+            priority: priorities::HISTORY,
+        }
+    }
+}
 
 impl HistoryHook {
     /// 创建新的历史钩子
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// 设置优先级
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl InferenceHook for HistoryHook {
     fn name(&self) -> &str {
         "HistoryHook"
     }
 
     fn priority(&self) -> i32 {
-        90 // 低优先级，最后执行
+        self.priority
     }
 
     async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
@@ -41,14 +56,21 @@ impl InferenceHook for HistoryHook {
             }
         };
 
-        debug!("Saving history for session: {}", session_id);
+        debug!("Saving current input for session: {}", session_id);
 
         let manager = chat_history();
-
         let _ = manager.get_or_create(session_id);
 
-        if let Err(e) = manager.add_messages(session_id, &ctx.unified_messages) {
-            error!("Failed to add user message: {}", e);
+        // 只保存当前输入的消息
+        // 避免重复保存历史消息
+        let current_input = &ctx.pipeline_state.current_input;
+
+        if !current_input.is_empty() {
+            if let Err(e) = manager.add_messages(session_id, current_input) {
+                error!("Failed to add user messages: {}", e);
+            } else {
+                debug!("Saved {} user message(s)", current_input.len());
+            }
         }
 
         Ok(())
@@ -63,11 +85,9 @@ impl InferenceHook for HistoryHook {
             }
         };
 
-        debug!("Saving history for session: {}", session_id);
+        debug!("Saving assistant response for session: {}", session_id);
 
         let manager = chat_history();
-
-        // 获取或创建会话
         let _ = manager.get_or_create(session_id);
 
         // 提取助手回复

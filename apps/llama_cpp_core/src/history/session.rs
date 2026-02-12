@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(ctx.session_id(), "test_session");
         assert_eq!(ctx.message_count(), 0);
 
-        ctx.add_message(UnifiedMessage::user_text("Hello"));
+        ctx.add_message(UnifiedMessage::user("Hello"));
         assert_eq!(ctx.message_count(), 1);
         assert_eq!(ctx.access_count(), 2); // 创建时1次 + add_message调用touch()1次
     }
@@ -237,9 +237,9 @@ mod tests {
         let mut ctx = SessionContext::with_capacity("test", 3);
 
         ctx.add_message(UnifiedMessage::system("System prompt"));
-        ctx.add_message(UnifiedMessage::user_text("Message 1"));
+        ctx.add_message(UnifiedMessage::user("Message 1"));
         ctx.add_message(UnifiedMessage::assistant("Response 1"));
-        ctx.add_message(UnifiedMessage::user_text("Message 2"));
+        ctx.add_message(UnifiedMessage::user("Message 2"));
 
         assert_eq!(ctx.message_count(), 3);
         assert_eq!(ctx.entries[0].role, MessageRole::System);

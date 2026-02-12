@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
 
     let request = GenerateRequest::text("Describe this image")
         .with_system("You are a helpful assistant.")
-        .with_media_marker("<image>")
+        .with_media_marker("<__media__>")
         .with_media_file("/path/to/image.png")?;
 
     let response = pipeline.generate(&request).await?;
@@ -222,7 +222,7 @@ let text = response_extract_content(&response);
 
 ## 媒体标记说明
 
-当使用多模态模型时，用户提示词需要包含媒体标记（如 `<image>`）来指示图像插入位置。
+当使用多模态模型时，用户提示词需要包含媒体标记（如 `<__media__>`）来指示图像插入位置。
 
 **自动处理**：如果提示词中媒体标记数量少于加载的图像数量，系统会自动在提示词末尾补全标记。
 

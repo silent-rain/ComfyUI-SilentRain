@@ -1,29 +1,46 @@
-//! 标准化插件
+//! 标准化 Hook
 
 use crate::{
     error::Error,
-    message_plugins::{MessageContext, MessagePlugin},
+    hooks::{HookContext, InferenceHook, priorities},
     unified_message::{ContentBlock, UnifiedMessage},
 };
 
-/// 标准化插件
+/// 标准化 Hook
 ///
 /// 负责：
 /// 1. 清理内容中的多余空白
 /// 2. 移除空消息
 /// 3. 规范化媒体标记格式
 /// 4. 验证消息结构完整性
-#[derive(Debug, Default)]
-pub struct NormalizePlugin {
+#[derive(Debug)]
+pub struct NormalizeHook {
+    priority: i32,
     /// 是否清理空白字符
     pub trim_whitespace: bool,
     /// 是否移除空消息
     pub remove_empty: bool,
 }
 
-impl NormalizePlugin {
+impl Default for NormalizeHook {
+    fn default() -> Self {
+        Self {
+            priority: priorities::NORMALIZE,
+            trim_whitespace: false,
+            remove_empty: false,
+        }
+    }
+}
+
+impl NormalizeHook {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 设置优先级
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 
     pub fn with_trim(mut self, enable: bool) -> Self {
@@ -55,20 +72,10 @@ impl NormalizePlugin {
             other => Some(other),
         }
     }
-}
 
-impl MessagePlugin for NormalizePlugin {
-    fn name(&self) -> &str {
-        "NormalizePlugin"
-    }
-
-    fn priority(&self) -> i32 {
-        60
-    }
-
-    fn process(
+    /// 处理消息列表
+    fn process_messages(
         &self,
-        _context: &MessageContext,
         messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         let mut result = Vec::with_capacity(messages.len());
@@ -94,25 +101,40 @@ impl MessagePlugin for NormalizePlugin {
     }
 }
 
+#[async_trait::async_trait]
+impl InferenceHook for NormalizeHook {
+    fn name(&self) -> &str {
+        "NormalizeHook"
+    }
+
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+
+    async fn on_prepare(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        // 处理原始消息
+        let normalized = self.process_messages(ctx.pipeline_state.raw_messages.clone())?;
+        ctx.pipeline_state.current_input = normalized;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_normalize_plugin_removes_empty() {
-        let plugin = NormalizePlugin::new()
-            .with_remove_empty(true)
-            .with_trim(true);
-        let context = MessageContext::default();
+    fn test_normalize_hook_removes_empty() {
+        let hook = NormalizeHook::new().with_remove_empty(true).with_trim(true);
 
         let messages = vec![
-            UnifiedMessage::user_text("Hello"),
-            UnifiedMessage::user_text("   "), // 空白消息
-            UnifiedMessage::user_text(""),    // 空消息
-            UnifiedMessage::user_text("World"),
+            UnifiedMessage::user("Hello"),
+            UnifiedMessage::user("   "), // 空白消息
+            UnifiedMessage::user(""),    // 空消息
+            UnifiedMessage::user("World"),
         ];
 
-        let result = plugin.process(&context, messages).unwrap();
+        let result = hook.process_messages(messages).unwrap();
         assert_eq!(result.len(), 2);
     }
 }

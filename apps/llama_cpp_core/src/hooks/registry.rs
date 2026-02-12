@@ -59,6 +59,32 @@ impl HookRegistry {
         }
     }
 
+    /// 执行消息准备钩子
+    ///
+    /// 按优先级顺序执行，如果某个钩子失败，会执行错误钩子并返回错误
+    pub async fn run_prepare(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        if self.hooks.is_empty() {
+            debug!("No hooks to run for prepare");
+            return Ok(());
+        }
+
+        for hook in &self.hooks {
+            debug!(
+                "Running prepare hook: {} (priority: {})",
+                hook.name(),
+                hook.priority()
+            );
+
+            if let Err(e) = hook.on_prepare(ctx).await {
+                error!("Prepare hook '{}' failed: {}", hook.name(), e);
+                // 执行错误钩子
+                let _ = hook.on_error(ctx, &e).await;
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
     /// 执行推理前钩子
     ///
     /// 按优先级顺序执行，如果某个钩子失败，会执行错误钩子并返回错误

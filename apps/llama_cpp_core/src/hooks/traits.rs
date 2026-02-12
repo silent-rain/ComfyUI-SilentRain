@@ -6,9 +6,27 @@ use crate::{error::Error, hooks::HookContext};
 
 /// 推理钩子 trait
 ///
-/// 实现此 trait 可在推理生命周期的关键节点插入自定义逻辑
+/// 实现此 trait 可在推理生命周期的关键节点插入自定义逻辑：
+/// - on_prepare: 消息准备阶段（标准化、加载历史等）
+/// - on_before: 推理开始前（验证、限流等）
+/// - on_after: 推理结束后（保存历史、日志等）
+/// - on_error: 发生错误时
 #[async_trait::async_trait]
 pub trait InferenceHook: Send + Sync + std::fmt::Debug {
+    /// 消息准备阶段
+    ///
+    /// 在推理前执行，用于：
+    /// - 消息标准化
+    /// - 系统提示词处理
+    /// - 加载历史消息
+    /// - 识别当前输入
+    /// - 工具调用准备
+    ///
+    /// 在此阶段可以通过 ctx.pipeline_state 读取和修改消息状态
+    async fn on_prepare(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        Ok(())
+    }
+
     /// 推理前钩子
     ///
     /// 在推理开始前执行，可用于：
@@ -27,6 +45,10 @@ pub trait InferenceHook: Send + Sync + std::fmt::Debug {
     /// - 更新缓存
     /// - 审计日志
     /// - 结果后处理
+    ///
+    /// # Arguments
+    /// * `ctx` - 钩子上下文
+    /// * `output` - 模型生成的输出文本
     async fn on_after(&self, _ctx: &mut HookContext) -> Result<(), Error> {
         Ok(())
     }
@@ -55,4 +77,4 @@ pub trait InferenceHook: Send + Sync + std::fmt::Debug {
 }
 
 /// 动态钩子类型（用于存储）
-pub(crate) type DynHook = Arc<dyn InferenceHook>;
+pub type DynHook = Arc<dyn InferenceHook>;

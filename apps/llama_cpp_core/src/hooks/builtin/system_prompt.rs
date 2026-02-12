@@ -1,8 +1,8 @@
-//! 系统消息插件
+//! 系统提示词 Hook
 
 use crate::{
     error::Error,
-    message_plugins::{MessageContext, MessagePlugin},
+    hooks::{HookContext, InferenceHook, priorities},
     types::MessageRole,
     unified_message::UnifiedMessage,
 };
@@ -18,34 +18,37 @@ pub enum SystemStrategy {
     KeepLast,
 }
 
-/// 系统消息插件
+/// 系统提示词 Hook
 ///
 /// 负责：
 /// 1. 根据策略处理多个系统消息
 /// 2. 确保系统消息始终在最前面
-/// 3. 分离系统消息与后续消息
+/// 3. 将系统消息分离到 pipeline_state.system_prompt
 #[derive(Debug)]
-pub struct SystemPromptPlugin {
+pub struct SystemPromptHook {
+    priority: i32,
     strategy: SystemStrategy,
     default_system: Option<String>,
 }
 
-impl Default for SystemPromptPlugin {
+impl Default for SystemPromptHook {
     fn default() -> Self {
         Self {
+            priority: priorities::SYSTEM_PROMPT,
             strategy: SystemStrategy::KeepFirst,
             default_system: None,
         }
     }
 }
 
-impl SystemPromptPlugin {
+impl SystemPromptHook {
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn keep_first() -> Self {
         Self {
+            priority: priorities::SYSTEM_PROMPT,
             strategy: SystemStrategy::KeepFirst,
             default_system: None,
         }
@@ -53,6 +56,7 @@ impl SystemPromptPlugin {
 
     pub fn merge() -> Self {
         Self {
+            priority: priorities::SYSTEM_PROMPT,
             strategy: SystemStrategy::Merge,
             default_system: None,
         }
@@ -60,9 +64,16 @@ impl SystemPromptPlugin {
 
     pub fn keep_last() -> Self {
         Self {
+            priority: priorities::SYSTEM_PROMPT,
             strategy: SystemStrategy::KeepLast,
             default_system: None,
         }
+    }
+
+    /// 设置优先级
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 
     pub fn with_default_system(mut self, system: impl Into<String>) -> Self {
@@ -101,22 +112,22 @@ impl SystemPromptPlugin {
     }
 }
 
-impl MessagePlugin for SystemPromptPlugin {
+#[async_trait::async_trait]
+impl InferenceHook for SystemPromptHook {
     fn name(&self) -> &str {
-        "SystemPlugin"
+        "SystemPromptHook"
     }
 
     fn priority(&self) -> i32 {
-        70
+        self.priority
     }
 
-    fn process(
-        &self,
-        _context: &MessageContext,
-        messages: Vec<UnifiedMessage>,
-    ) -> Result<Vec<UnifiedMessage>, Error> {
-        // 分离系统消息和其他消息
-        let (system_msgs, other_msgs): (Vec<_>, Vec<_>) = messages
+    async fn on_prepare(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        // 从用户输入的消息中分离系统消息
+        let (system_msgs, other_msgs): (Vec<_>, Vec<_>) = ctx
+            .pipeline_state
+            .current_input
+            .clone()
             .into_iter()
             .partition(|msg| msg.role == MessageRole::System);
 
@@ -130,14 +141,13 @@ impl MessagePlugin for SystemPromptPlugin {
                 .map(|text| UnifiedMessage::system(text.clone()))
         });
 
-        // 重新组装：系统消息在最前，然后是其他消息
-        let mut result = Vec::new();
-        if let Some(sys) = final_system {
-            result.push(sys);
-        }
-        result.extend(other_msgs);
+        // 保存系统提示词
+        ctx.pipeline_state.system_prompt = final_system;
 
-        Ok(result)
+        // 更新用户输入的消息（移除系统消息）
+        ctx.pipeline_state.current_input = other_msgs;
+
+        Ok(())
     }
 }
 
@@ -145,34 +155,20 @@ impl MessagePlugin for SystemPromptPlugin {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_system_plugin_keep_first() {
-        let plugin = SystemPromptPlugin::keep_first();
-        let context = MessageContext::default();
+    #[tokio::test]
+    async fn test_system_hook_keep_first() {
+        let hook = SystemPromptHook::keep_first();
 
-        let messages = vec![
+        let mut ctx = HookContext::default();
+        ctx.pipeline_state.current_input = vec![
             UnifiedMessage::system("First system"),
-            UnifiedMessage::user_text("Hello"),
-            UnifiedMessage::system("Second system"), // 应该被过滤
+            UnifiedMessage::user("Hello"),
+            UnifiedMessage::system("Second system"),
         ];
 
-        let result = plugin.process(&context, messages).unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].role, MessageRole::System);
-    }
+        hook.on_prepare(&mut ctx).await.unwrap();
 
-    #[test]
-    fn test_system_plugin_merge() {
-        let plugin = SystemPromptPlugin::merge();
-        let context = MessageContext::default();
-
-        let messages = vec![
-            UnifiedMessage::system("First"),
-            UnifiedMessage::user_text("Hello"),
-            UnifiedMessage::system("Second"),
-        ];
-
-        let result = plugin.process(&context, messages).unwrap();
-        assert_eq!(result.len(), 2);
+        assert!(ctx.pipeline_state.system_prompt.is_some());
+        assert_eq!(ctx.pipeline_state.current_input.len(), 1);
     }
 }

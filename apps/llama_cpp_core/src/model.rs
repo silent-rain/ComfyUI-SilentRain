@@ -93,7 +93,7 @@ impl Default for ModelConfig {
             n_gpu_layers: 0, // 0 = CPU only mode
             cmoe: false,
             devices: Vec::new(),
-            media_marker: Some("<__media__>".to_string()), // 默认媒体标记
+            media_marker: Some(mtmd_default_marker().to_string()), // 默认媒体标记
             n_threads: 4,
             verbose: false,
         }

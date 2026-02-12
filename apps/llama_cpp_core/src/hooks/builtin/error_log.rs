@@ -9,21 +9,35 @@ use crate::hooks::{HookContext, InferenceHook};
 /// 错误日志钩子
 ///
 /// 在发生错误时记录详细日志
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ErrorLogHook {
+    priority: i32,
     /// 是否记录请求详情
     log_request: bool,
     /// 是否记录上下文信息
     log_context: bool,
 }
 
-impl ErrorLogHook {
-    /// 创建新的错误日志钩子
-    pub fn new() -> Self {
+impl Default for ErrorLogHook {
+    fn default() -> Self {
         Self {
+            priority: 5, // 高优先级，确保尽早记录错误
             log_request: true,
             log_context: true,
         }
+    }
+}
+
+impl ErrorLogHook {
+    /// 创建新的错误日志钩子
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 设置优先级
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 
     /// 设置是否记录请求
@@ -46,7 +60,22 @@ impl InferenceHook for ErrorLogHook {
     }
 
     fn priority(&self) -> i32 {
-        5 // 高优先级，确保尽早记录错误
+        self.priority
+    }
+
+    async fn on_prepare(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        // 错误日志钩子不需要处理消息准备阶段
+        Ok(())
+    }
+
+    async fn on_before(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        // 错误日志钩子不需要处理推理前阶段
+        Ok(())
+    }
+
+    async fn on_after(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        // 错误日志钩子不需要处理推理后阶段
+        Ok(())
     }
 
     async fn on_error(&self, ctx: &HookContext, error: &Error) -> Result<(), Error> {

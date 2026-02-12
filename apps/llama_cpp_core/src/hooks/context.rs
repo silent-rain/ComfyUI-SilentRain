@@ -8,6 +8,7 @@ use async_openai::types::chat::{
 use serde_json::Value;
 use tracing::error;
 
+use crate::hooks::pipeline_state::PipelineState;
 use crate::{PipelineConfig, request::extract_session_id, unified_message::UnifiedMessage};
 
 /// 钩子上下文
@@ -17,8 +18,6 @@ use crate::{PipelineConfig, request::extract_session_id, unified_message::Unifie
 pub struct HookContext {
     /// 推理请求
     pub request: Option<CreateChatCompletionRequest>,
-    /// 统一消息
-    pub unified_messages: Vec<UnifiedMessage>,
     /// 推理响应（非流式）
     pub response: Option<CreateChatCompletionResponse>,
     /// 流式响应的最后一块（用于流式推理）
@@ -33,18 +32,13 @@ pub struct HookContext {
     pub metadata: HashMap<String, Value>,
     /// 推理开始时间
     pub start_time: Option<std::time::Instant>,
+    /// Pipeline 状态（新增）
+    pub pipeline_state: PipelineState,
 }
 
 impl HookContext {
     /// 创建新的上下文
-    pub fn new() -> Self {
-        Self {
-            ..HookContext::default()
-        }
-    }
-
-    /// 设置请求
-    pub fn with_request(mut self, request: &CreateChatCompletionRequest) -> Self {
+    pub fn new(request: &CreateChatCompletionRequest) -> Self {
         let session_id = extract_session_id(request);
         let unified_messages: Vec<UnifiedMessage> = request
             .messages
@@ -58,22 +52,21 @@ impl HookContext {
             })
             .unwrap_or_default();
 
-        self.session_id = session_id;
-        self.unified_messages = unified_messages;
-        self.request = Some(request.clone());
-
-        self
+        Self {
+            request: Some(request.clone()),
+            response: None,
+            stream_last_chunk: None,
+            stream_collected_text: None,
+            session_id,
+            config: None,
+            metadata: Default::default(),
+            start_time: None,
+            pipeline_state: PipelineState::new(unified_messages),
+        }
     }
 
-    /// 设置请配置
-    pub fn with_config(mut self, config: &PipelineConfig) -> Self {
-        self.config = Some(config.clone());
-        self
-    }
-
-    /// 同时设置请求和配置
-    pub fn with_request_and_config(
-        mut self,
+    /// 从请求和配置创建上下文
+    pub fn from_request_and_config(
         request: &CreateChatCompletionRequest,
         config: &PipelineConfig,
     ) -> Self {
@@ -90,11 +83,22 @@ impl HookContext {
             })
             .unwrap_or_default();
 
-        self.session_id = session_id;
-        self.unified_messages = unified_messages;
-        self.request = Some(request.clone());
-        self.config = Some(config.clone());
+        Self {
+            request: Some(request.clone()),
+            response: None,
+            stream_last_chunk: None,
+            stream_collected_text: None,
+            session_id,
+            config: Some(config.clone()),
+            metadata: Default::default(),
+            start_time: None,
+            pipeline_state: PipelineState::new(unified_messages),
+        }
+    }
 
+    /// 设置配置
+    pub fn with_config(mut self, config: &PipelineConfig) -> Self {
+        self.config = Some(config.clone());
         self
     }
 

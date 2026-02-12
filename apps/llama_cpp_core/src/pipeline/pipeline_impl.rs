@@ -15,21 +15,16 @@ use async_openai::types::chat::{
 };
 use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaChatMessage};
 use tokio::sync::mpsc::UnboundedReceiver;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     Backend, Model, PipelineConfig, Sampler,
     context::{ContexParams, ContextWrapper},
     error::Error,
-    hooks::{HookContext, HookRegistry, InferenceHook},
-    message_plugins::{
-        CurrentInputPlugin, LoadHistoryPlugin, MessageContext, MessagePipeline, NormalizePlugin,
-        SystemPromptPlugin, ToolsPlugin,
-    },
+    hooks::{DynHook, HookContext, InferenceHook},
     mtmd_context::MtmdContextWrapper,
-    request::extract_session_id,
     response::ChatCompletionBuilder,
-    unified_message::{UnifiedMessage, extract_media_sources_from_request, is_multimodal_request},
+    unified_message::{extract_media_sources_from_request, is_multimodal_request},
     utils::image::{Image, decode_image_sources},
 };
 
@@ -37,7 +32,7 @@ use crate::{
 pub struct Pipeline {
     backend: Arc<LlamaBackend>,
     config: PipelineConfig,
-    hooks: HookRegistry,
+    hooks: Vec<DynHook>,
 }
 
 impl Pipeline {
@@ -49,80 +44,25 @@ impl Pipeline {
         Ok(Self {
             backend: Arc::new(backend),
             config,
-            hooks: HookRegistry::new(),
+            hooks: Vec::new(),
         })
     }
 
     /// 注册钩子
     pub fn with_hook(mut self, hook: impl InferenceHook + 'static) -> Self {
-        self.hooks.register(hook);
+        self.hooks.push(Arc::new(hook));
         self
+    }
+
+    /// 获取排序后的钩子列表
+    fn sorted_hooks(&self) -> Vec<DynHook> {
+        let mut hooks: Vec<_> = self.hooks.clone().into_iter().collect();
+        hooks.sort_by_key(|h| h.priority());
+        hooks
     }
 }
 
 impl Pipeline {
-    /// 根据请求准备消息
-    ///
-    /// 流程：
-    /// 1. 将 async_openai 消息转换为 UnifiedMessage
-    /// 2. 通过插件管道处理（标准化、系统消息去重、加载历史等）
-    /// 3. 转换为 LlamaChatMessage 列表
-    ///
-    /// # Arguments
-    /// * `request` - OpenAI 标准请求
-    pub fn prepare_messages(
-        &self,
-        request: &CreateChatCompletionRequest,
-    ) -> Result<Vec<LlamaChatMessage>, Error> {
-        let session_id = extract_session_id(request).unwrap_or_default();
-
-        // 1. 将请求消息转换为 UnifiedMessage
-        let unified_messages: Vec<UnifiedMessage> = request
-            .messages
-            .iter()
-            .cloned()
-            .map(UnifiedMessage::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        // 2. 构建插件管道
-        let pipeline = MessagePipeline::new()
-            .add_plugin(
-                NormalizePlugin::new()
-                    .with_trim(true)
-                    .with_remove_empty(true),
-            )
-            .add_plugin(SystemPromptPlugin::keep_first())
-            .add_plugin(LoadHistoryPlugin::new().with_max_history(self.config.context.max_history))
-            .add_plugin(CurrentInputPlugin::new())
-            .add_plugin(ToolsPlugin::new());
-
-        // 3. 构建处理上下文
-        let context = MessageContext::default()
-            .with_session_id(session_id)
-            .with_media_marker(&self.config.context.media_marker)
-            .with_max_history(self.config.context.max_history);
-
-        // 4. 执行插件处理
-        let processed_messages = pipeline.process(unified_messages, &context)?;
-
-        // 5. 转换为 LlamaChatMessage
-        let llama_messages: Vec<LlamaChatMessage> = processed_messages
-            .into_iter()
-            .map(|msg| {
-                let content = msg.to_llama_format(&self.config.context.media_marker)?;
-                LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
-                    Error::InvalidInput {
-                        field: "LlamaChatMessage".to_string(),
-                        message: e.to_string(),
-                    }
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        info!("Prepared {} messages for inference", llama_messages.len());
-        Ok(llama_messages)
-    }
-
     /// 阻塞推理包装
     pub fn generate_block(
         &self,
@@ -156,45 +96,46 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<CreateChatCompletionResponse, Error> {
-        // 1. 创建上下文并执行推理前钩子
-        let mut ctx = HookContext::new().with_request_and_config(request, &self.config);
+        // 1. 创建上下文
+        let mut hook_ctx = HookContext::from_request_and_config(request, &self.config);
+        let hooks = self.sorted_hooks();
 
-        if let Err(e) = self.hooks.run_before(&mut ctx).await {
-            error!("Before inference hooks failed: {}", e);
-            let _ = self.hooks.run_on_error(&ctx, &e).await;
-            return Err(e);
-        }
+        // 2. 执行 on_prepare（准备消息）
+        self.on_prepare(&mut hook_ctx).await?;
 
-        // 2. 执行推理
-        let result = self.generate_internal(request).await;
+        // 3. 执行推理
+        let result = self.generate_internal(request, &mut hook_ctx).await;
 
-        // 3. 执行推理后钩子或错误钩子
+        // 4. 执行 on_after 或 on_error
         match result {
             Ok(response) => {
-                ctx.set_response(response.clone());
+                hook_ctx.set_response(response.clone());
 
-                if let Err(e) = self.hooks.run_after(&mut ctx).await {
-                    error!("After inference hooks failed: {}", e);
-                    // 后处理钩子失败不中断流程
-                }
+                // 执行 on_after
+                let _ = Self::on_after(hooks.clone(), &mut hook_ctx).await;
 
                 Ok(response)
             }
             Err(e) => {
-                let _ = self.hooks.run_on_error(&ctx, &e).await;
+                for hook in &hooks {
+                    let _ = hook.on_error(&hook_ctx, &e).await;
+                }
                 Err(e)
             }
         }
     }
 
-    /// 执行内部推理（无钩子）
+    /// 执行内部推理
     ///
-    /// 将流式推理结果收集成完整响应，适用于非流式接口
+    /// 将流式推理结果收集成完整响应，返回响应和输出文本
+    ///
+    /// 直接使用未包装钩子的流式推理，避免流式转发，减少开销。
     async fn generate_internal(
         &self,
         request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
     ) -> Result<CreateChatCompletionResponse, Error> {
-        let mut rx = self.generate_multimodal_stream(request).await?;
+        let mut rx = self.generate_multimodal_stream(request, hook_ctx).await?;
 
         let model = request.model.clone();
 
@@ -227,49 +168,52 @@ impl Pipeline {
         // 构建完整的非流式响应
         let response = ChatCompletionBuilder::new(model)
             .with_prompt_tokens(prompt_tokens)
-            .build(full_text, finish_reason, completion_tokens);
+            .build(full_text.clone(), finish_reason, completion_tokens);
 
         Ok(response)
     }
 
-    /// 执行流式推理, 支持带钩子的流式生成
+    /// 执行流式推理
+    ///
+    /// 根据有无钩子决定是否包装钩子的响应流；如果没有钩子则直接返回原始流，避免流式转发，减少开销。
     pub async fn generate_stream(
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         // 如果没有钩子，直接返回原始流（零开销）
-        if !self.hooks.has_hooks() {
-            return self.generate_multimodal_stream(request).await;
+        let mut hook_ctx = HookContext::from_request_and_config(request, &self.config);
+        if self.hooks.is_empty() {
+            return self
+                .generate_multimodal_stream(request, &mut hook_ctx)
+                .await;
         }
 
         // 有钩子时需要包装流
-        self.generate_stream_with_hooks(request).await
+        self.generate_multimodal_stream_with_hooks(request, &mut hook_ctx)
+            .await
     }
 
     /// 带钩子的流式推理
-    async fn generate_stream_with_hooks(
+    ///
+    /// 流式输出时，会将消息进行转发，有一定性能损耗
+    async fn generate_multimodal_stream_with_hooks(
         &self,
         request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         use tokio::sync::mpsc;
 
-        // 1. 创建上下文并执行推理前钩子
-        let mut ctx = HookContext::new().with_request_and_config(request, &self.config);
-
-        if let Err(e) = self.hooks.run_before(&mut ctx).await {
-            error!("Before inference hooks failed: {}", e);
-            let _ = self.hooks.run_on_error(&ctx, &e).await;
-            return Err(e);
-        }
+        // 1. 执行 on_prepare
+        self.on_prepare(hook_ctx).await?;
 
         // 2. 获取原始流
-        let mut inner_rx = self.generate_multimodal_stream(request).await?;
+        let mut inner_rx = self.generate_multimodal_stream(request, hook_ctx).await?;
 
         // 3. 创建新通道
         let (tx, rx) = mpsc::unbounded_channel();
 
         // 4. 克隆必要的数据用于异步任务
-        let hooks = self.hooks.clone();
+        let hooks_clone = self.sorted_hooks();
         let request_clone = request.clone();
         let config_clone = self.config.clone();
 
@@ -297,18 +241,17 @@ impl Pipeline {
                 }
             }
 
-            // 6. 流结束，执行推理后钩子
-            let mut ctx = HookContext::new().with_request_and_config(&request_clone, &config_clone);
-            ctx.set_stream_collected_text(full_text);
+            // 6. 流结束，执行 on_after 钩子
+            let mut hook_ctx = HookContext::from_request_and_config(&request_clone, &config_clone);
+            hook_ctx.set_stream_collected_text(full_text.clone());
 
             if let Some(chunk) = last_chunk {
-                ctx.set_stream_last_chunk(chunk);
+                hook_ctx.set_stream_last_chunk(chunk);
             }
 
-            if success && let Err(e) = hooks.run_after(&mut ctx).await {
-                error!("After inference hooks failed: {}", e);
-                // 后处理钩子失败不中断流程
-                let _ = hooks.run_on_error(&ctx, &e).await;
+            if success {
+                // 执行 on_after
+                let _ = Self::on_after(hooks_clone.clone(), &mut hook_ctx).await;
             }
         });
 
@@ -316,17 +259,109 @@ impl Pipeline {
     }
 }
 
+/// 生命周期钩子调用
+impl Pipeline {
+    /// 执行 on_prepare 钩子
+    async fn on_prepare(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        let hooks: Vec<_> = self.sorted_hooks();
+
+        for hook in &hooks {
+            let result: Result<(), Error> = hook.on_prepare(ctx).await;
+            if let Err(e) = result {
+                error!("Prepare hook '{}' failed: {}", hook.name(), e);
+                let _ = hook.on_error(ctx, &e).await;
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    /// 执行 on_before 钩子
+    async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        let hooks: Vec<_> = self.sorted_hooks();
+
+        for hook in &hooks {
+            let result: Result<(), Error> = hook.on_before(ctx).await;
+            if let Err(e) = result {
+                error!("Before hook '{}' failed: {}", hook.name(), e);
+                let _ = hook.on_error(ctx, &e).await;
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    /// 执行 on_after 钩子
+    async fn on_after(hooks: Vec<DynHook>, ctx: &mut HookContext) -> Result<(), Error> {
+        for hook in &hooks {
+            let result: Result<(), Error> = hook.on_after(ctx).await;
+            if let Err(e) = result {
+                error!("After hook '{}' failed: {}", hook.name(), e);
+                let _ = hook.on_error(ctx, &e).await;
+                return Err(e);
+            }
+        }
+
+        Ok(())
+    }
+}
+
 /// 流水线实现细节
 impl Pipeline {
+    /// 根据请求准备消息
+    ///
+    /// 流程：
+    /// 1. 从 pipeline_state 获取处理后的消息
+    /// 2. 转换为 LlamaChatMessage 列表
+    ///
+    /// # Arguments
+    /// * `request` - OpenAI 标准请求
+    /// * `hook_ctx` - HookContext（已初始化）
+    pub async fn prepare_messages(
+        &self,
+        _request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
+    ) -> Result<Vec<LlamaChatMessage>, Error> {
+        if hook_ctx.pipeline_state.working_messages.is_empty() {
+            warn!("No messages to prepare");
+            return Ok(Vec::new());
+        }
+
+        // 从 pipeline_state 获取处理后的消息
+        let processed_messages = &hook_ctx.pipeline_state.working_messages;
+
+        info!(
+            "Prepared {} messages for inference",
+            processed_messages.len()
+        );
+
+        // 转换为 LlamaChatMessage
+        let llama_messages: Vec<LlamaChatMessage> = processed_messages
+            .iter()
+            .map(|msg| {
+                let content = msg.to_llama_format(&self.config.context.media_marker)?;
+                LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
+                    Error::InvalidInput {
+                        field: "LlamaChatMessage".to_string(),
+                        message: e.to_string(),
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(llama_messages)
+    }
+
     /// 多模态流式推理
     async fn generate_multimodal_stream(
         &self,
         request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let rx = if !is_multimodal_request(request) {
-            self.generate_text_stream(request).await?
+            self.generate_text_stream(request, hook_ctx).await?
         } else {
-            self.generate_media_stream(request).await?
+            self.generate_media_stream(request, hook_ctx).await?
         };
 
         Ok(rx)
@@ -336,8 +371,9 @@ impl Pipeline {
     async fn generate_text_stream(
         &self,
         request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request)?;
+        let msgs = self.prepare_messages(request, hook_ctx).await?;
 
         // Load model
         let llama_model = Model::from_config(self.config.model.clone())
@@ -367,6 +403,9 @@ impl Pipeline {
             e
         })?;
 
+        // 执行 on_before
+        self.on_before(hook_ctx).await?;
+
         // 使用 channel 方式生成响应
         ctx.generate_response(&mut sampler, request.model.clone())
     }
@@ -375,8 +414,9 @@ impl Pipeline {
     async fn generate_media_stream(
         &self,
         request: &CreateChatCompletionRequest,
+        hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request)?;
+        let msgs = self.prepare_messages(request, hook_ctx).await?;
 
         // Load model
         let model = Model::from_config(self.config.model.clone());
@@ -437,6 +477,9 @@ impl Pipeline {
             error!("Failed to eval messages: {}", e);
             e
         })?;
+
+        // 执行 on_before
+        self.on_before(hook_ctx).await?;
 
         // 使用 channel 方式生成响应
         mtmd_ctx.generate_response(&mut sampler, request.model.clone())
@@ -595,19 +638,104 @@ mod tests {
             .model("Qwen3-VL-2B-Instruct")
             .messages(
                 ChatMessagesBuilder::new()
-                .system("You are a helpful assistant.") 
-                .users(
-                    UserMessageBuilder::new()
-                        .text("描述这张图片")
-                        .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
-                )
-                .build()
+                    .system("You are a helpful assistant.") 
+                    .users(
+                        UserMessageBuilder::new()
+                            .text("描述这张图片")
+                            .image_url("https://muse-ai.oss-cn-hangzhou.aliyuncs.com/img/ffdebd6731594c7fbef751944dddf1c0.jpeg"),
+                    )
+                    .build()
             )
             .build()?;
 
         let results = pipeline.generate(&request).await?;
 
         info!("{:?}", results);
+        Ok(())
+    }
+
+    /// Hook 使用示例测试
+    ///
+    /// 演示如何使用标准 hooks 构建 pipeline（仅验证 hooks 注册和排序，不执行推理）
+    #[test]
+    fn test_pipeline_with_standard_hooks() -> anyhow::Result<()> {
+        use crate::hooks::builtin::{
+            AssembleMessagesHook, HistoryHook, LoadHistoryHook, NormalizeHook, SystemPromptHook,
+            ValidateHook,
+        };
+
+        let pipeline_config = PipelineConfig::new("/path/to/model.gguf".to_string());
+        let pipeline = Pipeline::try_new(pipeline_config)?;
+
+        // 构建带标准 hooks 的 pipeline
+        let pipeline = pipeline
+            // 1. 参数验证（优先级 10）
+            .with_hook(
+                ValidateHook::new()
+                    .with_max_tokens(2048)
+                    .with_allow_empty_messages(false),
+            )
+            // 2. 消息标准化（优先级 10，与 ValidateHook 同级，按添加顺序执行）
+            .with_hook(NormalizeHook::new().with_trim(true).with_remove_empty(true))
+            // 3. 系统提示词处理（优先级 20）
+            .with_hook(
+                SystemPromptHook::keep_first().with_default_system("You are a helpful assistant."),
+            )
+            // 4. 加载历史消息（优先级 30）
+            .with_hook(LoadHistoryHook::new().with_max_history(100))
+            // 5. 组装最终消息（优先级 40）
+            .with_hook(AssembleMessagesHook::new())
+            // 6. 保存历史（优先级 60）
+            .with_hook(HistoryHook::new());
+
+        // 验证 hooks 已注册
+        assert_eq!(pipeline.hooks.len(), 6);
+
+        // 验证排序后的优先级顺序
+        let sorted = pipeline.sorted_hooks();
+        assert_eq!(sorted[0].priority(), 10); // ValidateHook
+        assert_eq!(sorted[1].priority(), 10); // NormalizeHook
+        assert_eq!(sorted[2].priority(), 20); // SystemPromptHook
+        assert_eq!(sorted[3].priority(), 30); // LoadHistoryHook
+        assert_eq!(sorted[4].priority(), 40); // CurrentInputHook
+        assert_eq!(sorted[5].priority(), 60); // HistoryHook
+
+        Ok(())
+    }
+
+    /// 自定义优先级示例测试
+    ///
+    /// 演示如何调整 hooks 的执行顺序
+    #[test]
+    fn test_pipeline_with_custom_priorities() -> anyhow::Result<()> {
+        use crate::hooks::builtin::{HistoryHook, LoadHistoryHook, SystemPromptHook};
+
+        let pipeline_config = PipelineConfig::new("/path/to/model.gguf".to_string());
+        let pipeline = Pipeline::try_new(pipeline_config)?;
+
+        // 自定义优先级：先保存历史，再加载历史（特殊场景）
+        let pipeline = pipeline
+            // 系统提示词提前到第一位
+            .with_hook(
+                SystemPromptHook::keep_first().with_priority(5), // 默认是 20，现在提前到 5
+            )
+            // 历史保存提前执行
+            .with_hook(
+                HistoryHook::new().with_priority(15), // 默认是 60，现在提前到 15
+            )
+            // 历史加载延后执行
+            .with_hook(
+                LoadHistoryHook::new()
+                    .with_priority(25) // 默认是 30，稍微延后
+                    .with_max_history(50),
+            );
+
+        // 验证排序后的优先级顺序（从小到大）
+        let sorted = pipeline.sorted_hooks();
+        assert_eq!(sorted[0].priority(), 5); // SystemPromptHook (自定义)
+        assert_eq!(sorted[1].priority(), 15); // HistoryHook (自定义)
+        assert_eq!(sorted[2].priority(), 25); // LoadHistoryHook (自定义)
+
         Ok(())
     }
 }

@@ -250,7 +250,7 @@ impl ChatHistoryManager {
         session_id: impl AsRef<str>,
         text: impl Into<String>,
     ) -> Result<(), Error> {
-        self.add_message(session_id, UnifiedMessage::user_text(text))
+        self.add_message(session_id, UnifiedMessage::user(text))
     }
 
     /// 添加助手文本消息

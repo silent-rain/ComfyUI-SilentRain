@@ -9,8 +9,9 @@ use crate::hooks::{HookContext, InferenceHook};
 /// 参数验证钩子
 ///
 /// 在推理前验证请求参数的有效性
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ValidateHook {
+    priority: i32,
     /// 最大允许的 tokens
     max_allowed_tokens: Option<u32>,
     /// 最小允许的 tokens
@@ -19,14 +20,27 @@ pub struct ValidateHook {
     allow_empty_messages: bool,
 }
 
-impl ValidateHook {
-    /// 创建新的验证钩子
-    pub fn new() -> Self {
+impl Default for ValidateHook {
+    fn default() -> Self {
         Self {
+            priority: 10, // 高优先级，尽早执行
             max_allowed_tokens: None,
             min_allowed_tokens: Some(1),
             allow_empty_messages: false,
         }
+    }
+}
+
+impl ValidateHook {
+    /// 创建新的验证钩子
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 设置优先级
+    pub fn with_priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
+        self
     }
 
     /// 设置最大允许的 tokens
@@ -55,7 +69,12 @@ impl InferenceHook for ValidateHook {
     }
 
     fn priority(&self) -> i32 {
-        10 // 高优先级，尽早执行
+        self.priority
+    }
+
+    async fn on_prepare(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        // 验证钩子不需要处理消息准备阶段
+        Ok(())
     }
 
     async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
@@ -126,6 +145,11 @@ impl InferenceHook for ValidateHook {
         debug!("Request validation passed");
         Ok(())
     }
+
+    async fn on_after(&self, _ctx: &mut HookContext) -> Result<(), Error> {
+        // 验证钩子不需要处理推理后阶段
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -141,7 +165,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new().with_request(&request);
+        let mut ctx = HookContext::new(&request);
         let result = hook.on_before(&mut ctx).await;
 
         assert!(result.is_err());
@@ -164,7 +188,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new().with_request(&request);
+        let mut ctx = HookContext::new(&request);
         assert!(hook.on_before(&mut ctx).await.is_ok());
 
         // 应该失败的请求
@@ -180,7 +204,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new().with_request(&request);
+        let mut ctx = HookContext::new(&request);
         assert!(hook.on_before(&mut ctx).await.is_err());
     }
 }

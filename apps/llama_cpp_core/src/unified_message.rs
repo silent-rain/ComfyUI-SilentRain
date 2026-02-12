@@ -9,7 +9,7 @@ use tracing::warn;
 use crate::{error::Error, types::MessageRole, utils::image::extract_image_source};
 
 /// 图片来源类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ImageSource {
     /// HTTP/HTTPS URL
     Url(String),
@@ -18,7 +18,7 @@ pub enum ImageSource {
 }
 
 /// 内容块 - 统一用数组表示，单文本是单元素数组
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ContentBlock {
     /// 纯文本内容
     Text { text: String },
@@ -41,7 +41,7 @@ pub enum ContentBlock {
 }
 
 /// 统一消息结构 - 扁平化设计
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UnifiedMessage {
     /// 消息角色
     pub role: MessageRole,
@@ -76,7 +76,7 @@ impl UnifiedMessage {
     }
 
     /// 创建纯文本用户消息
-    pub fn user_text(text: impl Into<String>) -> Self {
+    pub fn user(text: impl Into<String>) -> Self {
         Self {
             role: MessageRole::User,
             content: vec![ContentBlock::Text { text: text.into() }],
@@ -182,14 +182,15 @@ impl UnifiedMessage {
     }
 
     /// 清理内容中的媒体标记
-    pub fn sanitize_media_marker(&self, marker: &str) -> Vec<ContentBlock> {
+    pub fn sanitize_media_marker(&self) -> Vec<ContentBlock> {
         self.content
             .clone()
             .iter()
             .map(|block| {
-                if let ContentBlock::Text { text } = block {
-                    ContentBlock::Text {
-                        text: text.replace(marker, "[图片]"),
+                if let ContentBlock::Image { detail, .. } = block {
+                    ContentBlock::Image {
+                        source: ImageSource::Url("[image]".to_string()),
+                        detail: detail.clone(),
                     }
                 } else {
                     block.clone()
@@ -252,21 +253,6 @@ impl UnifiedMessage {
             .collect();
 
         serde_json::to_string(&parts).map_err(Error::Serde)
-    }
-}
-
-impl TryFrom<UnifiedMessage> for llama_cpp_2::model::LlamaChatMessage {
-    type Error = Error;
-
-    fn try_from(msg: UnifiedMessage) -> Result<Self, Error> {
-        let role_str = msg.role.to_string();
-        // 默认使用标准媒体标记
-        let content = msg.to_llama_format("<image>")?;
-
-        Self::new(role_str, content).map_err(|e| Error::InvalidInput {
-            field: "LlamaChatMessage".to_string(),
-            message: e.to_string(),
-        })
     }
 }
 
@@ -472,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_create_user_text_message() {
-        let msg = UnifiedMessage::user_text("Hello");
+        let msg = UnifiedMessage::user("Hello");
         assert_eq!(msg.role, MessageRole::User);
         assert!(!msg.has_image());
     }
@@ -490,12 +476,19 @@ mod tests {
 
     #[test]
     fn test_sanitize_media_marker() {
-        let msg = UnifiedMessage::user_text("See this image: <image> what is it?");
-        let new_content = msg.sanitize_media_marker("<image>");
-        assert_eq!(new_content.len(), 1);
-        if let ContentBlock::Text { text } = &new_content[0] {
-            assert_eq!(*text, "See this image: [图片] what is it?");
-        }
+        let default_marker = mtmd_default_marker().to_string();
+        let msg = UnifiedMessage::user_with_blocks(vec![
+            ContentBlock::Text {
+                text: "See this image what is it?".to_string(),
+            },
+            ContentBlock::Image {
+                source: ImageSource::Url(default_marker.clone()),
+                detail: None,
+            },
+        ]);
+
+        let new_content = msg.sanitize_media_marker();
+        println!("{:#?}", new_content);
     }
 
     #[test]

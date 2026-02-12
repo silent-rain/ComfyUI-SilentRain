@@ -6,7 +6,7 @@ use llama_cpp_2::context::params::LlamaPoolingType;
 use serde::{Deserialize, Serialize};
 
 /// 消息角色枚举 - 清晰明确的角色定义
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MessageRole {
     /// 系统角色 - 用于系统提示和全局指令
     System,

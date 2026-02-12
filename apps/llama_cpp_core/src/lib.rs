@@ -8,7 +8,6 @@ pub mod context;
 pub mod error;
 pub mod history;
 pub mod hooks;
-pub mod message_plugins;
 pub mod model;
 pub mod mtmd_context;
 pub mod pipeline;
