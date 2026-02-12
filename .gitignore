@@ -30,3 +30,7 @@ demo
 
 # py
 __pycache__
+
+
+# AI
+rustc-ice-*.txt
