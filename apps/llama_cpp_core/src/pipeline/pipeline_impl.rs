@@ -396,7 +396,6 @@ impl Pipeline {
                 error!("Failed to load model: {}", e);
                 e
             })?;
-        let llama_model = Arc::new(llama_model);
 
         // Load sampler
         let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
@@ -439,13 +438,10 @@ impl Pipeline {
             error!("Failed to load llama model: {}", e);
             e
         })?;
-        let llama_model = Arc::new(llama_model);
-        let mtmd_context = model
-            .load_mtmd_mtmd_context(llama_model.clone())
-            .map_err(|e| {
-                error!("Failed to load mtmd context: {}", e);
-                e
-            })?;
+        let mtmd_context = model.load_mtmd_context(llama_model.clone()).map_err(|e| {
+            error!("Failed to load mtmd context: {}", e);
+            e
+        })?;
 
         // Load sampler
         let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
@@ -461,16 +457,12 @@ impl Pipeline {
                 e
             })?;
 
-        let mut mtmd_ctx = MtmdContextWrapper::try_new(
-            llama_model.clone(),
-            ctx,
-            mtmd_context.into(),
-            &contex_params,
-        )
-        .map_err(|e| {
-            error!("Failed to create mtmd context: {}", e);
-            e
-        })?;
+        let mut mtmd_ctx =
+            MtmdContextWrapper::try_new(llama_model.clone(), ctx, mtmd_context, &contex_params)
+                .map_err(|e| {
+                    error!("Failed to create mtmd context: {}", e);
+                    e
+                })?;
 
         // Load media files
         let media_sources = extract_media_sources_from_request(request)?;

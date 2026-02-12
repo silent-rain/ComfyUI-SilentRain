@@ -20,8 +20,7 @@ use llama_cpp_2::{
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::{CacheManager, global_cache};
-use crate::{cache::CacheType, error::Error};
+use crate::error::Error;
 
 /// 生成模型路径的唯一哈希键
 fn hash_model_key(path: &str) -> String {
@@ -152,14 +151,12 @@ impl ModelConfig {
 #[derive(Debug, Clone)]
 pub struct Model {
     config: ModelConfig,
-    cache: Arc<CacheManager>,
     cache_model_key: String,
     cache_mmproj_key: String,
 }
 
 impl Model {
     pub fn new(model_path: impl Into<String>, mmproj_path: impl Into<Option<String>>) -> Self {
-        let cache = global_cache().clone();
         let model_path = model_path.into();
         let mmproj_path = mmproj_path.into().unwrap_or_default();
 
@@ -173,22 +170,18 @@ impl Model {
                 mmproj_path: mmproj_path.clone(),
                 ..ModelConfig::default()
             },
-            cache,
             cache_model_key,
             cache_mmproj_key,
         }
     }
 
     pub fn from_config(config: ModelConfig) -> Self {
-        let cache = global_cache().clone();
-
         // 基于路径生成唯一缓存键
         let cache_model_key = hash_model_key(&config.model_path);
         let cache_mmproj_key = hash_mmproj_key(&config.mmproj_path);
 
         Self {
             config: config.clone(),
-            cache,
             cache_model_key,
             cache_mmproj_key,
         }
@@ -234,7 +227,7 @@ impl Model {
     }
 
     /// 加载模型
-    pub fn load_llama_model(&self, backend: &LlamaBackend) -> Result<LlamaModel, Error> {
+    pub fn load_llama_model(&self, backend: &LlamaBackend) -> Result<Arc<LlamaModel>, Error> {
         // 加载新模型
         info!("Loading model: {:?}", self.config.model_path);
 
@@ -280,52 +273,11 @@ impl Model {
                 e
             })?;
 
-        Ok(model)
-    }
-
-    /// 加载模型（带缓存）
-    pub fn load_cache_llama_model(&self, backend: &LlamaBackend) -> Result<Arc<LlamaModel>, Error> {
-        if !true {
-            self.cache.remove(&self.cache_model_key)?;
-            return Ok(Arc::new(self.load_llama_model(backend)?));
-        }
-
-        // 尝试从缓存获取
-        if let Some(entry) = self.cache.get_data::<LlamaModel>(&self.cache_model_key)? {
-            info!("Model cache hit: {:?}", self.config.model_path);
-            return Ok(entry);
-        }
-
-        // 加载新模型
-        let model = Arc::new(self.load_llama_model(backend)?);
-
-        // 缓存参数
-        let params = vec![
-            self.config.model_path.clone(),
-            self.config.main_gpu.to_string(),
-            self.config.n_gpu_layers.to_string(),
-            self.config.cmoe.to_string(),
-            self.config
-                .devices
-                .iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        ];
-
-        // 缓存模型
-        self.cache.insert_or_update(
-            &self.cache_model_key,
-            CacheType::Model,
-            &params,
-            model.clone() as Arc<dyn std::any::Any + Send + Sync>,
-        )?;
-
-        Ok(model)
+        Ok(Arc::new(model))
     }
 
     /// Load MTMD context
-    pub fn load_mtmd_mtmd_context(&self, model: Arc<LlamaModel>) -> Result<MtmdContext, Error> {
+    pub fn load_mtmd_context(&self, model: Arc<LlamaModel>) -> Result<Arc<MtmdContext>, Error> {
         let use_gpu = self.config.n_gpu_layers > 0;
 
         // Create media marker CString
@@ -359,49 +311,7 @@ impl Model {
         let mtmd_context =
             MtmdContext::init_from_file(&self.config.mmproj_path, &model, &mtmd_params)?;
 
-        Ok(mtmd_context)
-    }
-
-    /// Load cache MTMD context
-    pub fn load_cache_mtmd_context(
-        &self,
-        model: Arc<LlamaModel>,
-    ) -> Result<Arc<MtmdContext>, Error> {
-        if !true {
-            self.cache.remove(&self.cache_mmproj_key)?;
-            let ctx = self.load_mtmd_mtmd_context(model)?;
-            return Ok(ctx.into());
-        }
-
-        // 尝试从缓存获取
-        if let Some(entry) = self
-            .cache
-            .get_data::<SafeMtmdContext>(&self.cache_mmproj_key)?
-        {
-            info!("MtmdContext cache hit: {:?}", self.config.mmproj_path);
-            return Ok(entry.0.clone());
-        }
-
-        // 加载新模型
-        let ctx = self.load_mtmd_mtmd_context(model)?;
-        let sendable_ctx = Arc::new(SafeMtmdContext(ctx.into()));
-
-        // 缓存参数
-        let params = vec![
-            self.config.mmproj_path.clone(),
-            (self.config.n_gpu_layers == 0).to_string(),
-            self.config.media_marker.clone().unwrap_or_default(),
-            self.config.n_threads.to_string(),
-            self.config.verbose.to_string(),
-        ];
-
-        // 缓存模型
-        self.cache.insert_or_update(
-            &self.cache_mmproj_key,
-            CacheType::Model,
-            &params,
-            sendable_ctx.clone() as Arc<dyn std::any::Any + Send + Sync>,
-        )?;
+        let sendable_ctx = Arc::new(SafeMtmdContext(mtmd_context.into()));
 
         Ok(sendable_ctx.0.clone())
     }
@@ -411,7 +321,7 @@ impl Model {
 ///
 /// 注意：MtmdContext 内部包含 NonNull 指针，但 llama.cpp 的 mtmd_context
 /// 实际上可以安全地在线程间移动（只要不在多个线程同时访问）
-pub struct SafeMtmdContext(Arc<MtmdContext>);
+pub struct SafeMtmdContext(pub Arc<MtmdContext>);
 
 // 不安全地实现 Send trait
 // 安全前提：MtmdContext 只能在单线程中使用，但可以在不同线程间传递

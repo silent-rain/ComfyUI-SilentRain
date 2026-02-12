@@ -6,13 +6,13 @@ use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use base64::Engine;
 use llama_cpp_core::{
     Pipeline, PipelineConfig,
-    request::{ChatMessagesBuilder, UserMessageBuilder},
+    request::{ChatMessagesBuilder, Metadata, UserMessageBuilder},
     response::response_extract_content,
     utils::log::init_logger,
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     init_logger();
 
     let model_path =
@@ -43,6 +43,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| "image/jpeg".to_string());
 
     // 使用新的构建器 API 构建请求
+    let metadata = Metadata {
+        session_id: Some("12345".to_string()),
+        ..Default::default()
+    };
     let messages = ChatMessagesBuilder::new()
         .system("你是专注生成套图模特提示词专家，用于生成3同人物，同场景，同服装，不同的模特照片，需要保持专业性。")
         .users(
@@ -54,6 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_completion_tokens(2048u32)
+        .metadata(metadata)
         .model("Qwen3-VL-2B-Instruct")
         .messages(messages)
         .build()?;

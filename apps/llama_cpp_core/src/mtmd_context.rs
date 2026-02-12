@@ -276,8 +276,7 @@ impl MtmdContextWrapper {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Backend, Model, Sampler, chat_history, sampler::SamplerConfig, types::MediaData,
-        types::MessageRole,
+        Backend, Model, Sampler, chat_history, sampler::SamplerConfig, types::MessageRole,
     };
 
     use super::*;
@@ -292,8 +291,8 @@ mod tests {
         let model_path = String::new();
         let mmproj_path = String::new();
         let model = Model::new(model_path, mmproj_path);
-        let llama_model = model.load_cache_llama_model(&backend)?;
-        let mtmd_context = model.load_cache_mtmd_context(llama_model.clone())?;
+        let llama_model = model.load_llama_model(&backend)?;
+        let mtmd_context = model.load_mtmd_context(llama_model.clone())?;
 
         // Load sampler
         let sampler_config = SamplerConfig::default();
@@ -315,10 +314,9 @@ mod tests {
         // }
 
         // Load media files
-        let medias = vec![MediaData::new_image("".as_bytes().to_vec())];
+        let medias = vec!["".as_bytes().to_vec()];
         for media in &medias {
-            info!("Loading media: {}", media.media_type);
-            mtmd_ctx.load_media_buffer(&media.data)?;
+            mtmd_ctx.load_media_buffer(media)?;
         }
 
         // 获取历史管理器

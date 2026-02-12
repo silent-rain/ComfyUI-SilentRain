@@ -13,31 +13,9 @@ use crate::error::Error;
 
 static GLOBAL_CACHE: OnceLock<Arc<CacheManager>> = OnceLock::new();
 
-/// 默认缓存最大条目数
-const DEFAULT_MAX_CACHE_ENTRIES: usize = 100;
-
-/// 缓存类型
-#[derive(Clone, PartialEq)]
-pub enum CacheType {
-    Model,
-    MessageContext,
-    Custom(String),
-}
-
-impl std::fmt::Display for CacheType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CacheType::Model => write!(f, "model"),
-            CacheType::MessageContext => write!(f, "message_context"),
-            CacheType::Custom(name) => write!(f, "custom:{}", name),
-        }
-    }
-}
-
 /// 缓存条目
 #[derive(Clone)]
 pub struct CacheEntry<T: Any + Send + Sync> {
-    pub cache_type: CacheType,
     pub params_hash: u64,
     pub data: T,
     /// 最后访问时间（用于 LRU 淘汰）
@@ -57,16 +35,15 @@ impl<T: Any + Send + Sync> fmt::Debug for CacheEntry<T> {
     /// # 示例
     /// ```
     /// use llama_cpp_core::cache::CacheEntry;
-    /// use llama_cpp_core::cache::CacheType;
     ///
-    /// let cache = CacheEntry { cache_type: CacheType::Model, params_hash: 123, data: "" };
+    /// let cache = CacheEntry { params_hash: 123, data: "" };
     /// println!("{:?}", cache);
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "CacheEntry(cache_type: {}, params_hash: {}, data: Object)",
-            self.cache_type, self.params_hash
+            "CacheEntry(params_hash: {}, data: Object)",
+            self.params_hash
         )
     }
 }
@@ -76,25 +53,12 @@ pub type CachePool = HashMap<String, CacheEntry<Arc<dyn Any + Send + Sync>>>;
 /// 全局单例的模型缓存
 pub struct CacheManager {
     pool: RwLock<CachePool>,
-    /// 最大缓存条目数
-    max_entries: usize,
 }
 
 impl Default for CacheManager {
     fn default() -> Self {
         Self {
             pool: RwLock::new(HashMap::new()),
-            max_entries: DEFAULT_MAX_CACHE_ENTRIES,
-        }
-    }
-}
-
-impl CacheManager {
-    /// 创建指定大小的缓存管理器
-    pub fn with_capacity(max_entries: usize) -> Self {
-        Self {
-            pool: RwLock::new(HashMap::new()),
-            max_entries,
         }
     }
 }
@@ -115,6 +79,7 @@ impl CacheManager {
             .get_or_init(|| Arc::new(CacheManager::default()))
             .clone()
     }
+
     /// 获取读取锁
     pub fn read(&self) -> Result<RwLockReadGuard<'_, CachePool>, Error> {
         self.pool.read().map_err(|e| {
@@ -135,7 +100,6 @@ impl CacheManager {
     pub fn insert_or_update<T>(
         &self,
         key: &str,
-        cache_type: CacheType,
         params: &[T],
         data: Arc<dyn Any + Send + Sync>,
     ) -> Result<(), Error>
@@ -152,15 +116,9 @@ impl CacheManager {
             return Ok(());
         }
 
-        // 检查是否需要淘汰旧条目
-        if pool.len() >= self.max_entries {
-            Self::evict_lru(&mut pool);
-        }
-
         pool.insert(
             key.to_string(),
             CacheEntry {
-                cache_type,
                 params_hash,
                 data,
                 last_accessed: std::time::Instant::now(),
@@ -170,22 +128,10 @@ impl CacheManager {
         Ok(())
     }
 
-    /// LRU 淘汰策略：移除最久未访问的条目
-    fn evict_lru(pool: &mut CachePool) {
-        if let Some(oldest_key) = pool
-            .iter()
-            .min_by_key(|(_, entry)| entry.last_accessed)
-            .map(|(k, _)| k.clone())
-        {
-            pool.remove(&oldest_key);
-        }
-    }
-
     /// 强制更新模型（无论 hash 值是否变化）
     pub fn force_update<T>(
         &self,
         key: &str,
-        cache_type: CacheType,
         params: &[T],
         data: Arc<dyn Any + Send + Sync>,
     ) -> Result<(), Error>
@@ -195,15 +141,9 @@ impl CacheManager {
         let params_hash = Self::compute_hash(params);
         let mut pool = self.write()?;
 
-        // 检查是否需要淘汰旧条目（仅当 key 不存在时）
-        if !pool.contains_key(key) && pool.len() >= self.max_entries {
-            Self::evict_lru(&mut pool);
-        }
-
         pool.insert(
             key.to_string(),
             CacheEntry {
-                cache_type,
                 params_hash,
                 data,
                 last_accessed: std::time::Instant::now(),
@@ -217,7 +157,6 @@ impl CacheManager {
     pub fn get_or_insert<F, T, P>(
         &self,
         key: &str,
-        cache_type: CacheType,
         params: &[P],
         handler: F,
     ) -> Result<CacheEntry<Arc<T>>, Error>
@@ -248,13 +187,7 @@ impl CacheManager {
 
         let mut pool = self.write()?;
 
-        // 检查是否需要淘汰旧条目
-        if !pool.contains_key(key) && pool.len() >= self.max_entries {
-            Self::evict_lru(&mut pool);
-        }
-
         let cache = CacheEntry {
-            cache_type: cache_type.clone(),
             params_hash,
             data: data.clone() as Arc<dyn Any + Send + Sync>,
             last_accessed: std::time::Instant::now(),
@@ -263,7 +196,6 @@ impl CacheManager {
 
         // 返回正确类型的 CacheEntry
         Ok(CacheEntry {
-            cache_type,
             params_hash,
             data,
             last_accessed: std::time::Instant::now(),
@@ -283,7 +215,6 @@ impl CacheManager {
                 Arc::downcast::<T>(cache.data.clone())
                     .ok()
                     .map(|typed_data| CacheEntry {
-                        cache_type: cache.cache_type.clone(),
                         params_hash: cache.params_hash,
                         data: typed_data,
                         last_accessed: cache.last_accessed,
@@ -329,19 +260,6 @@ impl CacheManager {
         Ok(pool.keys().cloned().collect())
     }
 
-    /// 获取指定缓存类型的缓存 key
-    pub fn get_keys_by_type(&self, cache_type: CacheType) -> Result<Vec<String>, Error> {
-        let pool = self.read()?;
-
-        let mut keys = Vec::new();
-        for (key, cache) in pool.iter() {
-            if cache.cache_type == cache_type {
-                keys.push(key.clone());
-            }
-        }
-        Ok(keys)
-    }
-
     /// 删除模型
     pub fn remove(
         &self,
@@ -363,7 +281,6 @@ impl CacheManager {
             Arc::downcast::<T>(cache.data.clone())
                 .ok()
                 .map(|typed_data| CacheEntry {
-                    cache_type: cache.cache_type,
                     params_hash: cache.params_hash,
                     data: typed_data,
                     last_accessed: cache.last_accessed,
@@ -376,15 +293,6 @@ impl CacheManager {
     /// 清空所有模型
     pub fn clear(&self) -> Result<(), Error> {
         self.write()?.clear();
-
-        Ok(())
-    }
-
-    /// 指定缓存类型进行清除
-    pub fn clear_cache_type(&self, cache_type: CacheType) -> Result<(), Error> {
-        let mut pool = self.write()?;
-
-        pool.retain(|_, cache| cache.cache_type != cache_type);
 
         Ok(())
     }
@@ -431,12 +339,7 @@ mod tests {
         {
             let cache = CacheManager::global();
 
-            cache.insert_or_update(
-                "model1",
-                CacheType::Model,
-                &[1, 2, 3],
-                Arc::new(MyModel { value: 42 }),
-            )?;
+            cache.insert_or_update("model1", &[1, 2, 3], Arc::new(MyModel { value: 42 }))?;
             assert!(cache.get::<MyModel>("model1").is_ok());
         }
 
@@ -457,35 +360,20 @@ mod tests {
 
         // 测试插入
         {
-            cache.insert_or_update(
-                "model1",
-                CacheType::Model,
-                &[1, 2, 3],
-                Arc::new(MyModel { value: 42 }),
-            )?;
+            cache.insert_or_update("model1", &[1, 2, 3], Arc::new(MyModel { value: 42 }))?;
             assert!(cache.get::<MyModel>("model1").is_ok());
         }
 
         // 测试 hash 值未变化时不更新
         {
-            cache.insert_or_update(
-                "model1",
-                CacheType::Model,
-                &[1, 2, 3],
-                Arc::new(MyModel { value: 100 }),
-            )?;
+            cache.insert_or_update("model1", &[1, 2, 3], Arc::new(MyModel { value: 100 }))?;
             let model = cache.get::<MyModel>("model1").unwrap();
             assert_eq!(model.data.value, 42); // 仍然是旧值，因为 hash 未变化
         }
 
         // 测试 hash 值变化时更新
         {
-            cache.insert_or_update(
-                "model1",
-                CacheType::Model,
-                &[1, 2, 4],
-                Arc::new(MyModel { value: 100 }),
-            )?;
+            cache.insert_or_update("model1", &[1, 2, 4], Arc::new(MyModel { value: 100 }))?;
             let model = cache.get::<MyModel>("model1").unwrap();
             assert_eq!(model.data.value, 100); // 新值，因为 hash 变化了
         }
@@ -503,9 +391,7 @@ mod tests {
         // 第一次调用，初始化模型
         {
             let model = cache
-                .get_or_insert(key, CacheType::Model, params, || {
-                    Ok(Arc::new(MyModel { value: 42 }))
-                })
+                .get_or_insert(key, params, || Ok(Arc::new(MyModel { value: 42 })))
                 .unwrap();
             assert_eq!(model.data.value, 42);
         }
@@ -513,7 +399,7 @@ mod tests {
         // 第二次调用，hash 一致，返回现有模型
         {
             let model = cache
-                .get_or_insert(key, CacheType::Model, params, || {
+                .get_or_insert(key, params, || {
                     println!("This should not be printed!");
                     Ok(Arc::new(MyModel { value: 80 }))
                 })
@@ -526,9 +412,7 @@ mod tests {
             let params = &[1, 2, 3];
 
             let model = cache
-                .get_or_insert(key, CacheType::Model, params, || {
-                    Ok(Arc::new(MyModel { value: 100 }))
-                })
+                .get_or_insert(key, params, || Ok(Arc::new(MyModel { value: 100 })))
                 .unwrap();
             assert_eq!(model.data.value, 100);
         }

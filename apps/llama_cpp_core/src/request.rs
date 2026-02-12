@@ -28,7 +28,7 @@ pub type Request = CreateChatCompletionRequest;
 /// 请求元数据
 ///
 /// 用于从 CreateChatCompletionRequest.metadata 解析自定义字段
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
     /// 会话 ID
     pub session_id: Option<String>,
@@ -37,202 +37,15 @@ pub struct Metadata {
     pub extra: HashMap<String, Value>,
 }
 
-// /// 解析后的输入结果
-// #[derive(Debug, Clone)]
-// pub struct ParsedInput {
-//     /// 转换后的消息列表
-//     pub messages: Vec<LlamaChatMessage>,
-//     /// 提取的图片源（供后续下载/编码）
-//     pub image_sources: Vec<ImageSource>,
-// }
+impl From<Metadata> for async_openai::types::Metadata {
+    fn from(value: Metadata) -> Self {
+        let v = serde_json::to_value(value)
+            .map_err(Error::from)
+            .unwrap_or_default();
 
-// /// 检查请求是否包含图片（多模态请求）
-// pub fn is_multimodal_request(request: &CreateChatCompletionRequest) -> bool {
-//     for msg in request.messages.clone() {
-//         if let ChatCompletionRequestMessage::User(user_msg) = msg
-//             && let ChatCompletionRequestUserMessageContent::Array(parts) = &user_msg.content
-//         {
-//             for part in parts {
-//                 if matches!(
-//                     part,
-//                     ChatCompletionRequestUserMessageContentPart::ImageUrl(_)
-//                 ) {
-//                     return true;
-//                 }
-//             }
-//         }
-//     }
-//     false
-// }
-
-// /// 解析 Request 的消息
-// ///
-// /// 处理标准的 `CreateChatCompletionRequest`，将消息转换为 LlamaChatMessage 列表
-// /// 支持多模态：图片内容会被提取，并在对应用户消息中添加媒体标记
-// ///
-// /// # Arguments
-// /// * `request` - 标准 Chat Completions 请求
-// /// * `media_marker` - 媒体标记（用于多模态，默认使用 mtmd 默认标记）
-// pub fn parse_request_input(
-//     request: &CreateChatCompletionRequest,
-//     media_marker: Option<impl Into<String>>,
-// ) -> Result<ParsedInput, Error> {
-//     let mut messages = Vec::new();
-//     let mut image_sources = Vec::new();
-
-//     let media_marker = media_marker
-//         .map(|s| s.into())
-//         .unwrap_or(mtmd_default_marker().to_string());
-
-//     for msg in request.messages.clone() {
-//         match msg {
-//             // 系统消息
-//             ChatCompletionRequestMessage::System(system_msg) => {
-//                 let content = extract_system_content(&system_msg.content);
-//                 if !content.is_empty() {
-//                     messages.push(LlamaChatMessage::new(
-//                         MessageRole::System.to_string(),
-//                         content,
-//                     )?);
-//                 }
-//             }
-//             // 用户消息：支持文本和多模态（文本+图片）
-//             ChatCompletionRequestMessage::User(user_msg) => {
-//                 let (user_text, img_sources) =
-//                     parse_user_message_content(&user_msg.content, &media_marker)?;
-
-//                 if !user_text.is_empty() {
-//                     // 添加用户消息（包含媒体标记）
-//                     messages.push(LlamaChatMessage::new(
-//                         MessageRole::User.to_string(),
-//                         user_text,
-//                     )?);
-
-//                     // 收集图片来源
-//                     image_sources.extend(img_sources);
-//                 }
-//             }
-//             // 助手消息
-//             ChatCompletionRequestMessage::Assistant(assistant_msg) => {
-//                 if let Some(content) = &assistant_msg.content {
-//                     let text = extract_assistant_content(content);
-//                     if !text.is_empty() {
-//                         messages.push(LlamaChatMessage::new(
-//                             MessageRole::Assistant.to_string(),
-//                             text,
-//                         )?);
-//                     }
-//                 }
-//             }
-//             // 工具/函数消息：暂不支持，记录日志后跳过
-//             _ => {
-//                 tracing::debug!("Skipping unsupported message type in request parsing");
-//             }
-//         }
-//     }
-
-//     Ok(ParsedInput {
-//         messages,
-//         image_sources,
-//     })
-// }
-
-// /// 解析用户消息内容
-// ///
-// /// 处理文本或多模态内容（文本+图片数组）
-// /// 多模态时，在文本后追加媒体标记（参考 llama.cpp mtmd 规范）
-// ///
-// /// # Returns
-// /// - `(用户消息文本, 图片来源列表)`
-// fn parse_user_message_content(
-//     content: &ChatCompletionRequestUserMessageContent,
-//     media_marker: &str,
-// ) -> Result<(String, Vec<ImageSource>), Error> {
-//     let mut contents = Vec::new();
-//     let mut image_sources = Vec::new();
-
-//     match content {
-//         // 纯文本消息
-//         ChatCompletionRequestUserMessageContent::Text(text) => {
-//             contents.push(json!({
-//                 "type": "text",
-//                 "text": text.replace(media_marker, "").to_string(),
-//             }));
-//         }
-//         // 多模态消息：文本 + 图片数组
-//         ChatCompletionRequestUserMessageContent::Array(parts) => {
-//             for part in parts {
-//                 match part {
-//                     ChatCompletionRequestUserMessageContentPart::Text(text_part) => {
-//                         // 清理文本中可能存在的默认标记（避免重复）
-//                         let clean_text = text_part.text.replace(media_marker, "");
-//                         contents.push(json!({
-//                             "type": "text",
-//                             "text": clean_text.to_string(),
-//                         }));
-//                     }
-//                     ChatCompletionRequestUserMessageContentPart::ImageUrl(image_part) => {
-//                         // 提取图片来源
-//                         if let Some(source) = extract_image_source(&image_part.image_url.url) {
-//                             contents.push(json!({
-//                                 "type": "image_url",
-//                                 "image_url": {
-//                                     "url": media_marker,
-//                                     "detail": image_part.image_url.detail
-//                                 }
-//                             }));
-//                             image_sources.push(source);
-//                         }
-//                     }
-//                     _ => {} // 忽略其他类型
-//                 }
-//             }
-//         }
-//     }
-
-//     let user_text = serde_json::to_string(&contents)?;
-//     Ok((user_text, image_sources))
-// }
-
-// /// 提取系统消息内容
-// fn extract_system_content(content: &ChatCompletionRequestSystemMessageContent) -> String {
-//     let contents = match content {
-//         ChatCompletionRequestSystemMessageContent::Text(text) => {
-//             ChatCompletionRequestSystemMessageContent::Array(vec![
-//                 ChatCompletionRequestSystemMessageContentPart::Text(
-//                     ChatCompletionRequestMessageContentPartText {
-//                         text: text.to_string(),
-//                     },
-//                 ),
-//             ])
-//         }
-//         ChatCompletionRequestSystemMessageContent::Array(parts) => {
-//             ChatCompletionRequestSystemMessageContent::Array(parts.to_vec())
-//         }
-//     };
-
-//     serde_json::to_string(&contents).unwrap_or_default()
-// }
-
-// /// 提取助手消息内容
-// fn extract_assistant_content(content: &ChatCompletionRequestAssistantMessageContent) -> String {
-//     let contents = match content {
-//         ChatCompletionRequestAssistantMessageContent::Text(text) => {
-//             ChatCompletionRequestAssistantMessageContent::Array(vec![
-//                 ChatCompletionRequestAssistantMessageContentPart::Text(
-//                     ChatCompletionRequestMessageContentPartText {
-//                         text: text.to_string(),
-//                     },
-//                 ),
-//             ])
-//         }
-//         ChatCompletionRequestAssistantMessageContent::Array(parts) => {
-//             ChatCompletionRequestAssistantMessageContent::Array(parts.to_vec())
-//         }
-//     };
-
-//     serde_json::to_string(&contents).unwrap_or_default()
-// }
+        async_openai::types::Metadata::from(v)
+    }
+}
 
 /// 从请求的 metadata 中提取 session_id
 pub fn extract_session_id(request: &CreateChatCompletionRequest) -> Option<String> {
@@ -440,71 +253,6 @@ impl From<UserMessageBuilder> for ChatCompletionRequestUserMessage {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn test_extract_system_content() {
-    //     let system_content = ChatCompletionRequestSystemMessageContent::Text(
-    //         "You are a system assistant".to_string(),
-    //     );
-    //     let result = extract_system_content(&system_content);
-    //     println!("{:?}", result);
-
-    //     let system_content = ChatCompletionRequestSystemMessageContent::Array(vec![
-    //         ChatCompletionRequestSystemMessageContentPart::Text(
-    //             ChatCompletionRequestMessageContentPartText {
-    //                 text: "You are a system assistant".to_string(),
-    //             },
-    //         ),
-    //     ]);
-    //     let result = extract_system_content(&system_content);
-    //     println!("{:?}", result);
-    // }
-
-    // #[test]
-    // fn test_extract_assistant_content() {
-    //     let assistant_content = ChatCompletionRequestAssistantMessageContent::Text(
-    //         "You are a helpful assistant".to_string(),
-    //     );
-    //     let result = extract_assistant_content(&assistant_content);
-    //     println!("{:?}", result);
-
-    //     let assistant_content = ChatCompletionRequestAssistantMessageContent::Array(vec![
-    //         ChatCompletionRequestAssistantMessageContentPart::Text(
-    //             ChatCompletionRequestMessageContentPartText {
-    //                 text: "You are a helpful assistant".to_string(),
-    //             },
-    //         ),
-    //     ]);
-    //     let result = extract_assistant_content(&assistant_content);
-    //     println!("{:?}", result);
-    // }
-
-    // #[test]
-    // fn test_parse_user_message_content() -> anyhow::Result<()> {
-    //     let media_marker = mtmd_default_marker().to_string();
-
-    //     let user_content =
-    //         ChatCompletionRequestUserMessageContent::Text("Hello, how can I help you?".to_string());
-    //     let (user_text, _media_sources) = parse_user_message_content(&user_content, &media_marker)?;
-    //     println!("{:?}", user_text);
-
-    //     let user_content = ChatCompletionRequestUserMessageContent::Array(vec![
-    //         ChatCompletionRequestUserMessageContentPart::Text(
-    //             ChatCompletionRequestMessageContentPartText {
-    //                 text: "Hello, how can I help you?".to_string(),
-    //             },
-    //         ),
-    //         ChatCompletionRequestUserMessageContentPart::ImageUrl(
-    //             ChatCompletionRequestMessageContentPartImage {
-    //                 image_url:ImageUrl {url:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==".to_string(), detail: Some(ImageDetail::Auto) },
-    //             },
-    //         ),
-    //     ]);
-    //     let (user_text, _media_sources) = parse_user_message_content(&user_content, &media_marker)?;
-    //     println!("{:?}", user_text);
-
-    //     Ok(())
-    // }
-
     #[test]
     fn test_user_message_builder() {
         // 纯文本 - 应该返回 Text 类型
@@ -580,5 +328,15 @@ mod tests {
         } else {
             panic!("Expected User message at index 3");
         }
+    }
+
+    #[test]
+    fn to_async_openai_metadata() {
+        let metadata = Metadata {
+            session_id: Some("12345".to_string()),
+            ..Default::default()
+        };
+        let async_metadata: async_openai::types::Metadata = metadata.into();
+        println!("{:#?}", async_metadata);
     }
 }

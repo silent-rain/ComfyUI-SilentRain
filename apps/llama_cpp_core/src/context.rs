@@ -531,7 +531,7 @@ mod tests {
         // Load model
         let model_id = "7b-chat".to_string();
         let model_path = String::new();
-        let llama_model = Model::new(model_path, None).load_cache_llama_model(&backend)?;
+        let llama_model = Model::new(model_path, None).load_llama_model(&backend)?;
 
         // Load sampler
         let sampler_config = SamplerConfig::default();
