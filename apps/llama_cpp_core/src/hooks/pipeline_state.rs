@@ -81,11 +81,11 @@ pub mod priorities {
     /// 加载历史插件优先级
     pub const LOAD_HISTORY: i32 = 30;
     /// 当前输入插件优先级
-    pub const CURRENT_INPUT: i32 = 40;
+    pub const ASSEMBLE_MESSAGES: i32 = 40;
     /// 工具插件优先级
     pub const TOOLS: i32 = 50;
     /// 历史保存插件优先级
-    pub const HISTORY: i32 = 60;
+    pub const SAVE_HISTORY: i32 = 60;
     /// 错误记录插件优先级
     pub const ERROR_LOG: i32 = 70;
 }

@@ -8,6 +8,8 @@ use tracing::warn;
 
 use crate::{error::Error, types::MessageRole, utils::image::extract_image_source};
 
+const HISTORY_MEDIA_MARKER: &str = "<[image]>";
+
 /// 图片来源类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ImageSource {
@@ -189,7 +191,7 @@ impl UnifiedMessage {
             .map(|block| {
                 if let ContentBlock::Image { detail, .. } = block {
                     ContentBlock::Image {
-                        source: ImageSource::Url("[image]".to_string()),
+                        source: ImageSource::Url(HISTORY_MEDIA_MARKER.to_string()),
                         detail: detail.clone(),
                     }
                 } else {
@@ -217,7 +219,19 @@ impl UnifiedMessage {
                 ContentBlock::Text { text } => {
                     serde_json::json!({"type": "text", "text": text})
                 }
-                ContentBlock::Image { detail, .. } => {
+                ContentBlock::Image { source, detail, .. } => {
+                    // 已经消除媒体标记，直接返回
+                    if let ImageSource::Url(url) = source
+                        && *url == HISTORY_MEDIA_MARKER
+                    {
+                        return serde_json::json!({
+                            "type": "image_url",
+                            "image_url": {
+                                "url": source,
+                                "detail": detail.as_deref().unwrap_or("auto")
+                            }
+                        });
+                    }
                     serde_json::json!({
                         "type": "image_url",
                         "image_url": {

@@ -19,7 +19,7 @@ pub struct AssembleMessagesHook {
 impl Default for AssembleMessagesHook {
     fn default() -> Self {
         Self {
-            priority: priorities::CURRENT_INPUT,
+            priority: priorities::ASSEMBLE_MESSAGES,
         }
     }
 }

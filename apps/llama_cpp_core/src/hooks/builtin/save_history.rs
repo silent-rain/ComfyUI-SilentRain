@@ -19,7 +19,7 @@ pub struct SaveHistoryHook {
 impl Default for SaveHistoryHook {
     fn default() -> Self {
         Self {
-            priority: priorities::HISTORY,
+            priority: priorities::SAVE_HISTORY,
         }
     }
 }
