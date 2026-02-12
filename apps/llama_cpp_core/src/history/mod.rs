@@ -30,5 +30,5 @@ mod manager;
 mod session;
 
 // 公开导出
-pub use manager::{chat_history, ChatHistoryManager, SessionStats};
+pub use manager::{ChatHistoryManager, SessionStats, chat_history};
 pub use session::SessionContext;
