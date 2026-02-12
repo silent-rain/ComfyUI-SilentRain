@@ -131,6 +131,8 @@ pub enum Error {
     TaskJoinError(String),
     #[error("progress channel send error, {0}")]
     ProgressSendError(String),
+    #[error("OpenAI error, {0}")]
+    OpenAIError(String),
 }
 
 impl From<std::io::Error> for Error {

@@ -15,8 +15,12 @@ use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, GenerateRequest, Pipeline, PipelineConfig, model::ModelConfig,
-    pipeline::response_extract_content, sampler::SamplerConfig, types::MediaData,
+    ContexParams, Pipeline, PipelineConfig,
+    model::ModelConfig,
+    request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Request},
+    response::response_extract_content,
+    sampler::SamplerConfig,
+    types::MediaData,
 };
 
 use crate::{
@@ -89,7 +93,6 @@ impl LlamaCppImageCaptionv2 {
         let sampler_config = SamplerConfig::default();
         let model_config = ModelConfig::default();
         let context_config = ContexParams::default();
-        let generate_request = GenerateRequest::default();
         let session_id = Uuid::new_v4().to_string();
 
         InputSpec::new()
@@ -115,14 +118,14 @@ impl LlamaCppImageCaptionv2 {
                 "system_prompt",
                 InputType::string()
                     .multiline(true)
-                    .default(generate_request.system_prompt.unwrap_or_default())
+                    .default("")
                     .tooltip("System prompt for the request"),
             )
             .with_required(
                 "user_prompt",
                 InputType::string()
                     .multiline(true)
-                    .default(generate_request.user_prompt)
+                    .default("")
                     .tooltip("User prompt for the request"),
             )
             .with_required(
@@ -225,30 +228,33 @@ impl LlamaCppImageCaptionv2 {
                 "session_id",
                 InputType::string()
                     .default(session_id)
-                    .default(generate_request.session_id)
                     .tooltip("Session ID for the request, Used for context isolation"),
             )
             .with_required(
                 "keep_context",
                 InputType::bool()
-                    .default(generate_request.keep_context)
+                    .default(false)
                     .tooltip("Maintain multiple rounds of conversation context. Context is not supported when concurrent limit is greater than 1"),
             )
             .build()
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(name = "execute", signature = (model, options, images, **kwargs))]
+    #[pyo3(name = "execute", signature = (model, options, system_prompt, user_prompt, images, session_id, keep_context, **kwargs))]
     fn execute<'py>(
         &mut self,
         py: Python<'py>,
         model: Bound<'py, PyDict>,
         options: Option<Bound<'py, PyDict>>,
+        system_prompt: String,
+        user_prompt: String,
         images: Option<Bound<'py, PyAny>>,
+        session_id: String,
+        keep_context: bool,
         kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(Vec<String>,)> {
-        let (pipeline_config, generate_request, medias, concurrency_limit) = self
-            .options_parser(model, options, images, kwargs)
+        let (pipeline_config, request, medias, concurrency_limit) = self
+            .options_parser(model, options, system_prompt, user_prompt, images, kwargs)
             .map_err(|e| {
                 error!("LlamaCppImageCaptionv2 options parser: {e}");
                 if let Err(e) =
@@ -289,7 +295,7 @@ impl LlamaCppImageCaptionv2 {
 
         let futures = self.generate(
             pipeline_config,
-            generate_request,
+            request,
             medias,
             concurrency_limit,
             progress_tx,
@@ -330,9 +336,11 @@ impl LlamaCppImageCaptionv2 {
         &self,
         model: Bound<'py, PyDict>,
         options: Option<Bound<'py, PyDict>>,
+        system_prompt: String,
+        user_prompt: String,
         images: Option<Bound<'py, PyAny>>,
         kwargs: Option<Bound<'py, PyDict>>,
-    ) -> Result<(PipelineConfig, GenerateRequest, Vec<MediaData>, u32), Error> {
+    ) -> Result<(PipelineConfig, Request, Vec<MediaData>, u32), Error> {
         let kwargs =
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
 
@@ -357,19 +365,32 @@ impl LlamaCppImageCaptionv2 {
 
         let model_config: ModelConfig = depythonize(&kwargs)?;
         let sampler_config: SamplerConfig = depythonize(&kwargs)?;
-        let context_config: ContexParams = depythonize(&kwargs)?;
+        let mut context_config: ContexParams = depythonize(&kwargs)?;
+        context_config.with_image_max_resolution(768); // 设置图片最大分辨率
+
         let pipeline_config = PipelineConfig {
             model: model_config,
             context: context_config,
             sampling: sampler_config,
         };
-        let mut generate_request: GenerateRequest = depythonize(&kwargs)?;
 
-        // 设置图片最大分辨率
-        generate_request = generate_request.with_image_max_resolution(768);
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_completion_tokens(2048u32)
+            .model("Qwen3-VL-2B-Instruct")
+            .messages(
+                ChatMessagesBuilder::new()
+                    .system(system_prompt)
+                    .user(user_prompt)
+                    .build(),
+            )
+            .build()
+            .map_err(|e| {
+                error!("CreateChatCompletionRequestArgs error: {e}");
+                Error::OpenAIError(e.to_string())
+            })?;
 
         info!("pipeline_config: {pipeline_config:#?}");
-        info!("generate_request: {generate_request:#?}");
+        info!("request: {request:#?}");
 
         // 图片资源处理
         let mut medias = Vec::new();
@@ -377,7 +398,7 @@ impl LlamaCppImageCaptionv2 {
             info!("Start processing images ...");
             let image_raw_datas = tensor_to_image_tensor_buffer(&images)?;
             for (pixel_bytes, height, width, channels) in image_raw_datas {
-                let media = generate_request.load_image_tensor_buffer(
+                let media = request.load_image_tensor_buffer(
                     pixel_bytes,
                     height as u32,
                     width as u32,
@@ -388,14 +409,14 @@ impl LlamaCppImageCaptionv2 {
             info!("Image processing completed ...");
         }
 
-        Ok((pipeline_config, generate_request, medias, concurrency_limit))
+        Ok((pipeline_config, request, medias, concurrency_limit))
     }
 
     /// 生成聊天响应
     async fn generate(
         &self,
         pipeline_config: PipelineConfig,
-        generate_request: GenerateRequest,
+        request: Request,
         medias: Vec<MediaData>,
         concurrency_limit: u32,
         progress_tx: std::sync::mpsc::Sender<()>,
@@ -410,7 +431,7 @@ impl LlamaCppImageCaptionv2 {
             .map(|(i, media)| {
                 let semaphore = Arc::clone(&semaphore);
                 let pipeline_clone = pipeline.clone();
-                let generate_request_clone = generate_request.clone().with_media(media);
+                let generate_request_clone = request.clone().with_media(media);
                 let progress_tx_clone = progress_tx.clone();
 
                 tokio::spawn(async move {
