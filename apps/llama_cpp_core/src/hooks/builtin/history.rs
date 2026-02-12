@@ -1,14 +1,13 @@
 //! 历史记录保存钩子
 
-use async_openai::types::chat::{
-    ChatCompletionRequestMessage, ChatCompletionRequestUserMessageContent,
-};
 use async_trait::async_trait;
 use tracing::{debug, error};
 
-use crate::chat_history;
-use crate::error::Error;
-use crate::hooks::{HookContext, InferenceHook};
+use crate::{
+    chat_history,
+    error::Error,
+    hooks::{HookContext, InferenceHook},
+};
 
 /// 历史记录保存钩子
 ///
@@ -33,6 +32,28 @@ impl InferenceHook for HistoryHook {
         90 // 低优先级，最后执行
     }
 
+    async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
+        let session_id = match &ctx.session_id {
+            Some(id) => id,
+            None => {
+                debug!("No session_id, skipping history save");
+                return Ok(());
+            }
+        };
+
+        debug!("Saving history for session: {}", session_id);
+
+        let manager = chat_history();
+
+        let _ = manager.get_or_create(session_id);
+
+        if let Err(e) = manager.add_messages(session_id, &ctx.unified_messages) {
+            error!("Failed to add user message: {}", e);
+        }
+
+        Ok(())
+    }
+
     async fn on_after(&self, ctx: &mut HookContext) -> Result<(), Error> {
         let session_id = match &ctx.session_id {
             Some(id) => id,
@@ -42,40 +63,12 @@ impl InferenceHook for HistoryHook {
             }
         };
 
-        let request = match &ctx.request {
-            Some(req) => req,
-            None => {
-                debug!("No request in context, skipping history save");
-                return Ok(());
-            }
-        };
-
         debug!("Saving history for session: {}", session_id);
 
-        // 获取或创建会话
-        let _ = chat_history().get_or_create(session_id);
+        let manager = chat_history();
 
-        // 添加用户消息
-        for msg in &request.messages {
-            if let ChatCompletionRequestMessage::User(user_msg) = msg {
-                let content = match &user_msg.content {
-                    ChatCompletionRequestUserMessageContent::Text(text) => text.clone(),
-                    ChatCompletionRequestUserMessageContent::Array(parts) => {
-                        parts
-                            .iter()
-                            .filter_map(|p| match p {
-                                async_openai::types::chat::ChatCompletionRequestUserMessageContentPart::Text(t) => Some(t.text.clone()),
-                                _ => None,
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    }
-                };
-                if let Err(e) = chat_history().add_user_text(session_id, &content) {
-                    error!("Failed to add user message: {}", e);
-                }
-            }
-        }
+        // 获取或创建会话
+        let _ = manager.get_or_create(session_id);
 
         // 提取助手回复
         let assistant_content = ctx
@@ -96,7 +89,7 @@ impl InferenceHook for HistoryHook {
         }
 
         // 添加助手回复
-        if let Err(e) = chat_history().add_assistant_text(session_id, &assistant_content) {
+        if let Err(e) = manager.add_assistant_text(session_id, &assistant_content) {
             error!("Failed to add assistant message: {}", e);
         } else {
             debug!("History saved successfully for session: {}", session_id);

@@ -59,7 +59,7 @@ impl MessagePipeline {
                 plugin.name(),
                 plugin.priority()
             );
-            result = plugin.process(result, context)?;
+            result = plugin.process(context, result)?;
         }
 
         Ok(result)
@@ -120,8 +120,8 @@ mod tests {
 
         fn process(
             &self,
-            messages: Vec<UnifiedMessage>,
             _context: &MessageContext,
+            messages: Vec<UnifiedMessage>,
         ) -> Result<Vec<UnifiedMessage>, Error> {
             Ok(messages)
         }

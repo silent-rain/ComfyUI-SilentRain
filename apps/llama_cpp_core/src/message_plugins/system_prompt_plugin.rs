@@ -112,8 +112,8 @@ impl MessagePlugin for SystemPromptPlugin {
 
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         _context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         // 分离系统消息和其他消息
         let (system_msgs, other_msgs): (Vec<_>, Vec<_>) = messages
@@ -156,7 +156,7 @@ mod tests {
             UnifiedMessage::system("Second system"), // 应该被过滤
         ];
 
-        let result = plugin.process(messages, &context).unwrap();
+        let result = plugin.process(&context, messages).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].role, MessageRole::System);
     }
@@ -172,7 +172,7 @@ mod tests {
             UnifiedMessage::system("Second"),
         ];
 
-        let result = plugin.process(messages, &context).unwrap();
+        let result = plugin.process(&context, messages).unwrap();
         assert_eq!(result.len(), 2);
     }
 }

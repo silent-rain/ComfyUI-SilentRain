@@ -9,7 +9,7 @@
 mod traits;
 
 mod current_input_plugin;
-mod history_plugin;
+mod load_history_plugin;
 mod message_pipeline;
 mod normalize_plugin;
 mod system_prompt_plugin;
@@ -18,7 +18,7 @@ mod tools_plugin;
 pub use traits::{MessageContext, MessagePlugin};
 
 pub use current_input_plugin::CurrentInputPlugin;
-pub use history_plugin::HistoryPlugin;
+pub use load_history_plugin::LoadHistoryPlugin;
 pub use message_pipeline::{MessagePipeline, MessagePipelineBuilder};
 pub use normalize_plugin::NormalizePlugin;
 pub use system_prompt_plugin::SystemPromptPlugin;

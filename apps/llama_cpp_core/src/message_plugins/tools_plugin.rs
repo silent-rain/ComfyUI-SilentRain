@@ -82,8 +82,8 @@ impl MessagePlugin for ToolsPlugin {
 
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         _context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         if self.validate_chains && !messages.is_empty() {
             self.validate_tool_chains(&messages)?;

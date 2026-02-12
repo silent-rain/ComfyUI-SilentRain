@@ -32,8 +32,8 @@ impl MessagePlugin for CurrentInputPlugin {
 
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         _context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         // 当前输入通常已经通过其他方式添加
         // 此插件可用于添加额外处理，如时间戳、元数据等

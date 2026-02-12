@@ -223,6 +223,27 @@ impl ChatHistoryManager {
         }
     }
 
+    /// 添加消息到会话列表
+    pub fn add_messages(
+        &self,
+        session_id: impl AsRef<str>,
+        messages: &Vec<UnifiedMessage>,
+    ) -> Result<(), Error> {
+        let session_id = session_id.as_ref();
+
+        if let Some(mut entry) = self.sessions.get_mut(session_id) {
+            for message in messages {
+                entry.add_message(message.clone());
+            }
+            entry.increment_version();
+            Ok(())
+        } else {
+            Err(Error::CacheNotFound {
+                key: session_id.to_string(),
+            })
+        }
+    }
+
     /// 添加用户文本消息
     pub fn add_user_text(
         &self,
@@ -304,26 +325,6 @@ impl ChatHistoryManager {
                     .collect()
             })
             .unwrap_or_default()
-    }
-
-    /// 清理会话所有消息中的媒体标记
-    pub fn sanitize_media_markers(
-        &self,
-        session_id: impl AsRef<str>,
-        marker: &str,
-    ) -> Result<(), Error> {
-        let session_id = session_id.as_ref();
-        if let Some(mut entry) = self.sessions.get_mut(session_id) {
-            for msg in entry.entries_mut() {
-                msg.content = msg.sanitize_media_marker(marker);
-            }
-            entry.increment_version();
-            Ok(())
-        } else {
-            Err(Error::CacheNotFound {
-                key: session_id.to_string(),
-            })
-        }
     }
 
     /// 私有：检查并执行清理
@@ -477,37 +478,6 @@ mod tests {
 
         let ctx = manager.get(session_id).unwrap();
         assert_eq!(ctx.message_count(), 3);
-
-        // 清理
-        manager.remove(session_id);
-    }
-
-    #[test]
-    fn test_sanitize_media_markers() {
-        use crate::unified_message::ContentBlock;
-
-        let manager = chat_history();
-        let session_id = "test_sanitize";
-
-        // 清理测试会话
-        let _ = manager.remove(session_id);
-
-        // 创建会话并添加带媒体标记的消息
-        let _ = manager.get_or_create(session_id);
-        manager
-            .add_user_text(session_id, "Look at this image: [IMG]")
-            .unwrap();
-
-        // 清理媒体标记
-        manager.sanitize_media_markers(session_id, "[IMG]").unwrap();
-
-        // 验证标记被替换
-        let messages = manager.get_messages(session_id).unwrap();
-        if let ContentBlock::Text { text } = &messages[0].content[0] {
-            assert_eq!(text, "Look at this image: [图片]");
-        } else {
-            panic!("Expected text block");
-        }
 
         // 清理
         manager.remove(session_id);

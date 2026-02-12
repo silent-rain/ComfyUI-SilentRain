@@ -68,8 +68,8 @@ impl MessagePlugin for NormalizePlugin {
 
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         _context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         let mut result = Vec::with_capacity(messages.len());
 
@@ -112,7 +112,7 @@ mod tests {
             UnifiedMessage::user_text("World"),
         ];
 
-        let result = plugin.process(messages, &context).unwrap();
+        let result = plugin.process(&context, messages).unwrap();
         assert_eq!(result.len(), 2);
     }
 }

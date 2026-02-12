@@ -21,8 +21,8 @@ pub trait MessagePlugin: Send + Sync + std::fmt::Debug {
     /// 转换后的消息列表
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error>;
 
     /// 插件优先级（数字越小越早执行）

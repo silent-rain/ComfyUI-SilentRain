@@ -8,24 +8,24 @@ use crate::{
     unified_message::UnifiedMessage,
 };
 
-/// 历史消息插件
+/// 加载历史消息插件
 ///
 /// 负责：
 /// 1. 从缓存加载历史消息
 /// 2. 清理历史消息中的媒体标记
 /// 3. 将历史消息插入到系统消息之后、当前消息之前
 #[derive(Debug)]
-pub struct HistoryPlugin {
+pub struct LoadHistoryPlugin {
     max_history: usize,
 }
 
-impl Default for HistoryPlugin {
+impl Default for LoadHistoryPlugin {
     fn default() -> Self {
         Self { max_history: 100 }
     }
 }
 
-impl HistoryPlugin {
+impl LoadHistoryPlugin {
     pub fn new() -> Self {
         Self::default()
     }
@@ -60,7 +60,7 @@ impl HistoryPlugin {
     }
 }
 
-impl MessagePlugin for HistoryPlugin {
+impl MessagePlugin for LoadHistoryPlugin {
     fn name(&self) -> &str {
         "HistoryPlugin"
     }
@@ -71,8 +71,8 @@ impl MessagePlugin for HistoryPlugin {
 
     fn process(
         &self,
-        messages: Vec<UnifiedMessage>,
         context: &MessageContext,
+        messages: Vec<UnifiedMessage>,
     ) -> Result<Vec<UnifiedMessage>, Error> {
         // 如果没有 session_id，直接返回
         let session_id = match &context.session_id {

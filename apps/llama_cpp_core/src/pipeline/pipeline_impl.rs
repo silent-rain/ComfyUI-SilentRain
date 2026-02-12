@@ -23,7 +23,7 @@ use crate::{
     error::Error,
     hooks::{HookContext, HookRegistry, InferenceHook},
     message_plugins::{
-        CurrentInputPlugin, HistoryPlugin, MessageContext, MessagePipeline, NormalizePlugin,
+        CurrentInputPlugin, LoadHistoryPlugin, MessageContext, MessagePipeline, NormalizePlugin,
         SystemPromptPlugin, ToolsPlugin,
     },
     mtmd_context::MtmdContextWrapper,
@@ -92,7 +92,7 @@ impl Pipeline {
                     .with_remove_empty(true),
             )
             .add_plugin(SystemPromptPlugin::keep_first())
-            .add_plugin(HistoryPlugin::new().with_max_history(self.config.context.max_history))
+            .add_plugin(LoadHistoryPlugin::new().with_max_history(self.config.context.max_history))
             .add_plugin(CurrentInputPlugin::new())
             .add_plugin(ToolsPlugin::new());
 
