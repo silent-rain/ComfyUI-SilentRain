@@ -492,6 +492,7 @@ mod tests {
     use base64::{Engine, engine::general_purpose};
 
     use crate::{
+        hooks::builtin::{ErrorLogHook, ToolsHook},
         request::{ChatMessagesBuilder, UserMessageBuilder},
         utils::log::init_logger,
     };
@@ -660,8 +661,8 @@ mod tests {
     #[test]
     fn test_pipeline_with_standard_hooks() -> anyhow::Result<()> {
         use crate::hooks::builtin::{
-            AssembleMessagesHook, HistoryHook, LoadHistoryHook, NormalizeHook, SystemPromptHook,
-            ValidateHook,
+            AssembleMessagesHook, LoadHistoryHook, NormalizeHook, SaveHistoryHook,
+            SystemPromptHook, ValidateHook,
         };
 
         let pipeline_config = PipelineConfig::new("/path/to/model.gguf".to_string());
@@ -686,10 +687,14 @@ mod tests {
             // 5. 组装最终消息（优先级 40）
             .with_hook(AssembleMessagesHook::new())
             // 6. 保存历史（优先级 60）
-            .with_hook(HistoryHook::new());
+            .with_hook(SaveHistoryHook::new())
+            // 7. 工具处理（优先级 50）
+            .with_hook(ToolsHook::new())
+            // 8. 错误日志（优先级 70）
+            .with_hook(ErrorLogHook::new());
 
         // 验证 hooks 已注册
-        assert_eq!(pipeline.hooks.len(), 6);
+        assert_eq!(pipeline.hooks.len(), 8);
 
         // 验证排序后的优先级顺序
         let sorted = pipeline.sorted_hooks();
@@ -708,7 +713,7 @@ mod tests {
     /// 演示如何调整 hooks 的执行顺序
     #[test]
     fn test_pipeline_with_custom_priorities() -> anyhow::Result<()> {
-        use crate::hooks::builtin::{HistoryHook, LoadHistoryHook, SystemPromptHook};
+        use crate::hooks::builtin::{LoadHistoryHook, SaveHistoryHook, SystemPromptHook};
 
         let pipeline_config = PipelineConfig::new("/path/to/model.gguf".to_string());
         let pipeline = Pipeline::try_new(pipeline_config)?;
@@ -721,7 +726,7 @@ mod tests {
             )
             // 历史保存提前执行
             .with_hook(
-                HistoryHook::new().with_priority(15), // 默认是 60，现在提前到 15
+                SaveHistoryHook::new().with_priority(15), // 默认是 60，现在提前到 15
             )
             // 历史加载延后执行
             .with_hook(

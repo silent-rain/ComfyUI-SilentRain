@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use tracing::{error, warn};
 
 use crate::error::Error;
+use crate::hooks::priorities::ERROR_LOG;
 use crate::hooks::{HookContext, InferenceHook};
 
 /// 错误日志钩子
@@ -21,7 +22,7 @@ pub struct ErrorLogHook {
 impl Default for ErrorLogHook {
     fn default() -> Self {
         Self {
-            priority: 5, // 高优先级，确保尽早记录错误
+            priority: ERROR_LOG, // 高优先级，确保尽早记录错误
             log_request: true,
             log_context: true,
         }

@@ -86,6 +86,8 @@ pub mod priorities {
     pub const TOOLS: i32 = 50;
     /// 历史保存插件优先级
     pub const HISTORY: i32 = 60;
+    /// 错误记录插件优先级
+    pub const ERROR_LOG: i32 = 70;
 }
 
 #[cfg(test)]

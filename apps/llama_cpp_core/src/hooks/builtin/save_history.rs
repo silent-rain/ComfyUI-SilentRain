@@ -12,11 +12,11 @@ use crate::{
 ///
 /// 在推理前保存当前输入，在推理后保存助手回复
 #[derive(Debug, Clone)]
-pub struct HistoryHook {
+pub struct SaveHistoryHook {
     priority: i32,
 }
 
-impl Default for HistoryHook {
+impl Default for SaveHistoryHook {
     fn default() -> Self {
         Self {
             priority: priorities::HISTORY,
@@ -24,7 +24,7 @@ impl Default for HistoryHook {
     }
 }
 
-impl HistoryHook {
+impl SaveHistoryHook {
     /// 创建新的历史钩子
     pub fn new() -> Self {
         Self::default()
@@ -38,7 +38,7 @@ impl HistoryHook {
 }
 
 #[async_trait::async_trait]
-impl InferenceHook for HistoryHook {
+impl InferenceHook for SaveHistoryHook {
     fn name(&self) -> &str {
         "HistoryHook"
     }
@@ -47,6 +47,7 @@ impl InferenceHook for HistoryHook {
         self.priority
     }
 
+    /// 保存用户输入到缓存
     async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
         let session_id = match &ctx.session_id {
             Some(id) => id,
@@ -76,6 +77,7 @@ impl InferenceHook for HistoryHook {
         Ok(())
     }
 
+    /// 模型输出到缓存
     async fn on_after(&self, ctx: &mut HookContext) -> Result<(), Error> {
         let session_id = match &ctx.session_id {
             Some(id) => id,
