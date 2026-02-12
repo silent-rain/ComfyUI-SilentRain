@@ -6,6 +6,8 @@
 //! - 提供详细的清理报告
 //! - 显示当前缓存统计信息
 
+use std::sync::Arc;
+
 use log::{error, info};
 use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
@@ -14,7 +16,7 @@ use pyo3::{
     types::{PyDict, PyType},
 };
 
-use llama_cpp_core::{CacheManager, cache::CacheType};
+use llama_cpp_core::{CacheManager, ChatHistoryManager, chat_history};
 
 use crate::{
     core::{
@@ -37,7 +39,8 @@ use crate::{
 /// - `report`: JSON 格式的清理报告
 #[pyclass(subclass)]
 pub struct LlamaCppPurgeVramv2 {
-    cache: std::sync::Arc<CacheManager>,
+    cache: Arc<CacheManager>,
+    history_cache: Arc<ChatHistoryManager>,
 }
 
 impl PromptServer for LlamaCppPurgeVramv2 {}
@@ -48,6 +51,7 @@ impl LlamaCppPurgeVramv2 {
     fn new() -> Self {
         Self {
             cache: CacheManager::global(),
+            history_cache: chat_history(),
         }
     }
 
@@ -154,23 +158,20 @@ impl LlamaCppPurgeVramv2 {
         let mut report = PurgeReport::default();
 
         // 获取清理前的缓存状态
-        let keys_before = match self.cache.get_keys() {
-            Ok(keys) => keys,
-            Err(e) => {
-                return Err(Error::LockError(e.to_string()));
-            }
-        };
-        report.total_keys_before = keys_before.len();
+        let model_keys: Vec<String> = self.cache.get_keys()?;
+        let context_keys: Vec<String> = self.history_cache.list_sessions();
+        report.total_models = model_keys.len();
+        report.total_contexts = context_keys.len();
 
         info!(
-            "Starting VRAM cleanup v2, {} keys in cache",
-            keys_before.len()
+            "Starting VRAM cleanup v2, {} models, {} contexts",
+            report.total_models, report.total_contexts,
         );
 
         // 清理所有模型
         if clear_models {
-            let model_keys: Vec<String> = self.cache.get_keys_by_type(CacheType::Model)?;
-            self.cache.clear_cache_type(CacheType::Model)?;
+            self.cache.clear()?;
+            let model_keys: Vec<String> = self.cache.get_keys()?;
 
             report.models_cleared = model_keys.len();
             info!("Cleared {} model caches", report.models_cleared);
@@ -178,38 +179,28 @@ impl LlamaCppPurgeVramv2 {
 
         // 清理所有上下文
         if clear_contexts {
-            let context_keys: Vec<String> =
-                self.cache.get_keys_by_type(CacheType::MessageContext)?;
-            self.cache.clear_cache_type(CacheType::MessageContext)?;
+            self.history_cache.clear();
+            let context_keys: Vec<String> = self.history_cache.list_sessions();
 
             report.contexts_cleared = context_keys.len();
-
             info!("Cleared {} context caches", report.contexts_cleared);
         }
 
         // 清理所有
         if clear_all {
-            let all_keys = self.cache.get_keys()?;
             self.cache.clear()?;
+            self.history_cache.clear();
 
-            info!("Cleared {} caches", all_keys.len());
+            let model_keys = self.cache.get_keys()?;
+            let context_keys: Vec<String> = self.history_cache.list_sessions();
+
+            let all_keys = context_keys.len() + model_keys.len();
+            info!("Cleared {} caches", all_keys);
         }
-
-        // 获取清理后的缓存状态
-        let keys_after = match self.cache.get_keys() {
-            Ok(keys) => keys,
-            Err(e) => {
-                return Err(Error::LockError(e.to_string()));
-            }
-        };
-        report.total_keys_after = keys_after.len();
-        report.keys_cleared = report
-            .total_keys_before
-            .saturating_sub(report.total_keys_after);
 
         info!(
             "VRAM cleanup v2 complete: {} keys cleared",
-            report.keys_cleared
+            report.models_cleared + report.contexts_cleared
         );
 
         // 生成 JSON 报告
@@ -222,12 +213,8 @@ impl LlamaCppPurgeVramv2 {
 /// 清理报告
 #[derive(Default, serde::Serialize)]
 struct PurgeReport {
-    pub total_keys_before: usize,
-    pub total_keys_after: usize,
-    pub keys_cleared: usize,
+    pub total_contexts: usize,
+    pub total_models: usize,
     pub models_cleared: usize,
     pub contexts_cleared: usize,
-    pub chat_histories_cleared: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub specific_model_cleared: Option<String>,
 }

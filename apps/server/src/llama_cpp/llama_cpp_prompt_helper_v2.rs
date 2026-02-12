@@ -7,16 +7,16 @@ use pyo3::{
     Bound, Py, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
+    types::{PyDict, PyDictMethods, PyType},
 };
 use pythonize::depythonize;
 use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, Pipeline, PipelineConfig, global_cache,
+    ContexParams, Pipeline, PipelineConfig, chat_history, global_cache,
     model::ModelConfig,
-    request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Request},
+    request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Metadata, Request},
     response::response_extract_content,
     sampler::SamplerConfig,
 };
@@ -27,6 +27,7 @@ use crate::{
         node_base::{InputSpec, InputType},
     },
     error::Error,
+    llama_cpp::llama_cpp_model_v2::LlamaCppModelParams,
     wrapper::comfyui::{
         PromptServer,
         types::{NODE_LLAMA_CPP_MODEL_V2, NODE_LLAMA_CPP_OPTIONS_V2, NODE_STRING},
@@ -233,8 +234,15 @@ impl LlamaCppPromptHelperv2 {
         keep_context: bool,
         kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(String,)> {
-        let (pipeline_config, request, cache_model) = self
-            .options_parser(model, options, system_prompt, user_prompt, kwargs)
+        let (pipeline_config, request, llama_cpp_model_params) = self
+            .options_parser(
+                model,
+                options,
+                system_prompt,
+                user_prompt,
+                session_id.clone(),
+                kwargs,
+            )
             .map_err(|e| {
                 error!("LlamaCppPromptHelperv2 options parser: {e}");
                 if let Err(e) =
@@ -250,7 +258,7 @@ impl LlamaCppPromptHelperv2 {
             request,
             session_id,
             keep_context,
-            cache_model,
+            llama_cpp_model_params,
         );
 
         // 使用 allow_threads 释放 GIL，然后在内部运行异步代码
@@ -283,8 +291,9 @@ impl LlamaCppPromptHelperv2 {
         options: Option<Bound<'py, PyDict>>,
         system_prompt: String,
         user_prompt: String,
+        session_id: String,
         kwargs: Option<Bound<'py, PyDict>>,
-    ) -> Result<(PipelineConfig, Request, String), Error> {
+    ) -> Result<(PipelineConfig, Request, LlamaCppModelParams), Error> {
         let kwargs =
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
 
@@ -300,13 +309,7 @@ impl LlamaCppPromptHelperv2 {
             Error::InvalidParameter(format!("update model kwargs error: {e}"))
         })?;
 
-        let cache_model: String = kwargs
-            .get_item("verbose")
-            .ok()
-            .flatten()
-            .map(|v| v.extract().unwrap_or("".to_string()))
-            .unwrap_or("".to_string());
-
+        let llama_cpp_model_params: LlamaCppModelParams = depythonize(&kwargs)?;
         let model_config: ModelConfig = depythonize(&kwargs)?;
         let sampler_config: SamplerConfig = depythonize(&kwargs)?;
         let context_config: ContexParams = depythonize(&kwargs)?;
@@ -316,7 +319,12 @@ impl LlamaCppPromptHelperv2 {
             sampling: sampler_config,
         };
 
+        let metadata = Metadata {
+            session_id: Some(session_id),
+            ..Default::default()
+        };
         let request = CreateChatCompletionRequestArgs::default()
+            .metadata(metadata)
             .max_completion_tokens(2048u32)
             .model("Qwen3-VL-2B-Instruct")
             .messages(
@@ -332,9 +340,8 @@ impl LlamaCppPromptHelperv2 {
             })?;
 
         info!("pipeline_config: {pipeline_config:#?}");
-        info!("request: {request:#?}");
 
-        Ok((pipeline_config, request, cache_model))
+        Ok((pipeline_config, request, llama_cpp_model_params))
     }
 
     /// 生成聊天响应
@@ -342,19 +349,62 @@ impl LlamaCppPromptHelperv2 {
         &self,
         pipeline_config: PipelineConfig,
         request: Request,
-
         session_id: String,
         keep_context: bool,
-        cache_model: String,
+        llama_cpp_model_params: LlamaCppModelParams,
     ) -> Result<(String,), Error> {
-        if !keep_context && !cache_model.is_empty() {
-            let cache = global_cache();
-            cache.remove(&session_id)?;
+        // 移除上下文
+        if !keep_context {
+            let chat_history = chat_history();
+            chat_history.remove(&session_id);
         }
+        let pipeline = Self::load_pipeline(pipeline_config, llama_cpp_model_params)?;
 
-        let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
         let output = pipeline.generate(&request).await?;
 
         Ok((response_extract_content(&output),))
+    }
+
+    pub fn load_pipeline(
+        pipeline_config: PipelineConfig,
+        llama_cpp_model_params: LlamaCppModelParams,
+    ) -> Result<Arc<Pipeline>, Error> {
+        if !llama_cpp_model_params.cache_model {
+            return Ok(Arc::new(Pipeline::try_new(pipeline_config.clone())?));
+        }
+
+        let cache = global_cache();
+
+        // 尝试从缓存获取
+        if let Some(entry) = cache.get_data::<Pipeline>(&llama_cpp_model_params.cache_model_key)? {
+            info!(
+                "MtmdContext cache hit: {:?}",
+                pipeline_config.model.mmproj_path
+            );
+            return Ok(entry);
+        }
+
+        let pipeline = Arc::new(Pipeline::try_new(pipeline_config.clone())?);
+
+        // 缓存参数
+        let params = vec![
+            pipeline_config.model.mmproj_path.clone(),
+            pipeline_config.model.n_gpu_layers.to_string(),
+            pipeline_config
+                .model
+                .media_marker
+                .clone()
+                .unwrap_or_default(),
+            pipeline_config.model.n_threads.to_string(),
+            pipeline_config.model.verbose.to_string(),
+        ];
+
+        cache.insert_or_update(
+            &llama_cpp_model_params.cache_model_key,
+            &params,
+            pipeline.clone(),
+        )?;
+
+        Ok(pipeline)
     }
 }

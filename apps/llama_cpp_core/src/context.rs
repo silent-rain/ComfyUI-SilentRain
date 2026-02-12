@@ -63,6 +63,7 @@ pub struct ContexParams {
     pub chat_template: Option<String>,
 
     /// 图片最大分辨率限制
+    #[serde(default)]
     pub image_max_resolution: u32,
 
     /// 最大历史消息数

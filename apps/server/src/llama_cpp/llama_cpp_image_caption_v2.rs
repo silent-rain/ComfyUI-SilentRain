@@ -15,12 +15,14 @@ use tracing::info;
 use uuid::Uuid;
 
 use llama_cpp_core::{
-    ContexParams, Pipeline, PipelineConfig,
+    ContexParams, PipelineConfig, chat_history,
     model::ModelConfig,
-    request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Request},
+    request::{
+        ChatMessagesBuilder, CreateChatCompletionRequestArgs, Metadata, Request, UserMessageBuilder,
+    },
     response::response_extract_content,
     sampler::SamplerConfig,
-    types::MediaData,
+    utils::image::Image,
 };
 
 use crate::{
@@ -30,6 +32,7 @@ use crate::{
         utils::image::tensor_to_image_tensor_buffer,
     },
     error::Error,
+    llama_cpp::{LlamaCppPromptHelperv2, llama_cpp_model_v2::LlamaCppModelParams},
     wrapper::comfyui::{
         PromptServer,
         types::{NODE_LLAMA_CPP_MODEL_V2, NODE_LLAMA_CPP_OPTIONS_V2, NODE_STRING},
@@ -253,8 +256,16 @@ impl LlamaCppImageCaptionv2 {
         keep_context: bool,
         kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<(Vec<String>,)> {
-        let (pipeline_config, request, medias, concurrency_limit) = self
-            .options_parser(model, options, system_prompt, user_prompt, images, kwargs)
+        let (pipeline_config, requests, concurrency_limit, llama_cpp_model_params) = self
+            .options_parser(
+                model,
+                options,
+                system_prompt,
+                user_prompt,
+                images,
+                session_id.clone(),
+                kwargs,
+            )
             .map_err(|e| {
                 error!("LlamaCppImageCaptionv2 options parser: {e}");
                 if let Err(e) =
@@ -265,7 +276,7 @@ impl LlamaCppImageCaptionv2 {
                 PyErr::new::<PyRuntimeError, _>(e.to_string())
             })?;
 
-        let total_tasks = medias.len();
+        let total_tasks = requests.len();
         if total_tasks == 0 {
             return Ok((Vec::new(),));
         }
@@ -295,10 +306,12 @@ impl LlamaCppImageCaptionv2 {
 
         let futures = self.generate(
             pipeline_config,
-            request,
-            medias,
+            requests,
             concurrency_limit,
+            llama_cpp_model_params,
             progress_tx,
+            session_id,
+            keep_context,
         );
 
         // 使用 allow_threads 释放 GIL，然后在内部运行异步代码
@@ -332,6 +345,7 @@ impl LlamaCppImageCaptionv2 {
 
 impl LlamaCppImageCaptionv2 {
     /// 解析参数
+    #[allow(clippy::too_many_arguments)]
     fn options_parser<'py>(
         &self,
         model: Bound<'py, PyDict>,
@@ -339,8 +353,9 @@ impl LlamaCppImageCaptionv2 {
         system_prompt: String,
         user_prompt: String,
         images: Option<Bound<'py, PyAny>>,
+        session_id: String,
         kwargs: Option<Bound<'py, PyDict>>,
-    ) -> Result<(PipelineConfig, Request, Vec<MediaData>, u32), Error> {
+    ) -> Result<(PipelineConfig, Vec<Request>, u32, LlamaCppModelParams), Error> {
         let kwargs =
             kwargs.ok_or_else(|| Error::InvalidParameter("parameters is required".to_string()))?;
 
@@ -363,10 +378,11 @@ impl LlamaCppImageCaptionv2 {
             .map(|v| v.extract().unwrap_or(1))
             .unwrap_or(1);
 
+        let llama_cpp_model_params: LlamaCppModelParams = depythonize(&kwargs)?;
         let model_config: ModelConfig = depythonize(&kwargs)?;
         let sampler_config: SamplerConfig = depythonize(&kwargs)?;
         let mut context_config: ContexParams = depythonize(&kwargs)?;
-        context_config.with_image_max_resolution(768); // 设置图片最大分辨率
+        context_config = context_config.with_image_max_resolution(768); // 设置图片最大分辨率
 
         let pipeline_config = PipelineConfig {
             model: model_config,
@@ -374,64 +390,94 @@ impl LlamaCppImageCaptionv2 {
             sampling: sampler_config,
         };
 
-        let request = CreateChatCompletionRequestArgs::default()
-            .max_completion_tokens(2048u32)
-            .model("Qwen3-VL-2B-Instruct")
-            .messages(
-                ChatMessagesBuilder::new()
-                    .system(system_prompt)
-                    .user(user_prompt)
-                    .build(),
-            )
-            .build()
-            .map_err(|e| {
-                error!("CreateChatCompletionRequestArgs error: {e}");
-                Error::OpenAIError(e.to_string())
-            })?;
-
-        info!("pipeline_config: {pipeline_config:#?}");
-        info!("request: {request:#?}");
-
         // 图片资源处理
         let mut medias = Vec::new();
         if let Some(images) = images {
             info!("Start processing images ...");
             let image_raw_datas = tensor_to_image_tensor_buffer(&images)?;
             for (pixel_bytes, height, width, channels) in image_raw_datas {
-                let media = request.load_image_tensor_buffer(
-                    pixel_bytes,
-                    height as u32,
-                    width as u32,
-                    channels,
-                )?;
-                medias.push(media);
+                let media = Image::from_tensor(pixel_bytes, height as u32, width as u32, channels)?;
+                medias.push(media.to_base64()?);
             }
             info!("Image processing completed ...");
         }
 
-        Ok((pipeline_config, request, medias, concurrency_limit))
+        let mut metadata = Metadata {
+            session_id: Some(session_id),
+            ..Default::default()
+        };
+
+        let mut requests = Vec::new();
+        for media in &medias {
+            if medias.len() > 1 {
+                let session_id = Uuid::new_v4().to_string();
+                metadata = Metadata {
+                    session_id: Some(session_id),
+                    ..Default::default()
+                };
+            }
+
+            let request = CreateChatCompletionRequestArgs::default()
+                .metadata(metadata.clone())
+                .max_completion_tokens(2048u32)
+                .model("Qwen3-VL-2B-Instruct")
+                .messages(
+                    ChatMessagesBuilder::new()
+                        .system(&system_prompt)
+                        .users(
+                            UserMessageBuilder::new()
+                                .text(&user_prompt)
+                                .image_base64("image/png", media),
+                        )
+                        .build(),
+                )
+                .build()
+                .map_err(|e| {
+                    error!("CreateChatCompletionRequestArgs error: {e}");
+                    Error::OpenAIError(e.to_string())
+                })?;
+            requests.push(request);
+        }
+
+        info!("pipeline_config: {pipeline_config:#?}");
+
+        Ok((
+            pipeline_config,
+            requests,
+            concurrency_limit,
+            llama_cpp_model_params,
+        ))
     }
 
     /// 生成聊天响应
+    #[allow(clippy::too_many_arguments)]
     async fn generate(
         &self,
         pipeline_config: PipelineConfig,
-        request: Request,
-        medias: Vec<MediaData>,
+        requests: Vec<Request>,
         concurrency_limit: u32,
+        llama_cpp_model_params: LlamaCppModelParams,
         progress_tx: std::sync::mpsc::Sender<()>,
+        session_id: String,
+        keep_context: bool,
     ) -> Result<(Vec<String>,), Error> {
+        // 移除上下文
+        if !keep_context {
+            let chat_history = chat_history();
+            chat_history.remove(&session_id);
+        }
+
         let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
-        let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
+        let pipeline =
+            LlamaCppPromptHelperv2::load_pipeline(pipeline_config, llama_cpp_model_params)?;
 
         // 生成所有并行任务
-        let handles = medias
+        let handles = requests
             .into_iter()
             .enumerate()
-            .map(|(i, media)| {
+            .map(|(i, request)| {
                 let semaphore = Arc::clone(&semaphore);
                 let pipeline_clone = pipeline.clone();
-                let generate_request_clone = request.clone().with_media(media);
                 let progress_tx_clone = progress_tx.clone();
 
                 tokio::spawn(async move {
@@ -440,7 +486,7 @@ impl LlamaCppImageCaptionv2 {
                         Error::AcquireError(e.to_string())
                     })?;
 
-                    let output = pipeline_clone.generate(&generate_request_clone).await?;
+                    let output = pipeline_clone.generate(&request).await?;
 
                     // 任务完成，发送进度信号
                     if let Err(e) = progress_tx_clone.send(()) {

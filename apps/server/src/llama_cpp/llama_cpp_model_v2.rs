@@ -27,9 +27,8 @@ use crate::{
 pub struct LlamaCppModelParams {
     pub model_path: String,
     pub mmproj_path: String,
-    pub cache_model: String,
+    pub cache_model: bool,
     pub cache_model_key: String,
-    pub cache_mmproj_key: String,
 }
 
 /// LlamaCpp Model Loader v2
@@ -155,20 +154,12 @@ impl LlamaCppModelv2 {
             "comfyui:model:{}",
             model_path.file_name().unwrap_or_default().to_string_lossy()
         );
-        let cache_mmproj_key = format!(
-            "comfyui:mmproj:{}",
-            mmproj_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-        );
 
         let llama_cpp_model_params = LlamaCppModelParams {
             model_path: model_path.to_string_lossy().to_string(),
             mmproj_path: mmproj_path.to_string_lossy().to_string(),
-            cache_model: cache_model.to_string(),
+            cache_model,
             cache_model_key,
-            cache_mmproj_key,
         };
         let py_params = pythonize(py, &llama_cpp_model_params)?
             .extract::<Bound<'py, PyDict>>()

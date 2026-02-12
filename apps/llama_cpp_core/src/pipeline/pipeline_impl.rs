@@ -457,14 +457,6 @@ impl Pipeline {
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
         let msgs = self.prepare_messages(request, hook_ctx).await?;
 
-        // let mtmd_context = match self.mtmd_context {
-        //     Some(mtmd_context) => mtmd_context,
-        //     None => {
-        //         error!("MTMD context is not initialized");
-        //         Error
-        //     },
-        // };
-
         let mtmd_context = self.mtmd_context.clone().ok_or_else(|| {
             error!("MTMD context is not initialized");
             Error::MtmdContextNotInitialized
