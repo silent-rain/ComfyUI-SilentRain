@@ -70,6 +70,10 @@ pub struct ContexParams {
     #[serde(default = "default_max_history")]
     pub max_history: usize,
 
+    /// 是否存储此聊天
+    #[serde(default)]
+    pub store: bool,
+
     /// Enables verbose logging from llama.cpp.
     #[serde(default)]
     pub verbose: bool,
@@ -96,6 +100,7 @@ impl Default for ContexParams {
             image_max_resolution: 768,
             max_history: 100,
 
+            store: false,
             verbose: false,
         }
     }

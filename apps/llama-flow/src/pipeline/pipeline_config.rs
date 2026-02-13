@@ -5,7 +5,10 @@
 use async_openai::types::chat::CreateChatCompletionRequest;
 use serde::{Deserialize, Serialize};
 
-use crate::{context::ContexParams as ContextConfig, model::ModelConfig, sampler::SamplerConfig};
+use crate::{
+    context::ContexParams as ContextConfig, error::Error, model::ModelConfig,
+    sampler::SamplerConfig,
+};
 
 /// 流水线配置
 ///
@@ -195,36 +198,50 @@ impl PipelineConfig {
     /// // 再应用请求特定的参数...
     /// config.apply_request_params(&override_request);
     /// ```
-    pub fn apply_request_params(&mut self, request: &CreateChatCompletionRequest) {
+    pub fn apply_request_params(
+        config: &PipelineConfig,
+        request: &CreateChatCompletionRequest,
+    ) -> Result<PipelineConfig, Error> {
+        let mut config = config.clone();
+
+        // 提取模型名称
+        config.model.model_name = request.model.clone();
+
         // 提取 max_completion_tokens -> n_predict
         if let Some(max_completion_tokens) = request.max_completion_tokens {
-            self.context.n_predict = max_completion_tokens as i32;
+            config.context.n_predict = max_completion_tokens as i32;
         }
 
         // 提取 temperature
         if let Some(temperature) = request.temperature {
-            self.sampling.temperature = temperature;
+            config.sampling.temperature = temperature;
         }
 
         // 提取 top_p
         if let Some(top_p) = request.top_p {
-            self.sampling.top_p = top_p;
+            config.sampling.top_p = top_p;
         }
 
         // 提取 presence_penalty -> penalty_present
         if let Some(presence_penalty) = request.presence_penalty {
-            self.sampling.penalty_present = presence_penalty;
+            config.sampling.penalty_present = presence_penalty;
         }
 
         // 提取 frequency_penalty -> penalty_freq
         if let Some(frequency_penalty) = request.frequency_penalty {
-            self.sampling.penalty_freq = frequency_penalty;
+            config.sampling.penalty_freq = frequency_penalty;
         }
+
+        // 额外参数
+        // if let Some(value) = &request.metadata {
+        //     let metadata: Metadata = value.try_into()?;
+        // }
 
         // 注意：以下参数在标准 OpenAI API 中没有直接对应，保持默认值
         // - top_k (OpenAI 不支持)
         // - n_gpu_layers (基础设施参数)
         // - n_ctx (基础设施参数)
+        Ok(config)
     }
 }
 

@@ -42,6 +42,10 @@ fn hash_mmproj_key(path: &str) -> String {
 /// 模型参数配置
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModelConfig {
+    /// model name (e.g., "Qwen3-VL-2B-Instruct")
+    #[serde(default)]
+    pub model_name: String,
+
     /// Path to the model file (e.g., "ggml-model.bin")
     #[serde(default)]
     pub model_path: String,
@@ -86,6 +90,7 @@ pub struct ModelConfig {
 impl Default for ModelConfig {
     fn default() -> Self {
         Self {
+            model_name: String::new(),
             model_path: String::new(),
             mmproj_path: String::new(),
             main_gpu: 0,
@@ -100,6 +105,11 @@ impl Default for ModelConfig {
 }
 
 impl ModelConfig {
+    pub fn with_model_name(mut self, model_name: impl Into<String>) -> Self {
+        self.model_name = model_name.into();
+        self
+    }
+
     pub fn with_model_path(mut self, path: impl Into<String>) -> Self {
         self.model_path = path.into();
         self

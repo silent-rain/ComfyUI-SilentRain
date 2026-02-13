@@ -47,6 +47,22 @@ impl From<Metadata> for async_openai::types::Metadata {
     }
 }
 
+impl TryFrom<async_openai::types::Metadata> for Metadata {
+    type Error = Error;
+    fn try_from(value: async_openai::types::Metadata) -> Result<Self, Self::Error> {
+        let v = serde_json::to_value(value)?;
+        serde_json::from_value(v).map_err(Error::from)
+    }
+}
+
+impl TryFrom<&async_openai::types::Metadata> for Metadata {
+    type Error = Error;
+    fn try_from(value: &async_openai::types::Metadata) -> Result<Self, Self::Error> {
+        let v = serde_json::to_value(value)?;
+        serde_json::from_value(v).map_err(Error::from)
+    }
+}
+
 /// 从请求的 metadata 中提取 session_id
 pub fn extract_session_id(request: &CreateChatCompletionRequest) -> Option<String> {
     parse_metadata(request)

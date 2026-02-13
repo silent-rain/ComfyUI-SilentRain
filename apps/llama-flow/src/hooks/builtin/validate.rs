@@ -78,10 +78,7 @@ impl InferenceHook for ValidateHook {
     }
 
     async fn on_before(&self, ctx: &mut HookContext) -> Result<(), Error> {
-        let request = ctx.request.as_ref().ok_or_else(|| Error::InvalidInput {
-            field: "request".to_string(),
-            message: "Request is required".to_string(),
-        })?;
+        let request = &ctx.request;
 
         debug!("Validating request parameters");
 
@@ -154,6 +151,8 @@ impl InferenceHook for ValidateHook {
 
 #[cfg(test)]
 mod tests {
+    use crate::PipelineConfig;
+
     use super::*;
     use async_openai::types::chat::CreateChatCompletionRequestArgs;
 
@@ -165,7 +164,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new(&request);
+        let mut ctx = HookContext::new(&request, &PipelineConfig::default());
         let result = hook.on_before(&mut ctx).await;
 
         assert!(result.is_err());
@@ -188,7 +187,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new(&request);
+        let mut ctx = HookContext::new(&request, &PipelineConfig::default());
         assert!(hook.on_before(&mut ctx).await.is_ok());
 
         // 应该失败的请求
@@ -204,7 +203,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut ctx = HookContext::new(&request);
+        let mut ctx = HookContext::new(&request, &PipelineConfig::default());
         assert!(hook.on_before(&mut ctx).await.is_err());
     }
 }

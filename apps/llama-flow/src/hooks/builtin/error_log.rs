@@ -80,29 +80,18 @@ impl InferenceHook for ErrorLogHook {
     }
 
     async fn on_error(&self, ctx: &HookContext, error: &Error) -> Result<(), Error> {
-        if self.log_request {
-            error!(
-                error = ?error,
-                session_id = ?ctx.session_id,
-                model = ctx.request.as_ref().map(|r| &r.model),
-                "Inference error occurred"
-            );
-        }
-
         if self.log_context {
             // 记录额外的上下文信息
             if let Some(elapsed) = ctx.elapsed_ms() {
                 error!(elapsed_ms = elapsed, "Error occurred after");
             }
 
-            if let Some(req) = &ctx.request {
-                warn!(
-                    message_count = req.messages.len(),
-                    max_completion_tokens = ?req.max_completion_tokens,
-                    temperature = ?req.temperature,
-                    "Request details"
-                );
-            }
+            warn!(
+                message_count = ctx.request.messages.len(),
+                max_completion_tokens = ?ctx.request.max_completion_tokens,
+                temperature = ?ctx.request.temperature,
+                error = ?error
+            );
         }
 
         Ok(())

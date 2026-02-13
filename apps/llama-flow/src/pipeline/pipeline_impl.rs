@@ -33,7 +33,6 @@ use crate::{
     },
     mtmd_context::MtmdContextWrapper,
     response::ChatCompletionBuilder,
-    unified_message::{extract_media_sources_from_request, is_multimodal_request},
     utils::image::{Image, decode_image_sources},
 };
 
@@ -142,8 +141,10 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<CreateChatCompletionResponse, Error> {
+        let config = PipelineConfig::apply_request_params(&self.config, request)?;
+
         // 1. 创建上下文
-        let mut hook_ctx = HookContext::from_request_and_config(request, &self.config);
+        let mut hook_ctx = HookContext::new(request, &config);
         let hooks = self.sorted_hooks();
 
         // 2. 执行 on_prepare（准备消息）
@@ -181,7 +182,7 @@ impl Pipeline {
         request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<CreateChatCompletionResponse, Error> {
-        let mut rx = self.generate_multimodal_stream(request, hook_ctx).await?;
+        let mut rx = self.generate_multimodal_stream(hook_ctx).await?;
 
         let model = request.model.clone();
 
@@ -226,12 +227,12 @@ impl Pipeline {
         &self,
         request: &CreateChatCompletionRequest,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
+        let config = PipelineConfig::apply_request_params(&self.config, request)?;
+
         // 如果没有钩子，直接返回原始流（零开销）
-        let mut hook_ctx = HookContext::from_request_and_config(request, &self.config);
+        let mut hook_ctx = HookContext::new(request, &config);
         if self.hooks.is_empty() {
-            return self
-                .generate_multimodal_stream(request, &mut hook_ctx)
-                .await;
+            return self.generate_multimodal_stream(&mut hook_ctx).await;
         }
 
         // 有钩子时需要包装流
@@ -251,7 +252,7 @@ impl Pipeline {
         self.on_prepare(hook_ctx).await?;
 
         // 2. 获取原始流
-        let mut inner_rx = self.generate_multimodal_stream(request, hook_ctx).await?;
+        let mut inner_rx = self.generate_multimodal_stream(hook_ctx).await?;
 
         // 3. 创建新通道
         let (tx, rx) = unbounded_channel();
@@ -259,7 +260,7 @@ impl Pipeline {
         // 4. 克隆必要的数据用于异步任务
         let hooks_clone = self.sorted_hooks();
         let request_clone = request.clone();
-        let config_clone = self.config.clone();
+        let config_clone = hook_ctx.config.clone();
 
         // 5. 启动中转任务
         tokio::spawn(async move {
@@ -286,7 +287,7 @@ impl Pipeline {
             }
 
             // 6. 流结束，执行 on_after 钩子
-            let mut hook_ctx = HookContext::from_request_and_config(&request_clone, &config_clone);
+            let mut hook_ctx = HookContext::new(&request_clone, &config_clone);
             hook_ctx.set_stream_collected_text(full_text.clone());
 
             if let Some(chunk) = last_chunk {
@@ -363,7 +364,6 @@ impl Pipeline {
     /// * `hook_ctx` - HookContext（已初始化）
     pub async fn prepare_messages(
         &self,
-        _request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<Vec<LlamaChatMessage>, Error> {
         if hook_ctx.pipeline_state.working_messages.is_empty() {
@@ -385,7 +385,7 @@ impl Pipeline {
         let llama_messages: Vec<LlamaChatMessage> = processed_messages
             .iter()
             .map(|msg| {
-                let content = msg.to_llama_format(&self.config.context.media_marker)?;
+                let content = msg.to_llama_format(&hook_ctx.config.context.media_marker)?;
                 LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
                     Error::InvalidInput {
                         field: "LlamaChatMessage".to_string(),
@@ -403,13 +403,12 @@ impl Pipeline {
     /// 多模态流式推理
     async fn generate_multimodal_stream(
         &self,
-        request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let rx = if !is_multimodal_request(request) {
-            self.generate_text_stream(request, hook_ctx).await?
+        let rx = if !hook_ctx.is_multimodal_request() {
+            self.generate_text_stream(hook_ctx).await?
         } else {
-            self.generate_media_stream(request, hook_ctx).await?
+            self.generate_media_stream(hook_ctx).await?
         };
 
         Ok(rx)
@@ -418,19 +417,19 @@ impl Pipeline {
     /// 纯文本流式推理内部实现
     async fn generate_text_stream(
         &self,
-        request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request, hook_ctx).await?;
+        let msgs = self.prepare_messages(hook_ctx).await?;
 
         // Load sampler
-        let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
-            error!("Failed to load sampler: {}", e);
-            e
-        })?;
+        let mut sampler =
+            Sampler::load_sampler(&hook_ctx.config.sampling.clone()).map_err(|e| {
+                error!("Failed to load sampler: {}", e);
+                e
+            })?;
 
         // 创建上下文
-        let contex_params: ContexParams = self.config.context.clone();
+        let contex_params: ContexParams = hook_ctx.config.context.clone();
         let mut ctx =
             ContextWrapper::try_new(self.llama_model.clone(), &self.backend, &contex_params)
                 .map_err(|e| {
@@ -448,16 +447,15 @@ impl Pipeline {
         self.on_before(hook_ctx).await?;
 
         // 使用 channel 方式生成响应
-        ctx.generate_response(&mut sampler, request.model.clone())
+        ctx.generate_response(&mut sampler, hook_ctx.config.model.model_name.clone())
     }
 
     /// 媒体流式推理内部实现
     async fn generate_media_stream(
         &self,
-        request: &CreateChatCompletionRequest,
         hook_ctx: &mut HookContext,
     ) -> Result<UnboundedReceiver<CreateChatCompletionStreamResponse>, Error> {
-        let msgs = self.prepare_messages(request, hook_ctx).await?;
+        let msgs = self.prepare_messages(hook_ctx).await?;
 
         let mtmd_context = self.mtmd_context.clone().ok_or_else(|| {
             error!("MTMD context is not initialized");
@@ -465,13 +463,14 @@ impl Pipeline {
         })?;
 
         // Load sampler
-        let mut sampler = Sampler::load_sampler(&self.config.sampling.clone()).map_err(|e| {
-            error!("Failed to load sampler: {}", e);
-            e
-        })?;
+        let mut sampler =
+            Sampler::load_sampler(&hook_ctx.config.sampling.clone()).map_err(|e| {
+                error!("Failed to load sampler: {}", e);
+                e
+            })?;
 
         // 上下文
-        let contex_params: ContexParams = self.config.context.clone();
+        let contex_params: ContexParams = hook_ctx.config.context.clone();
         let ctx = ContextWrapper::try_new(self.llama_model.clone(), &self.backend, &contex_params)
             .map_err(|e| {
                 error!("Failed to create context: {}", e);
@@ -490,15 +489,14 @@ impl Pipeline {
         })?;
 
         // Load media files
-        let media_sources = extract_media_sources_from_request(request)?;
+        let media_sources = hook_ctx.media_sources();
         let decoded_images = decode_image_sources(&media_sources).await?;
 
         // 将解码后的图像加载到 MTMD 上下文中
         for data in decoded_images {
             // 从二进制数据创建 Image 对象，并根据配置缩放
             let img = Image::from_bytes(&data)?
-                .resize_with_max_resolution(self.config.context.image_max_resolution)?;
-            img.save("/home/one/Downloads/resized.jpg")?;
+                .resize_with_max_resolution(hook_ctx.config.context.image_max_resolution)?;
 
             // 将缩放后的图像转换为字节数据
             let resized_data = img.to_vec()?;
@@ -519,7 +517,7 @@ impl Pipeline {
         self.on_before(hook_ctx).await?;
 
         // 使用 channel 方式生成响应
-        mtmd_ctx.generate_response(&mut sampler, request.model.clone())
+        mtmd_ctx.generate_response(&mut sampler, hook_ctx.config.model.model_name.clone())
     }
 }
 

@@ -17,11 +17,17 @@ pub struct SamplerConfig {
 
     /// Controls diversity via nucleus sampling.
     /// Lower values mean more focused outputs.
+    ///
+    /// min: 0, max: 1, default: 1
     #[serde(default)]
     pub top_p: f32,
 
-    /// Controls randomness.
-    /// 0.0 means deterministic, 1.0 means fully random.
+    /// What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random,
+    /// while lower values like 0.2 will make it more focused and deterministic.
+    ///
+    /// We generally recommend altering this or `top_p` but not both.
+    ///
+    /// min: 0, max: 2, default: 1,
     #[serde(default)]
     pub temperature: f32,
 
@@ -46,11 +52,13 @@ pub struct SamplerConfig {
 
     /// Frequency penalty coefficient
     /// Penalizes tokens based on their frequency in the text
+    /// min: -2.0, max: 2.0, default 0
     #[serde(default)]
     pub penalty_freq: f32,
 
     /// Presence penalty coefficient
     /// Penalizes tokens already present in the context
+    /// min: -2.0, max: 2.0, default 0
     #[serde(default)]
     pub penalty_present: f32,
 }
