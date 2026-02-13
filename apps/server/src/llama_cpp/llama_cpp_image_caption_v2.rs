@@ -14,7 +14,7 @@ use tokio::sync::Semaphore;
 use tracing::info;
 use uuid::Uuid;
 
-use llama_cpp_core::{
+use llama_flow::{
     ContexParams, PipelineConfig, chat_history,
     model::ModelConfig,
     request::{

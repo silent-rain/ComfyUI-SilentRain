@@ -4,7 +4,7 @@
     "rust-analyzer.linkedProjects": [
         "./Cargo.toml",
         "./apps/server/Cargo.toml",
-        "./apps/llama_cpp_core/Cargo.toml",
+        "./apps/llama-flow/Cargo.toml",
     ],
     "rust-analyzer.cargo.extraEnv": {
         "LIBCLANG_PATH": "/usr/lib",

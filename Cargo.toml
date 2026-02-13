@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["apps/comfy_app", "apps/llama_cpp_core", "apps/server", "apps/web"]
+members = ["apps/comfy_app", "apps/llama-flow", "apps/server", "apps/web"]
 
 
 [profile.dev]
@@ -28,33 +28,33 @@ js-sys = "0.3"
 web-sys = "0.3"
 
 
-serde = "1.0"                              # 用于序列化和反序列化
-serde_json = "1.0"                         # 用于序列化和反序列化
-serde_repr = "0.1"                         # 自动将枚举的变体序列化为对应的数字
-strum = "0.27"                             # 用于枚举的宏
-strum_macros = "0.27"                      # 用于枚举的宏
-rust_decimal = "1.40"                      # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
+serde = "1.0"         # 用于序列化和反序列化
+serde_json = "1.0"    # 用于序列化和反序列化
+serde_repr = "0.1"    # 自动将枚举的变体序列化为对应的数字
+strum = "0.27"        # 用于枚举的宏
+strum_macros = "0.27" # 用于枚举的宏
+rust_decimal = "1.40" # 用于处理十进制数字的库, 适用于需要有效整数和小数位且无舍入误差的财务计算
 raw-string = "0.3"
-walkdir = "2.5"                            # 用于遍历目录树
-chardet = "0.2"                            # 用于检测文本编码的库
-encoding = "0.2"                           # 用于编码和解码文本的库
-encoding_rs = "0.8"                        # 用于编码和解码文本的库
-rand = "0.10"                              # 用于生成随机数
-rand_chacha = "0.10"                       # 用于生成随机数
-lazy_static = "1.5"                        # 用于延迟初始化全局变量
-reqwest = "0.13"                           # 用于 HTTP 客户端
-regex = "1.12"                             # 正则表达式
-base64 = "0.22"                            # 用于 base64 编码解码
-rust-embed = "8.11"                        # 用于将静态文件嵌入到二进制文件中
-tempfile = "3.25"                          # 用于创建临时文件和目录
-crc32fast = "1.5"                          # 快速、SIMD加速的CRC32（IEEE）校验和计算
-futures = "0.3"                            # 用于异步编程
-tokio = "1.43"                             # 异步运行时
-async-trait = "0.1"                        # 异步 trait
-dashmap = "6.1"                            # 并发 HashMap
-parking_lot = "0.12"                       # 更高效的锁
-indexmap = "2.13"                          # 有序的 HashMap
-infer = "0.19"                             # 推断文件和MIME类型的轻量级工具
+walkdir = "2.5"       # 用于遍历目录树
+chardet = "0.2"       # 用于检测文本编码的库
+encoding = "0.2"      # 用于编码和解码文本的库
+encoding_rs = "0.8"   # 用于编码和解码文本的库
+rand = "0.10"         # 用于生成随机数
+rand_chacha = "0.10"  # 用于生成随机数
+lazy_static = "1.5"   # 用于延迟初始化全局变量
+reqwest = "0.13"      # 用于 HTTP 客户端
+regex = "1.12"        # 正则表达式
+base64 = "0.22"       # 用于 base64 编码解码
+rust-embed = "8.11"   # 用于将静态文件嵌入到二进制文件中
+tempfile = "3.25"     # 用于创建临时文件和目录
+crc32fast = "1.5"     # 快速、SIMD加速的CRC32（IEEE）校验和计算
+futures = "0.3"       # 用于异步编程
+tokio = "1.43"        # 异步运行时
+async-trait = "0.1"   # 异步 trait
+dashmap = "6.1"       # 并发 HashMap
+parking_lot = "0.12"  # 更高效的锁
+indexmap = "2.13"     # 有序的 HashMap
+infer = "0.19"        # 推断文件和MIME类型的轻量级工具
 uuid = "1.20"
 async-openai = "0.32"
 # open-ai-rust-responses-by-sshift = "0.4"

@@ -13,7 +13,7 @@ use pythonize::depythonize;
 use tracing::info;
 use uuid::Uuid;
 
-use llama_cpp_core::{
+use llama_flow::{
     ContexParams, Pipeline, PipelineConfig, chat_history, global_cache,
     model::ModelConfig,
     request::{ChatMessagesBuilder, CreateChatCompletionRequestArgs, Metadata, Request},

@@ -16,7 +16,7 @@ use pyo3::{
     types::{PyDict, PyType},
 };
 
-use llama_cpp_core::{CacheManager, ChatHistoryManager, chat_history};
+use llama_flow::{CacheManager, ChatHistoryManager, chat_history};
 
 use crate::{
     core::{

@@ -73,7 +73,7 @@ pub fn parse_metadata(request: &CreateChatCompletionRequest) -> Result<Option<Me
 ///
 /// # 示例
 /// ```
-/// use llama_cpp_core::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
+/// use llama_flow::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
 ///
 /// // 纯文本消息
 /// let text_only = UserMessageBuilder::new().text("Hello").build();
@@ -185,7 +185,7 @@ impl UserMessageBuilder {
 ///
 /// # 示例
 /// ```
-/// use llama_cpp_core::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
+/// use llama_flow::pipeline::{ChatMessagesBuilder, UserMessageBuilder};
 /// use async_openai::types::chat::CreateChatCompletionRequestArgs;
 ///
 /// let messages = ChatMessagesBuilder::new()

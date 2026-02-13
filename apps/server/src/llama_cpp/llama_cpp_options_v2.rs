@@ -8,7 +8,7 @@
 //!     - gguf model
 //!         - tokenizer.chat_template
 
-use llama_cpp_core::{
+use llama_flow::{
     ContexParams, model::ModelConfig, sampler::SamplerConfig, types::PoolingTypeMode,
 };
 use pyo3::{

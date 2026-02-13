@@ -6,7 +6,7 @@ use async_openai::types::chat::{
     ChatCompletionRequestAssistantMessage, ChatCompletionRequestSystemMessage,
     CreateChatCompletionRequestArgs,
 };
-use llama_cpp_core::{
+use llama_flow::{
     Pipeline, PipelineConfig,
     request::{
         ChatCompletionRequestMessageContentPartText, ChatCompletionRequestUserMessage,

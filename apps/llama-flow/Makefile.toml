@@ -134,7 +134,7 @@ args = ["fmt", "--all"]
 description = "Run dev build"
 category = "dev"
 command = "cargo"
-args = ["build", "-p", "llama_cpp_core"]
+args = ["build", "-p", "llama-flow"]
 
 
 [tasks.dev-aarch64-android]
@@ -142,26 +142,26 @@ description = "Run android dev build."
 category = "run"
 # env = { "CC_aarch64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang", "CC_armv7_linux_androideabi" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang", "CC_x86_64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang", "CC_i686_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang", "CXX_aarch64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++", "CXX_armv7_linux_androideabi" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi35-clang++", "CXX_x86_64_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android35-clang++", "CXX_i686_linux_android" = "${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android35-clang++"}
 command = "cargo"
-args = ["build", "-p", "llama_cpp_core", "--target=aarch64-linux-android"]
+args = ["build", "-p", "llama-flow", "--target=aarch64-linux-android"]
 
 [tasks.dev-armv7-android]
 description = "Run android dev build."
 category = "run"
 command = "cargo"
-args = ["build", "-p", "llama_cpp_core", "--target=armv7-linux-androideabi"]
+args = ["build", "-p", "llama-flow", "--target=armv7-linux-androideabi"]
 
 [tasks.dev-x86_64-android]
 description = "Run android dev build."
 category = "run"
 command = "cargo"
-args = ["build", "-p", "llama_cpp_core", "--target=x86_64-linux-android"]
+args = ["build", "-p", "llama-flow", "--target=x86_64-linux-android"]
 
 
 [tasks.dev-i686-android]
 description = "Run android dev build."
 category = "run"
 command = "cargo"
-args = ["build", "-p", "llama_cpp_core", "--target=i686-linux-android"]
+args = ["build", "-p", "llama-flow", "--target=i686-linux-android"]
 
 
 [tasks.dev-android]

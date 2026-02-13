@@ -34,7 +34,7 @@ impl<T: Any + Send + Sync> fmt::Debug for CacheEntry<T> {
     ///
     /// # 示例
     /// ```
-    /// use llama_cpp_core::cache::CacheEntry;
+    /// use llama_flow::cache::CacheEntry;
     ///
     /// let cache = CacheEntry { params_hash: 123, data: "" };
     /// println!("{:?}", cache);

@@ -1,5 +1,5 @@
 [package]
-name = "llama_cpp_core"
+name = "llama-flow"
 version = "0.1.0"
 edition = "2024"
 

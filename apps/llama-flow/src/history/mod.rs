@@ -10,7 +10,7 @@
 //! # 使用示例
 //!
 //! ```rust
-//! use llama_cpp_core::history::chat_history;
+//! use llama_flow::history::chat_history;
 //!
 //! // 获取管理器实例
 //! let manager = chat_history();

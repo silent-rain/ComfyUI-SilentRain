@@ -16,7 +16,7 @@ use crate::{context::ContexParams as ContextConfig, model::ModelConfig, sampler:
 ///
 /// # Example
 /// ```rust
-/// use llama_cpp_core::PipelineConfig;
+/// use llama_flow::PipelineConfig;
 ///
 /// let config = PipelineConfig::new("model.gguf")
 ///     .with_gpu_layers(10)

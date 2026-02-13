@@ -59,7 +59,7 @@ pub enum Error {
     LlamaMtmdBitmapError(#[from] llama_cpp_2::mtmd::MtmdBitmapError),
 
     #[error(transparent)]
-    LlamaCppCoreError(#[from] llama_cpp_core::error::Error),
+    LlamaCppCoreError(#[from] llama_flow::error::Error),
 
     #[error("encode error, {0}")]
     Encode(String),

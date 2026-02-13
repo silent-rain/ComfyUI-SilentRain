@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use base64::Engine;
-use llama_cpp_core::{
+use llama_flow::{
     Pipeline, PipelineConfig,
     request::{ChatMessagesBuilder, UserMessageBuilder},
     utils::log::init_logger,

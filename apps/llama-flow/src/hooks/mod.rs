@@ -5,7 +5,7 @@
 //! # 使用示例
 //!
 //! ```rust
-//! use llama_cpp_core::hooks::{InferenceHook, HookContext, priorities};
+//! use llama_flow::hooks::{InferenceHook, HookContext, priorities};
 //!
 //! // 定义钩子
 //! #[derive(Debug)]

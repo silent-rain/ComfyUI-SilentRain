@@ -981,7 +981,7 @@ dependencies = [
  "indexmap",
  "lazy_static",
  "llama-cpp-2",
- "llama_cpp_core",
+ "llama-flow",
  "log",
  "numpy",
  "parquet",
@@ -2968,7 +2968,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "llama_cpp_core"
+name = "llama-flow"
 version = "0.1.0"
 dependencies = [
  "anyhow",

@@ -1,4 +1,4 @@
-use llama_cpp_core::{Backend, Model, utils::log::init_logger};
+use llama_flow::{Backend, Model, utils::log::init_logger};
 
 fn main() -> anyhow::Result<()> {
     init_logger();

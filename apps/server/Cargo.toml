@@ -72,7 +72,7 @@ llama-cpp-2 = { workspace = true, features = [
 ] }
 
 # 本地推理引擎
-llama_cpp_core = { path = "../llama_cpp_core" }
+llama-flow = { path = "../llama-flow" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 # ONNX Runtime

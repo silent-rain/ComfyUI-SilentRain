@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_openai::types::chat::CreateChatCompletionRequestArgs;
 use futures::future::try_join_all;
-use llama_cpp_core::{
+use llama_flow::{
     Pipeline, PipelineConfig,
     error::Error,
     request::{ChatMessagesBuilder, UserMessageBuilder},
