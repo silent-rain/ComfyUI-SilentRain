@@ -33,7 +33,8 @@ async fn main() -> anyhow::Result<()> {
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
     // 读取图片文件
-    let image_path = "/data/cy/ComfyUI_01908_.png"; // 请替换为实际图片路径
+    let image_path =
+        "/data/cy/b865b2d38190fb7a540ebce3791807cb5d841a139bf78dfac42a290d99801dce.webp"; // 请替换为实际图片路径
     let image_data = std::fs::read(image_path)?;
     let base64_data = base64::engine::general_purpose::STANDARD.encode(&image_data);
     let mime_type = infer::get_from_path(image_path)

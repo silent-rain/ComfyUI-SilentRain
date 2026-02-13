@@ -374,8 +374,6 @@ impl Pipeline {
         // 从 pipeline_state 获取处理后的消息
         let processed_messages = &hook_ctx.pipeline_state.working_messages;
 
-        info!("Prepared messages: {:?}", processed_messages);
-
         info!(
             "Prepared {} messages for inference",
             processed_messages.len()
