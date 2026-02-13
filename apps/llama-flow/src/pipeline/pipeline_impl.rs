@@ -493,8 +493,13 @@ impl Pipeline {
         // 将解码后的图像加载到 MTMD 上下文中
         for data in decoded_images {
             // 从二进制数据创建 Image 对象，并根据配置缩放
-            let img = Image::from_bytes(&data)?
-                .resize_with_max_resolution(hook_ctx.config.context.image_max_resolution)?;
+            let img = Image::from_bytes(&data)?;
+
+            let max_resolution = img
+                .longest()
+                .min(hook_ctx.config.context.image_max_resolution);
+            img.resize_to_longest(max_resolution)?;
+            // img.save("/home/one/Downloads/resized.jpg")?;
 
             // 将缩放后的图像转换为字节数据
             let resized_data = img.to_vec()?;
