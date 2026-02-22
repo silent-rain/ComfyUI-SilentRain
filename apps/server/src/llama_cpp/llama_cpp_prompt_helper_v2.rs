@@ -66,6 +66,12 @@ impl LlamaCppPromptHelperv2 {
     }
 
     #[classattr]
+    #[pyo3(name = "OUTPUT_IS_LIST")]
+    fn output_is_list() -> (bool,) {
+        (true,)
+    }
+
+    #[classattr]
     #[pyo3(name = "CATEGORY")]
     const CATEGORY: &'static str = CATEGORY_LLAMA_CPP;
 
