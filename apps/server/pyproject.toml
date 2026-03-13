@@ -15,8 +15,8 @@ classifiers = [
 dynamic = ["version"]
 # version = "1.0.1"
 dependencies = [
-    "comfy-cli>=1.5.4",
-    "maturin>=1.9.3",
+    "comfy-cli>=1.6.0",
+    "maturin>=1.12.6",
     "numpy>=2.2.6",
     "torch>=2.7.0",
 ] # Filled in from requirements.txt

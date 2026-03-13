@@ -3,10 +3,10 @@
 use candle_core::{Device, IndexOp, Tensor};
 use log::error;
 use pyo3::{
+    Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyList, PyType},
-    Bound, Py, PyAny, PyErr, PyResult, Python,
 };
 use strum_macros::{Display, EnumString};
 
@@ -14,14 +14,14 @@ use crate::{
     core::category::CATEGORY_LIST,
     error::Error,
     wrapper::{
-        comfyui::{types::any_type, PromptServer},
+        comfyui::{PromptServer, types::any_type},
         python::isinstance,
         torch::{nn::functional::interpolation::Interpolation, tensor::TensorWrapper},
     },
 };
 
 /// 图像调整方法枚举
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum ResizeMethod {

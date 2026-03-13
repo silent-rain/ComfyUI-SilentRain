@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::error::Error;
 
-#[pyclass]
+#[pyclass(subclass, from_py_object)]
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct ExtraPnginfo {
     pub workflow: Workflow,

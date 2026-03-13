@@ -23,7 +23,7 @@ use strum_macros::{Display, EnumString};
 use crate::{core::category::CATEGORY_IMAGE, wrapper::comfyui::types::NODE_INT};
 
 /// 宽高比枚举
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum AspectRatio {
@@ -69,7 +69,7 @@ pub enum AspectRatio {
 }
 
 /// 分辨率级别枚举
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum ResolutionLevel {

@@ -97,7 +97,7 @@ pub enum Error {
     #[error("invalid tensor shape, {0}")]
     InvalidTensorShape(String),
     #[error("numpy error, {0}")]
-    NotContiguousError(#[from] numpy::NotContiguousError),
+    NotContiguousError(#[from] numpy::AsSliceError),
 
     #[error("image error, {0}")]
     ImageError(#[from] image::ImageError),

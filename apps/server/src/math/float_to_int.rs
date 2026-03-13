@@ -20,7 +20,7 @@ use crate::{
 
 /// 浮点数转整数的模式
 ///
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum FloatToIntMode {

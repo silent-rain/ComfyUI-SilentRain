@@ -26,7 +26,7 @@ use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};
 /// 图像插值方法枚举
 ///
 /// 定义了在图像缩放、旋转等变换时使用的像素插值算法
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 pub enum Interpolation {
     /// 最近邻插值法
@@ -174,7 +174,7 @@ impl Interpolation {
 /// 表示插值算法的枚举
 ///
 /// mode: nearest|linear|bilinear|bicubic|trilinear|area|nearest-exact
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 pub enum InterpolationMode {
     #[strum(to_string = "nearest")]

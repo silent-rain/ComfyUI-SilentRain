@@ -26,7 +26,7 @@ use crate::{
 };
 
 /// Options for the llama_cpp library
-#[pyclass(subclass)]
+#[pyclass(subclass, from_py_object)]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LlamaCppOptionsv2 {}
 

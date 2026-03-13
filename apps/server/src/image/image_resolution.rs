@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// 图像缩放模式枚举
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum ResizeMode {

@@ -27,7 +27,7 @@ use serde::Serialize;
 /// 任意参数类型代理
 ///
 /// 注意: 在python端, 使用json.dumps()会报错
-#[pyclass(name = "AlwaysEqualProxy")]
+#[pyclass(name = "AlwaysEqualProxy", from_py_object)]
 #[derive(Debug, Clone)]
 pub struct AlwaysEqualProxy(String);
 

@@ -22,7 +22,7 @@ use crate::{
 };
 
 /// 图像调整方法枚举
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum ResizeMethod {

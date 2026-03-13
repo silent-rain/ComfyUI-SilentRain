@@ -29,7 +29,8 @@ use crate::wrapper::comfyui::types::{
 /// 输入规范构建器
 ///
 /// 用于构建 ComfyUI 节点的 INPUT_TYPES 字典结构
-#[pyclass]
+#[pyclass(from_py_object)]
+#[derive(Debug, Clone)]
 pub struct InputSpec {
     required: Vec<(String, InputType)>,
     optional: Vec<(String, InputType)>,
@@ -106,6 +107,7 @@ impl Default for InputSpec {
 /// 输入类型（包含类型和参数）
 ///
 /// 统一了类型定义和参数设置，简化了 API
+#[derive(Debug, Clone)]
 pub struct InputType {
     kind: InputKind,
     params: IndexMap<String, ParamValue>,

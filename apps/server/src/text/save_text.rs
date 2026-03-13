@@ -22,7 +22,7 @@ use crate::{
 /// 保存文本的模式
 ///
 /// "overwrite", "append", "append_new_line"
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum SaveTextMode {

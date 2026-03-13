@@ -6,7 +6,7 @@ use strum_macros::{Display, EnumString};
 
 use crate::{error::Error, wrapper::torch::tensor::TensorWrapper};
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 pub enum PadMode {
     #[strum(to_string = "constant")]

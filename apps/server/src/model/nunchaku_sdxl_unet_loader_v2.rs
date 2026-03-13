@@ -32,7 +32,7 @@ use crate::{
 
 /// 数据类型的选项
 ///
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum DTypeOption {

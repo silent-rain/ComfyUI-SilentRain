@@ -90,7 +90,7 @@ pub enum PoolingTypeMode {
 }
 
 /// Options for the llama_cpp library
-#[pyclass(subclass)]
+#[pyclass(subclass, from_py_object)]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LlamaCppOptions {
     /// Path to the model file (e.g., "ggml-model.bin")
