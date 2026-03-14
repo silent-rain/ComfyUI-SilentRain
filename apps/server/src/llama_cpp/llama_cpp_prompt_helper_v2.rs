@@ -68,7 +68,7 @@ impl LlamaCppPromptHelperv2 {
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
     fn output_is_list() -> (bool,) {
-        (true,)
+        (false,)
     }
 
     #[classattr]

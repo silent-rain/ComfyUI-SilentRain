@@ -38,9 +38,9 @@ url = "https://mirrors.cloud.tencent.com/pypi/simple"
 default = true
 
 [[tool.uv.index]]
-name = "pytorch-cu126"
-#url = "https://download.pytorch.org/whl/cu126"
-url = "https://mirrors.aliyun.com/pytorch-wheels/cu126"
+name = "pytorch-cu128"
+#url = "https://download.pytorch.org/whl/cu128"
+url = "https://mirrors.aliyun.com/pytorch-wheels/cu128"
 explicit = true
 
 [dependency-groups]

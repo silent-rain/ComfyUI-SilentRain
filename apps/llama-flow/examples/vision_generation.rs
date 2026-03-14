@@ -15,11 +15,9 @@ use llama_flow::{
 async fn main() -> anyhow::Result<()> {
     init_logger();
 
-    let model_path =
-        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
+    let model_path = "/data/ComfyUI/models/LLM/GGUF/Qwen3.5-2B-heretic-Q8_0.gguf".to_string();
     let mmproj_path =
-        "/data/ComfyUI/models/LLM/GGUF/Qwen3-VL-2B-Instruct-abliterated-v1.mmproj-Q8_0.gguf"
-            .to_string();
+        "/data/ComfyUI/models/LLM/GGUF/Qwen3.5-2B-heretic-Q8_0.mmproj-F16.gguf".to_string();
 
     let pipeline_config = PipelineConfig::new_with_mmproj(model_path, mmproj_path)
         .with_n_gpu_layers(10) // GPU 层数配置 - 影响 GPU 加速

@@ -20,8 +20,7 @@ use tracing::info;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logger();
 
-    let model_path =
-        "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
+    let model_path = "/data/ComfyUI/models/LLM/GGUF/Qwen3.5-2B-heretic-Q8_0.gguf".to_string();
     let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
@@ -69,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let request = CreateChatCompletionRequestArgs::default()
             .max_completion_tokens(2048u32)
-            .model("Qwen3-VL-2B-Instruct")
+            .model("Qwen3.5-2B")
             .messages(messages)
             .build()?;
 

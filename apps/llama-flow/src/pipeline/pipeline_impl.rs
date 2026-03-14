@@ -542,8 +542,7 @@ mod tests {
     async fn test_simple_text() -> anyhow::Result<()> {
         init_logger();
 
-        let model_path =
-            "/dataEtx/models/LLM/Qwen3-VL-2B-Instruct-abliterated-v1.Q6_K.gguf".to_string();
+        let model_path = "/data/ComfyUI/models/LLM/GGUF/Qwen3.5-2B-heretic-Q8_0.gguf".to_string();
 
         let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
 

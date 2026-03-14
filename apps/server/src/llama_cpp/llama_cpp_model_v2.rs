@@ -141,7 +141,16 @@ impl LlamaCppModelv2 {
         // 解析完整路径
         let base_models_dir = FolderPaths::default().model_path();
         let model_path = base_models_dir.join("LLM").join(&model_path);
-        let mmproj_path = base_models_dir.join("LLM").join(&mmproj_path);
+
+        // None
+        let mmproj_path = {
+            if mmproj_path != "None" {
+                let mmproj_path = base_models_dir.join("LLM").join(&mmproj_path);
+                mmproj_path.to_string_lossy().to_string()
+            } else {
+                "".to_string()
+            }
+        };
 
         if !model_path.exists() {
             return Err(Error::InvalidPath(format!(
@@ -157,7 +166,7 @@ impl LlamaCppModelv2 {
 
         let llama_cpp_model_params = LlamaCppModelParams {
             model_path: model_path.to_string_lossy().to_string(),
-            mmproj_path: mmproj_path.to_string_lossy().to_string(),
+            mmproj_path,
             cache_model,
             cache_model_key,
         };
