@@ -170,6 +170,11 @@ impl LlamaCppOptionsv2 {
                     .tooltip("Chat template to use, default template if not provided"),
             )
             .with_optional(
+                "chat_template_kwargs",
+                InputType::string()
+                    .tooltip("Chat template extra parameters (JSON object string). Used to control model inference behavior"),
+            )
+            .with_optional(
                 "cmoe",
                 InputType::bool()
                     .default(false)

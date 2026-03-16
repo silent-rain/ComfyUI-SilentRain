@@ -13,11 +13,7 @@ use async_openai::types::chat::{
     CreateChatCompletionRequest, CreateChatCompletionResponse, CreateChatCompletionStreamResponse,
     FinishReason,
 };
-use llama_cpp_2::{
-    llama_backend::LlamaBackend,
-    model::{LlamaChatMessage, LlamaModel},
-    mtmd::MtmdContext,
-};
+use llama_cpp_2::{llama_backend::LlamaBackend, model::LlamaModel, mtmd::MtmdContext};
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 use tracing::{error, info, warn};
 
@@ -357,18 +353,14 @@ impl Pipeline {
     ///
     /// 流程：
     /// 1. 从 pipeline_state 获取处理后的消息
-    /// 2. 转换为 LlamaChatMessage 列表
+    /// 2. 转换为 OpenAI 兼容的 JSON 字符串
     ///
     /// # Arguments
-    /// * `request` - OpenAI 标准请求
     /// * `hook_ctx` - HookContext（已初始化）
-    pub async fn prepare_messages(
-        &self,
-        hook_ctx: &mut HookContext,
-    ) -> Result<Vec<LlamaChatMessage>, Error> {
+    pub async fn prepare_messages(&self, hook_ctx: &mut HookContext) -> Result<String, Error> {
         if hook_ctx.pipeline_state.working_messages.is_empty() {
             warn!("No messages to prepare");
-            return Ok(Vec::new());
+            return Ok("[]".to_string());
         }
 
         // 从 pipeline_state 获取处理后的消息
@@ -379,23 +371,23 @@ impl Pipeline {
             processed_messages.len()
         );
 
-        // 转换为 LlamaChatMessage
-        let llama_messages: Vec<LlamaChatMessage> = processed_messages
+        // 转换为 OpenAI 兼容的 JSON 数组
+        let messages_arr: Vec<serde_json::Value> = processed_messages
             .iter()
             .map(|msg| {
                 let content = msg.to_llama_format(&hook_ctx.config.context.media_marker)?;
-                LlamaChatMessage::new(msg.role.to_string(), content).map_err(|e| {
-                    Error::InvalidInput {
-                        field: "LlamaChatMessage".to_string(),
-                        message: e.to_string(),
-                    }
-                })
+                Ok(serde_json::json!({
+                    "role": msg.role.to_string(),
+                    "content": content,
+                }))
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, Error>>()?;
 
-        info!("Prepared llama messages: {:?}", llama_messages);
+        let messages_json = serde_json::to_string(&messages_arr).map_err(Error::Serde)?;
 
-        Ok(llama_messages)
+        info!("Prepared messages JSON: {}", messages_json);
+
+        Ok(messages_json)
     }
 
     /// 多模态流式推理
@@ -436,7 +428,7 @@ impl Pipeline {
                 })?;
 
         // 评估消息
-        ctx.eval_messages(msgs.to_vec()).map_err(|e| {
+        ctx.eval_messages(&msgs).map_err(|e| {
             error!("Failed to eval messages: {}", e);
             e
         })?;
@@ -511,7 +503,7 @@ impl Pipeline {
         }
 
         // 评估消息
-        mtmd_ctx.eval_messages(msgs.to_vec()).map_err(|e| {
+        mtmd_ctx.eval_messages(&msgs).map_err(|e| {
             error!("Failed to eval messages: {}", e);
             e
         })?;

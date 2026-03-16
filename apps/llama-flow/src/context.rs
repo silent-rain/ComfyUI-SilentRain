@@ -13,8 +13,9 @@ use llama_cpp_2::{
     ggml_time_us,
     llama_backend::LlamaBackend,
     llama_batch::LlamaBatch,
-    model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel},
+    model::{AddBos, LlamaChatTemplate, LlamaModel},
     mtmd::mtmd_default_marker,
+    openai::OpenAIChatTemplateParams,
     sampling::LlamaSampler,
     timing::LlamaTimings,
     token::LlamaToken,
@@ -62,6 +63,13 @@ pub struct ContexParams {
     #[serde(default)]
     pub chat_template: Option<String>,
 
+    /// 聊天模板额外参数（JSON 对象字符串），用于动态控制模型推理行为。
+    /// 例如：传入 `{"enable_thinking": true}` 可开启思考模式（适用于支持 thinking 的模型，如 Qwen3）。
+    /// 传入 `{"enable_thinking": false}` 则关闭思考模式。
+    /// 若为 None，则不传递额外参数，使用模型默认行为。
+    #[serde(default)]
+    pub chat_template_kwargs: Option<String>,
+
     /// 图片最大分辨率限制
     #[serde(default)]
     pub image_max_resolution: u32,
@@ -99,6 +107,8 @@ impl Default for ContexParams {
 
             image_max_resolution: 768,
             max_history: 100,
+
+            chat_template_kwargs: None,
 
             store: false,
             verbose: false,
@@ -147,6 +157,13 @@ impl ContexParams {
     /// 设置聊天模板
     pub fn with_chat_template(mut self, chat_template: String) -> Self {
         self.chat_template = Some(chat_template);
+        self
+    }
+    /// 设置聊天模板额外参数（JSON 对象字符串）
+    ///
+    /// 例如：传入 `"{\"enable_thinking\": true}"` 可开启思考模式
+    pub fn with_chat_template_kwargs(mut self, chat_template_kwargs: impl Into<String>) -> Self {
+        self.chat_template_kwargs = Some(chat_template_kwargs.into());
         self
     }
 
@@ -231,13 +248,20 @@ impl ContextWrapper {
     }
 
     /// Evaluates a chat message, tokenizing and processing it through the model
-    pub fn eval_messages(&mut self, msgs: Vec<LlamaChatMessage>) -> Result<(), Error> {
+    ///
+    /// `messages_json` 为 OpenAI 兼容的消息 JSON 数组字符串，例如：
+    /// `[{"role": "user", "content": "Hello"}]`
+    pub fn eval_messages(&mut self, messages_json: &str) -> Result<(), Error> {
         info!("eval messages ...");
         let chat_template =
             ContextWrapper::chat_template(self.llama_model.clone(), &self.contex_params)?;
 
-        let (_formatted_chat_template, tokens) =
-            ContextWrapper::apply_chat_template(self.llama_model.clone(), &chat_template, &msgs)?;
+        let (_formatted_chat_template, tokens) = ContextWrapper::apply_chat_template(
+            self.llama_model.clone(),
+            &chat_template,
+            messages_json,
+            &self.contex_params,
+        )?;
 
         ContextWrapper::validate_tokens_size(
             tokens.len(),
@@ -450,21 +474,48 @@ impl ContextWrapper {
         })
     }
 
-    /// Apply chat template
+    /// Apply chat template（使用 OpenAI 兼容接口，支持思考模式、工具调用等高级特性）
+    ///
+    /// `messages_json` 为 OpenAI 兼容的消息 JSON 数组字符串，例如：
+    /// `[{"role": "user", "content": "Hello"}]`
     pub fn apply_chat_template(
         model: Arc<LlamaModel>,
         chat_template: &LlamaChatTemplate,
-        msgs: &[LlamaChatMessage],
+        messages_json: &str,
+        contex_params: &ContexParams,
     ) -> Result<(String, Vec<LlamaToken>), Error> {
         info!("apply chat template...");
 
-        // Format the message using chat template (simplified)
-        let formatted_template = model
-            .apply_chat_template(chat_template, msgs, true)
+        // 构建 OpenAI 兼容的模板参数
+        let params = OpenAIChatTemplateParams {
+            messages_json,
+            tools_json: None,
+            tool_choice: None,
+            json_schema: None,
+            grammar: None,
+            reasoning_format: None,
+            chat_template_kwargs: contex_params.chat_template_kwargs.as_deref(),
+            add_generation_prompt: true,
+            use_jinja: true,
+            parallel_tool_calls: false,
+            enable_thinking: false,
+            add_bos: false,
+            add_eos: false,
+            parse_tool_calls: false,
+        };
+
+        // 使用 oaicompat 接口应用聊天模板
+        let result = model
+            .apply_chat_template_oaicompat(chat_template, &params)
             .map_err(|e| {
                 error!("Failed to apply chat template: {e}");
-                e
+                Error::InvalidInput {
+                    field: "chat_template".into(),
+                    message: e.to_string(),
+                }
             })?;
+
+        let formatted_template = result.prompt;
 
         // 将提示文本转换为 token 列表，AddBos::Always 表示始终在开头添加 BOS (Beginning of Sequence) token
         let tokens = model
@@ -473,11 +524,6 @@ impl ContextWrapper {
                 error!("failed to tokenize {:?}, err: {}", formatted_template, e);
                 e
             })?;
-
-        // let tokens_list = self
-        //     .context
-        //     .model
-        //     .str_to_token(&params.user_prompt, AddBos::Always)?;
 
         info!("Formatted template: {}", formatted_template);
         Ok((formatted_template, tokens))
@@ -554,13 +600,14 @@ mod tests {
         // 创建消息
         let system_prompt = "You are a helpful assistant".to_string();
         let user_prompt = "Hello, how are you?".to_string();
-        let msgs = vec![
-            LlamaChatMessage::new(MessageRole::System.to_string(), system_prompt.clone())?,
-            LlamaChatMessage::new(MessageRole::User.to_string(), user_prompt.clone())?,
-        ];
+        let messages_json = serde_json::json!([
+            {"role": MessageRole::System.to_string(), "content": system_prompt.clone()},
+            {"role": MessageRole::User.to_string(), "content": user_prompt.clone()},
+        ])
+        .to_string();
 
         // 评估消息
-        ctx.eval_messages(msgs)?;
+        ctx.eval_messages(&messages_json)?;
 
         // 生成响应
         let mut rx = ctx.generate_response(&mut sampler, model_id)?;

@@ -13,7 +13,7 @@ use async_openai::types::chat::CreateChatCompletionStreamResponse;
 use llama_cpp_2::{
     ggml_time_us,
     llama_batch::LlamaBatch,
-    model::{LlamaChatMessage, LlamaModel},
+    model::LlamaModel,
     mtmd::{MtmdBitmap, MtmdBitmapError, MtmdContext, MtmdInputText},
     sampling::LlamaSampler,
 };
@@ -82,15 +82,21 @@ impl MtmdContextWrapper {
     }
 
     /// Evaluates a chat message, tokenizing and processing it through the model
-    pub fn eval_messages(&mut self, msgs: Vec<LlamaChatMessage>) -> Result<(), Error> {
+    ///
+    /// `messages_json` 为 OpenAI 兼容的消息 JSON 数组字符串，例如：
+    /// `[{"role": "user", "content": "Hello"}]`
+    pub fn eval_messages(&mut self, messages_json: &str) -> Result<(), Error> {
         info!("eval messages ...");
 
         let chat_template =
             ContextWrapper::chat_template(self.llama_model.clone(), &self.contex_params)?;
 
-        let (formatted_chat_template, tokens) =
-            ContextWrapper::apply_chat_template(self.llama_model.clone(), &chat_template, &msgs)?;
-
+        let (formatted_chat_template, tokens) = ContextWrapper::apply_chat_template(
+            self.llama_model.clone(),
+            &chat_template,
+            messages_json,
+            &self.contex_params,
+        )?;
         ContextWrapper::validate_tokens_size(
             tokens.len(),
             self.contex_params.n_ctx,
@@ -326,13 +332,14 @@ mod tests {
         // 创建消息
         let system_prompt = "You are a helpful assistant".to_string();
         let user_prompt = "Hello, how are you?".to_string();
-        let msgs = vec![
-            LlamaChatMessage::new(MessageRole::System.to_string(), system_prompt.clone())?,
-            LlamaChatMessage::new(MessageRole::User.to_string(), user_prompt.clone())?,
-        ];
+        let messages_json = serde_json::json!([
+            {"role": MessageRole::System.to_string(), "content": system_prompt.clone()},
+            {"role": MessageRole::User.to_string(), "content": user_prompt.clone()},
+        ])
+        .to_string();
 
         // 评估消息
-        mtmd_ctx.eval_messages(msgs)?;
+        mtmd_ctx.eval_messages(&messages_json)?;
 
         // 生成响应
         let mut rx = mtmd_ctx.generate_response(&mut sampler, "test-model")?;
