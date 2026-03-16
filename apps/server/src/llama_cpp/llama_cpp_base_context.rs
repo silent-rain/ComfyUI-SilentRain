@@ -330,7 +330,7 @@ impl LlamaCppBaseContext {
         let last_index: i32 = (tokens_list.len() - 1) as i32;
 
         // 遍历所有 token，i 是索引，token 是实际的 token 值
-        for (i, token) in (0_i32..).zip(tokens_list.into_iter()) {
+        for (i, token) in (0_i32..).zip(tokens_list) {
             // llama_decode 只会为提示的最后一个 token 输出 logits（概率分布）
             // 判断当前 token 是否是最后一个
             let is_last = i == last_index;
