@@ -13,11 +13,15 @@ pub use flux_kontext_inpainting_conditioning::FluxKontextInpaintingConditioning;
 mod conditioning_console_debug;
 pub use conditioning_console_debug::ConditioningConsoleDebug;
 
+mod reference_latent_combo;
+pub use reference_latent_combo::ReferenceLatentCombo;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "conditioning")?;
     submodule.add_class::<FluxKontextInpaintingConditioning>()?;
     submodule.add_class::<ConditioningConsoleDebug>()?;
+    submodule.add_class::<ReferenceLatentCombo>()?;
     Ok(submodule)
 }
 
@@ -33,6 +37,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ConditioningConsoleDebug",
             py.get_type::<ConditioningConsoleDebug>(),
             "Sr Conditioning Console Debug",
+        ),
+        NodeRegister(
+            "ReferenceLatentCombo",
+            py.get_type::<ReferenceLatentCombo>(),
+            "Sr Reference Latent Combo",
         ),
     ];
     Ok(nodes)
