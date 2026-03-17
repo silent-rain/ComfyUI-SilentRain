@@ -116,7 +116,7 @@ impl IsEmpty {
                 };
 
                 // 检查是否为 tensor，若 tensor 全为 0 则视为空遮罩
-                match self.is_empty_tensor_mask(py, &input) {
+                match Self::is_empty_tensor_mask(py, &input) {
                     Ok((true,)) => return Ok((true,)),
                     Err(e) => {
                         error!("IsEmpty check tensor mask err: {e:#?}");
@@ -131,8 +131,7 @@ impl IsEmpty {
 }
 impl IsEmpty {
     /// 判断是否为 tensor，若 tensor 全为 0 则视为空遮罩
-    fn is_empty_tensor_mask<'py>(
-        &self,
+    pub fn is_empty_tensor_mask<'py>(
         py: Python<'py>,
         input: &Bound<'py, PyAny>,
     ) -> Result<(bool,), Error> {

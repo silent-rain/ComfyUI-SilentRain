@@ -17,7 +17,7 @@ use pyo3::{
 
 use crate::{
     core::{
-        category::CATEGORY_IMAGE,
+        category::CATEGORY_MASK,
         node_base::{InputSpec, InputType},
     },
     error::Error,
@@ -69,7 +69,7 @@ impl ResizeMaskByShorterEdge {
 
     #[classattr]
     #[pyo3(name = "CATEGORY")]
-    const CATEGORY: &'static str = CATEGORY_IMAGE;
+    const CATEGORY: &'static str = CATEGORY_MASK;
 
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]

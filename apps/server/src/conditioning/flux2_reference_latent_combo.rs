@@ -29,7 +29,7 @@ use crate::{
     image::ResizeImageMaskByLongerEdge,
     wrapper::comfyui::{
         PromptServer,
-        types::{NODE_CONDITIONING, NODE_LATENT},
+        types::{NODE_CONDITIONING, NODE_LATENT, NODE_MASK},
     },
 };
 
@@ -56,25 +56,38 @@ impl Flux2ReferenceLatentCombo {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str, &'static str, &'static str) {
+    fn return_types() -> (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+    ) {
         (
             NODE_CONDITIONING,
             NODE_CONDITIONING,
             NODE_LATENT,
             NODE_LATENT,
+            NODE_MASK,
         )
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str, &'static str, &'static str) {
-        ("positive", "negative", "latent", "main_latent")
+    fn return_names() -> (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+    ) {
+        ("positive", "negative", "latent", "main_latent", "main_mask")
     }
 
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool, bool) {
-        (false, false, false)
+    fn output_is_list() -> (bool, bool, bool, bool, bool) {
+        (false, false, false, false, false)
     }
 
     #[classattr]
@@ -154,6 +167,7 @@ impl Flux2ReferenceLatentCombo {
         ref_image4: Option<Bound<'py, PyAny>>,
         ref_image5: Option<Bound<'py, PyAny>>,
     ) -> PyResult<(
+        Bound<'py, PyAny>,
         Bound<'py, PyAny>,
         Bound<'py, PyAny>,
         Bound<'py, PyAny>,
@@ -311,6 +325,7 @@ impl Flux2ReferenceLatentCombo {
             Bound<'py, PyAny>,
             Bound<'py, PyAny>,
             Bound<'py, PyAny>,
+            Bound<'py, PyAny>,
         ),
         Error,
     > {
@@ -318,17 +333,17 @@ impl Flux2ReferenceLatentCombo {
         let use_ref_edge_indices = Self::parse_ref_long_index(&ref_long_index);
 
         // 1. 处理 main_image：使用 ResizeImageMaskByLongerEdge 缩放图像和遮罩
-        let (main_resized, main_mask_resized) =
+        let (main_image_resized, main_mask_resized) =
             Self::resize_image_mask(py, &main_image, main_long_edge, main_mask.as_ref())?;
-        let main_latent = Self::vae_encode(py, &vae, &main_resized)?;
+        let main_latent = Self::vae_encode(py, &vae, &main_image_resized)?;
 
         // 2. 获取缩放后图像的宽高
-        let (width, height) = Self::get_image_size(&main_resized)?;
+        let (width, height) = Self::get_image_size(&main_image_resized)?;
 
         // 3. 根据是否有 main_mask 决定 latent 生成方式
         let latent = if main_mask.is_some() {
             // 有遮罩：使用 VAEEncodeForInpaint
-            Self::vae_encode_for_inpaint(py, &vae, &main_resized, &main_mask_resized)?
+            Self::vae_encode_for_inpaint(py, &vae, &main_image_resized, &main_mask_resized)?
         } else {
             // 无遮罩：使用 EmptyFlux2LatentImage 生成空 latent
             Self::empty_flux2_latent(py, width, height)?
@@ -361,6 +376,6 @@ impl Flux2ReferenceLatentCombo {
             neg = Self::apply_reference_latent(py, &neg, &ref_latent)?;
         }
 
-        Ok((pos, neg, latent, main_latent))
+        Ok((pos, neg, latent, main_latent, main_mask_resized))
     }
 }

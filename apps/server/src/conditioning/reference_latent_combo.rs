@@ -23,9 +23,10 @@ use crate::{
         node_base::{InputSpec, InputType},
     },
     error::Error,
+    image::ResizeImageMaskByLongerEdge,
     wrapper::comfyui::{
         PromptServer,
-        types::{NODE_CONDITIONING, NODE_LATENT},
+        types::{NODE_CONDITIONING, NODE_INT, NODE_LATENT, NODE_MASK},
     },
 };
 const DEFAULT_REF_LONG_EDGE: i64 = 512;
@@ -51,20 +52,48 @@ impl ReferenceLatentCombo {
 
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]
-    fn return_types() -> (&'static str, &'static str, &'static str) {
-        (NODE_CONDITIONING, NODE_CONDITIONING, NODE_LATENT)
+    fn return_types() -> (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+    ) {
+        (
+            NODE_CONDITIONING,
+            NODE_CONDITIONING,
+            NODE_LATENT,
+            NODE_MASK,
+            NODE_INT,
+            NODE_INT,
+        )
     }
 
     #[classattr]
     #[pyo3(name = "RETURN_NAMES")]
-    fn return_names() -> (&'static str, &'static str, &'static str) {
-        ("positive", "negative", "main_latent")
+    fn return_names() -> (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+    ) {
+        (
+            "positive",
+            "negative",
+            "main_latent",
+            "main_mask",
+            "width",
+            "height",
+        )
     }
 
     #[classattr]
     #[pyo3(name = "OUTPUT_IS_LIST")]
-    fn output_is_list() -> (bool, bool, bool) {
-        (false, false, false)
+    fn output_is_list() -> (bool, bool, bool, bool, bool, bool) {
+        (false, false, false, false, false, false)
     }
 
     #[classattr]
@@ -90,6 +119,7 @@ impl ReferenceLatentCombo {
             .with_required("positive", InputType::conditioning())
             .with_required("negative", InputType::conditioning())
             .with_required("main_image", InputType::image())
+            .with_optional("main_mask", InputType::mask())
             .with_required(
                 "main_long_edge",
                 InputType::int()
@@ -122,7 +152,8 @@ impl ReferenceLatentCombo {
             .build()
     }
 
-    #[pyo3(name = "execute", signature = (positive, negative, vae, main_image, main_long_edge, ref_long_index, ref_long_edge, ref_image1=None, ref_image2=None, ref_image3=None, ref_image4=None, ref_image5=None))]
+    #[pyo3(name = "execute", signature = (positive, negative, vae, main_image, main_long_edge, ref_long_index, ref_long_edge, main_mask=None, ref_image1=None, ref_image2=None, ref_image3=None, ref_image4=None, ref_image5=None))]
+    #[allow(clippy::type_complexity)]
     #[allow(clippy::too_many_arguments)]
     fn execute<'py>(
         &self,
@@ -134,12 +165,20 @@ impl ReferenceLatentCombo {
         main_long_edge: i64,
         ref_long_index: String,
         ref_long_edge: i64,
+        main_mask: Option<Bound<'py, PyAny>>,
         ref_image1: Option<Bound<'py, PyAny>>,
         ref_image2: Option<Bound<'py, PyAny>>,
         ref_image3: Option<Bound<'py, PyAny>>,
         ref_image4: Option<Bound<'py, PyAny>>,
         ref_image5: Option<Bound<'py, PyAny>>,
-    ) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>, Bound<'py, PyAny>)> {
+    ) -> PyResult<(
+        Bound<'py, PyAny>,
+        Bound<'py, PyAny>,
+        Bound<'py, PyAny>,
+        Bound<'py, PyAny>,
+        i64,
+        i64,
+    )> {
         let result = self.run(
             py,
             positive,
@@ -149,6 +188,7 @@ impl ReferenceLatentCombo {
             main_long_edge,
             ref_long_index,
             ref_long_edge,
+            main_mask,
             [ref_image1, ref_image2, ref_image3, ref_image4, ref_image5],
         );
 
@@ -176,6 +216,20 @@ impl ReferenceLatentCombo {
             .collect()
     }
 
+    /// 直接调用 ResizeImageMaskByLongerEdge Rust 实现缩放图像和遮罩
+    /// 返回 (resized_image, resized_mask_or_zeros)
+    fn resize_image_mask<'py>(
+        py: Python<'py>,
+        image: &Bound<'py, PyAny>,
+        longer_edge: i64,
+        mask: Option<&Bound<'py, PyAny>>,
+    ) -> Result<(Bound<'py, PyAny>, Bound<'py, PyAny>), Error> {
+        let node = ResizeImageMaskByLongerEdge::new();
+        let (resized_image, resized_mask) =
+            node.run(py, image.clone(), longer_edge, mask.cloned())?;
+        Ok((resized_image, resized_mask))
+    }
+
     /// 通过 Python 调用 ResizeImagesByLongerEdge.execute(images, longer_edge)
     /// 返回缩放后的图像 tensor
     fn resize_image<'py>(
@@ -192,6 +246,16 @@ impl ReferenceLatentCombo {
         // NodeOutput 是一个包含结果的对象，取第一个输出
         let result = node_output.get_item(0)?;
         Ok(result)
+    }
+
+    /// 获取图像的宽高（从 tensor shape 直接读取）
+    /// 返回 (width, height)
+    fn get_image_size<'py>(image: &Bound<'py, PyAny>) -> Result<(i64, i64), Error> {
+        // image 形状为 [B, H, W, C]
+        let shape = image.getattr("shape")?;
+        let height: i64 = shape.get_item(1)?.extract()?;
+        let width: i64 = shape.get_item(2)?.extract()?;
+        Ok((width, height))
     }
 
     /// 通过 Python 调用 VAEEncode.encode(vae, pixels)
@@ -245,22 +309,34 @@ impl ReferenceLatentCombo {
         main_long_edge: i64,
         ref_long_index: String,
         ref_long_edge: i64,
+        main_mask: Option<Bound<'py, PyAny>>,
         ref_images: [Option<Bound<'py, PyAny>>; 5],
-    ) -> Result<(Bound<'py, PyAny>, Bound<'py, PyAny>, Bound<'py, PyAny>), Error> {
+    ) -> Result<
+        (
+            Bound<'py, PyAny>,
+            Bound<'py, PyAny>,
+            Bound<'py, PyAny>,
+            Bound<'py, PyAny>,
+            i64,
+            i64,
+        ),
+        Error,
+    > {
         // 解析哪些 ref 图像使用 ref_long_edge
         let use_ref_edge_indices = Self::parse_ref_long_index(&ref_long_index);
 
-        // 1. 处理 main_image：缩放 → VAE 编码
-        let main_resized = Self::resize_image(py, &main_image, main_long_edge)?;
-        let main_latent = Self::vae_encode(py, &vae, &main_resized)?;
+        // 1. 处理 main_image：使用 ResizeImageMaskByLongerEdge 缩放图像和遮罩
+        let (main_image_resized, main_mask_resized) =
+            Self::resize_image_mask(py, &main_image, main_long_edge, main_mask.as_ref())?;
+        let main_latent = Self::vae_encode(py, &vae, &main_image_resized)?;
 
-        // 2. 将 main latent 应用到 positive 和 negative
+        // 3. 将 main latent 应用到 positive 和 negative
         let mut pos = positive;
         let mut neg = negative;
         pos = Self::apply_reference_latent(py, &pos, &main_latent)?;
         neg = Self::apply_reference_latent(py, &neg, &main_latent)?;
 
-        // 3. 处理每张 ref 图像
+        // 4. 处理每张 ref 图像
         for (i, ref_image_opt) in ref_images.into_iter().enumerate() {
             let ref_idx = i + 1; // 1-based
             let Some(ref_image) = ref_image_opt else {
@@ -281,6 +357,9 @@ impl ReferenceLatentCombo {
             neg = Self::apply_reference_latent(py, &neg, &ref_latent)?;
         }
 
-        Ok((pos, neg, main_latent))
+        // 2. 获取缩放后图像的宽高
+        let (width, height) = Self::get_image_size(&main_image_resized)?;
+
+        Ok((pos, neg, main_latent, main_mask_resized, width, height))
     }
 }
