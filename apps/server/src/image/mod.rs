@@ -40,6 +40,12 @@ pub use image_preset_resolution::ImagePresetResolution;
 mod image_custom_resolution;
 pub use image_custom_resolution::ImageCustomResolution;
 
+mod resize_image_mask_by_longer_edge;
+pub use resize_image_mask_by_longer_edge::ResizeImageMaskByLongerEdge;
+
+mod resize_image_mask_by_shorter_edge;
+pub use resize_image_mask_by_shorter_edge::ResizeImageMaskByShorterEdge;
+
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "image")?;
@@ -54,6 +60,8 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<ImageAttachmentText>()?;
     submodule.add_class::<ImagePresetResolution>()?;
     submodule.add_class::<ImageCustomResolution>()?;
+    submodule.add_class::<ResizeImageMaskByLongerEdge>()?;
+    submodule.add_class::<ResizeImageMaskByShorterEdge>()?;
     Ok(submodule)
 }
 
@@ -110,6 +118,16 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "ImageCustomResolution",
             py.get_type::<ImageCustomResolution>(),
             "Sr Image Custom Resolution",
+        ),
+        NodeRegister(
+            "ResizeImageMaskByLongerEdge",
+            py.get_type::<ResizeImageMaskByLongerEdge>(),
+            "Sr Resize Image Mask By Longer Edge",
+        ),
+        NodeRegister(
+            "ResizeImageMaskByShorterEdge",
+            py.get_type::<ResizeImageMaskByShorterEdge>(),
+            "Sr Resize Image Mask By Shorter Edge",
         ),
     ];
     Ok(nodes)
