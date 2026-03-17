@@ -13,8 +13,8 @@ use string_dyn_list::StringDynList;
 mod any_dyn_list;
 use any_dyn_list::AnyDynList;
 
-mod workflow_image;
-use workflow_image::register_workflow_image_export;
+// mod workflow_image;
+// use workflow_image::register_workflow_image_export;
 
 mod workflow_image_export;
 use workflow_image_export::register_workflow_image_export as register_workflow_image_export_full;
@@ -98,7 +98,7 @@ fn run() -> Result<(), JsValue> {
         menu_items.push(&JsValue::NULL);
 
         // 注册工作流图片导出功能注册菜单
-        menu_items.push(&register_workflow_image_export()?);
+        // menu_items.push(&register_workflow_image_export()?);
 
         Ok(menu_items.into())
     })?;
