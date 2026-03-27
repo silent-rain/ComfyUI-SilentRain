@@ -45,6 +45,8 @@ mod llama_cpp_image_caption_v2;
 pub use llama_cpp_image_caption_v2::LlamaCppImageCaptionv2;
 mod llama_cpp_purge_vram_v2;
 pub use llama_cpp_purge_vram_v2::LlamaCppPurgeVramv2;
+mod llama_cpp_image_caption_v3;
+pub use llama_cpp_image_caption_v3::LlamaCppImageCaptionv3;
 
 /// 逻辑模块
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
@@ -60,6 +62,7 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<LlamaCppPromptHelperv2>()?;
     submodule.add_class::<LlamaCppImageCaptionv2>()?;
     submodule.add_class::<LlamaCppPurgeVramv2>()?;
+    submodule.add_class::<LlamaCppImageCaptionv3>()?;
     Ok(submodule)
 }
 
@@ -112,6 +115,11 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "LlamaCppPurgeVramv2",
             py.get_type::<LlamaCppPurgeVramv2>(),
             "Sr Llama Cpp Purge Vram v2",
+        ),
+        NodeRegister(
+            "LlamaCppImageCaptionv3",
+            py.get_type::<LlamaCppImageCaptionv3>(),
+            "Sr Llama Cpp Image Caption v3",
         ),
     ];
     Ok(nodes)

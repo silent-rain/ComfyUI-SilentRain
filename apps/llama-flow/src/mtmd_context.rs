@@ -101,6 +101,7 @@ impl MtmdContextWrapper {
             tokens.len(),
             self.contex_params.n_ctx,
             self.contex_params.max_predict(),
+            self.contex_params.n_batch,
         )?;
 
         self.rest_batch(self.contex_params.n_predict as usize)?;

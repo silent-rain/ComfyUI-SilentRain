@@ -9,8 +9,13 @@ use crate::core::node::NodeRegister;
 
 mod joy_caption_extra_options;
 pub use joy_caption_extra_options::JoyCaptionExtraOptions;
+mod joy_caption_extra_options_zh;
+pub use joy_caption_extra_options_zh::JoyCaptionExtraOptionsZh;
+
 mod joy_caption_ollama_prompter;
 pub use joy_caption_ollama_prompter::JoyCaptionOllamaPrompter;
+mod joy_caption_ollama_prompter_zh;
+pub use joy_caption_ollama_prompter_zh::JoyCaptionOllamaPrompterZh;
 
 mod joycaption_predictor;
 pub use joycaption_predictor::JoyCaptionPredictorGGUF;
@@ -25,7 +30,9 @@ pub use joycaption_beta_one_custom_gguf::JoyCaptionBetaOneCustomGGUF;
 pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     let submodule = PyModule::new(py, "joycaption")?;
     submodule.add_class::<JoyCaptionExtraOptions>()?;
+    submodule.add_class::<JoyCaptionExtraOptionsZh>()?;
     submodule.add_class::<JoyCaptionOllamaPrompter>()?;
+    submodule.add_class::<JoyCaptionOllamaPrompterZh>()?;
     submodule.add_class::<JoyCaptionBetaOneGGUF>()?;
     submodule.add_class::<JoyCaptionBetaOneCustomGGUF>()?;
     Ok(submodule)
@@ -40,9 +47,19 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             "Sr JoyCaption Extra Options",
         ),
         NodeRegister(
+            "JoyCaptionExtraOptionsZh",
+            py.get_type::<JoyCaptionExtraOptionsZh>(),
+            "Sr JoyCaption Extra Options Zh",
+        ),
+        NodeRegister(
             "JoyCaptionOllamaPrompter",
             py.get_type::<JoyCaptionOllamaPrompter>(),
             "Sr JoyCaption Ollama Prompter",
+        ),
+        NodeRegister(
+            "JoyCaptionOllamaPrompterZh",
+            py.get_type::<JoyCaptionOllamaPrompterZh>(),
+            "Sr JoyCaption Ollama Prompter Zh",
         ),
         NodeRegister(
             "JoyCaptionBetaOneGGUF",

@@ -267,6 +267,7 @@ impl ContextWrapper {
             tokens.len(),
             self.contex_params.n_ctx,
             self.contex_params.max_predict(),
+            self.contex_params.n_batch,
         )?;
 
         self.rest_batch(self.contex_params.max_predict() as usize)?;
@@ -534,6 +535,7 @@ impl ContextWrapper {
         tokens_size: usize,
         n_ctx: u32,
         n_predict: i32,
+        n_batch: u32,
     ) -> Result<(), Error> {
         info!("validate tokens size ...");
         // 验证 token 数量
@@ -541,6 +543,12 @@ impl ContextWrapper {
             if tokens_size > n_ctx as usize {
                 return Err(Error::InvalidParameter(
                     "the prompt is too long, it has more tokens than n_ctx".to_string(),
+                ));
+            }
+
+            if tokens_size > n_batch as usize {
+                return Err(Error::InvalidParameter(
+                    "tokens_size is be less than or equal to n_batch".to_string(),
                 ));
             }
 
@@ -559,6 +567,12 @@ impl ContextWrapper {
         if tokens_size >= n_predict as usize {
             return Err(Error::InvalidParameter(
                 "the prompt is too long, it has more tokens than n_predict".to_string(),
+            ));
+        }
+
+        if tokens_size > n_batch as usize {
+            return Err(Error::InvalidParameter(
+                "tokens_size is be less than or equal to n_batch".to_string(),
             ));
         }
 

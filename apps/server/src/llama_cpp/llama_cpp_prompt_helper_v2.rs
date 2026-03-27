@@ -385,7 +385,7 @@ impl LlamaCppPromptHelperv2 {
         if let Some(entry) = cache.get_data::<Pipeline>(&llama_cpp_model_params.cache_model_key)? {
             info!(
                 "MtmdContext cache hit: {:?}",
-                pipeline_config.model.mmproj_path
+                pipeline_config.model.model_path
             );
             return Ok(entry);
         }
@@ -394,8 +394,12 @@ impl LlamaCppPromptHelperv2 {
 
         // 缓存参数
         let params = vec![
+            pipeline_config.model.model_path.clone(),
             pipeline_config.model.mmproj_path.clone(),
             pipeline_config.model.n_gpu_layers.to_string(),
+            pipeline_config.model.main_gpu.to_string(),
+            pipeline_config.model.cmoe.to_string(),
+            pipeline_config.model.devices_str(),
             pipeline_config
                 .model
                 .media_marker

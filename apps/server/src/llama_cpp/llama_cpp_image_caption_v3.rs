@@ -1,6 +1,5 @@
-//! llama.cpp Image Caption v2
+//! llama.cpp Image Caption v3
 //! 支持图像反推
-use std::sync::Arc;
 
 use log::error;
 use pyo3::{
@@ -10,7 +9,6 @@ use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyType},
 };
 use pythonize::depythonize;
-use tokio::sync::Semaphore;
 use tracing::info;
 use uuid::Uuid;
 
@@ -39,14 +37,14 @@ use crate::{
     },
 };
 
-/// LlamaCpp Image Caption v2
+/// LlamaCpp Image Caption v3
 #[pyclass(subclass)]
-pub struct LlamaCppImageCaptionv2 {}
+pub struct LlamaCppImageCaptionv3 {}
 
-impl PromptServer for LlamaCppImageCaptionv2 {}
+impl PromptServer for LlamaCppImageCaptionv3 {}
 
 #[pymethods]
-impl LlamaCppImageCaptionv2 {
+impl LlamaCppImageCaptionv3 {
     #[new]
     fn new() -> PyResult<Self> {
         Ok(Self {})
@@ -83,7 +81,7 @@ impl LlamaCppImageCaptionv2 {
     #[classattr]
     #[pyo3(name = "DESCRIPTION")]
     fn description() -> &'static str {
-        "llama.cpp image caption v2."
+        "llama.cpp image caption v3."
     }
 
     #[classattr]
@@ -277,68 +275,26 @@ impl LlamaCppImageCaptionv2 {
             return Ok((Vec::new(),));
         }
 
-        // 获取 comfy.utils.ProgressBar
-        let comfy = py.import("comfy")?;
-        let utils = comfy.getattr("utils")?;
-        // 创建 ProgressBar，总数为任务数
-        let pbar = utils.call_method1("ProgressBar", (total_tasks,))?;
-
-        // 创建进度通道
-        let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
-
-        // 将 Bound 转换为 PyObject，这样才能跨线程传递
-        // Py<PyAny> 是 Send + Sync，可以安全地跨线程
-        let pbar_py: Py<pyo3::PyAny> = pbar.unbind();
-        let progress_handle = std::thread::spawn(move || {
-            for _ in progress_rx {
-                // 获取 GIL 并更新 ProgressBar
-                Python::attach(|py| {
-                    if let Err(e) = pbar_py.bind(py).call_method1("update", (1,)) {
-                        error!("Failed to update progress bar: {e}");
-                    }
-                });
-            }
-        });
-
-        let futures = self.generate(
+        let result = self.generate(
+            py,
             pipeline_config,
             requests,
             llama_cpp_model_params,
-            progress_tx,
             session_id,
             keep_context,
         );
 
-        // 使用 allow_threads 释放 GIL，然后在内部运行异步代码
-        let result = py.detach(move || {
-            let rt = tokio::runtime::Runtime::new().map_err(|e| {
-                error!("Failed to create tokio runtime: {e}");
-                PyErr::new::<PyRuntimeError, _>(format!("Failed to create tokio runtime: {e}"))
-            })?;
-
-            rt.block_on(async {
-                let result: Result<_, Error> = futures.await;
-
-                match result {
-                    Ok(v) => Ok(v),
-                    Err(e) => {
-                        error!("LlamaCppImageCaptionv2 error: {e}");
-                        Err(PyErr::new::<PyRuntimeError, _>(e.to_string()))
-                    }
-                }
-            })
-        });
-
-        // 等待进度线程完成
-        if let Err(e) = progress_handle.join() {
-            error!("Progress thread panicked: {:?}", e);
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                error!("LlamaCppImageCaptionv2 error: {e}");
+                Err(PyErr::new::<PyRuntimeError, _>(e.to_string()))
+            }
         }
-
-        result
     }
 }
 
-impl LlamaCppImageCaptionv2 {
+impl LlamaCppImageCaptionv3 {
     /// 解析参数
     #[allow(clippy::too_many_arguments)]
     fn options_parser<'py>(
@@ -426,68 +382,44 @@ impl LlamaCppImageCaptionv2 {
 
     /// 生成聊天响应
     #[allow(clippy::too_many_arguments)]
-    async fn generate(
+    fn generate<'py>(
         &self,
+        py: Python<'py>,
         pipeline_config: PipelineConfig,
         requests: Vec<Request>,
         llama_cpp_model_params: LlamaCppModelParams,
-        progress_tx: std::sync::mpsc::Sender<()>,
         session_id: String,
         keep_context: bool,
     ) -> Result<(Vec<String>,), Error> {
-        let concurrency_limit = 1;
-        let semaphore = Arc::new(Semaphore::new(concurrency_limit as usize));
+        // 移除上下文
+        if !keep_context {
+            let chat_history = chat_history();
+            chat_history.remove(&session_id);
+        }
+
         let pipeline =
             LlamaCppPromptHelperv2::load_pipeline(pipeline_config, llama_cpp_model_params)?;
 
+        // 获取 comfy.utils.ProgressBar
+        // 创建 ProgressBar，总数为 n
+        let pbar = py
+            .import("comfy")?
+            .getattr("utils")?
+            .call_method1("ProgressBar", (requests.len(),))?;
+
         // 生成所有并行任务
-        let handles = requests
-            .into_iter()
-            .enumerate()
-            .map(|(i, request)| {
-                let semaphore = Arc::clone(&semaphore);
-                let pipeline_clone = pipeline.clone();
-                let progress_tx_clone = progress_tx.clone();
-                let session_id_clone = session_id.clone();
+        let mut results = Vec::new();
+        for (i, request) in requests.into_iter().enumerate() {
+            let output = pipeline.generate_block(&request)?;
 
-                tokio::spawn(async move {
-                    let _permit = semaphore.acquire().await.map_err(|e| {
-                        error!("获取Semaphore许可失败, err: {:#?}", e);
-                        Error::AcquireError(e.to_string())
-                    })?;
+            // 更新进度条，每次增加 1
+            pbar.call_method1("update", (1,))?;
 
-                    let output = pipeline_clone.generate(&request).await?;
+            info!("image {i} processing completed");
+            let content = response_extract_content(&output);
+            results.push(content);
+        }
 
-                    // 移除上下文
-                    if !keep_context {
-                        let chat_history = chat_history();
-                        chat_history.remove(&session_id_clone);
-                    }
-
-                    // 任务完成，发送进度信号
-                    if let Err(e) = progress_tx_clone.send(()) {
-                        error!("发送进度信号失败: {e}");
-                    }
-
-                    info!("image {i} processing completed");
-                    let content = response_extract_content(&output);
-                    Ok::<_, Error>(content)
-                })
-            })
-            .collect::<Vec<_>>();
-
-        // 并行执行所有任务并收集结果
-        let results = futures::future::try_join_all(handles)
-            .await
-            .map_err(|e| {
-                error!("任务执行失败, err: {:#?}", e);
-                Error::TaskJoinError(e.to_string())
-            })?
-            .into_iter()
-            .collect::<Result<Vec<String>, Error>>()?;
-
-        // 关闭通道
-        drop(progress_tx);
         Ok((results,))
     }
 }

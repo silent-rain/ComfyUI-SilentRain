@@ -63,6 +63,12 @@ impl LlamaCppPurgeVram {
         true
     }
 
+    #[classattr]
+    #[pyo3(name = "DEPRECATED")]
+    fn deprecated() -> bool {
+        true
+    }
+
     // 返回参数类型
     #[classattr]
     #[pyo3(name = "RETURN_TYPES")]

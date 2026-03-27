@@ -44,6 +44,12 @@ impl LlamaCppChat {
     // }
 
     #[classattr]
+    #[pyo3(name = "DEPRECATED")]
+    fn deprecated() -> bool {
+        true
+    }
+
+    #[classattr]
     #[pyo3(name = "INPUT_IS_LIST")]
     fn input_is_list() -> bool {
         false

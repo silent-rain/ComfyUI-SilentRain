@@ -20,8 +20,12 @@ use tracing::info;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logger();
 
-    let model_path = "/data/ComfyUI/models/LLM/GGUF/Qwen3.5-2B-heretic-Q8_0.gguf".to_string();
-    let pipeline_config = PipelineConfig::new(model_path).with_verbose(false);
+    let model_path =
+        "/data/ComfyUI/models/LLM/GGUF/Gliese-Qwen3.5-0.8B-Abliterated-Caption.Q8_0.gguf"
+            .to_string();
+    let pipeline_config = PipelineConfig::new(model_path)
+        .with_verbose(false)
+        .with_n_batch(2048);
 
     let pipeline = Arc::new(Pipeline::try_new(pipeline_config)?);
 
