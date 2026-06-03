@@ -71,7 +71,7 @@ impl ExampleNode {
             .with_input_list(false) // 输入是否为列表, 可选
             .with_output_node(false) // 是否为输出节点, 可选
             .with_inputs([
-                ImageInput::new("image").into(),
+                // ImageInput::new("image").into(),
                 IntInput::new("int_field")
                     .with_min(0)
                     .with_max(4096)
@@ -86,11 +86,11 @@ impl ExampleNode {
                     .with_round(0.001)
                     .with_lazy(true)
                     .into(),
-                ComboInput::new("print_to_screen", ["enable", "disable"]).into(),
                 StringInput::new("string_field")
                     .with_default("Hello world!")
                     .with_lazy(true)
                     .into(),
+                ComboInput::new("print_to_screen", ["enable", "disable"]).into(),
             ])
             .with_outputs([Output::image("imageout")])
             .with_hidden([Hidden::UNIQUE_ID, Hidden::EXTRA_PNGINFO])
@@ -281,6 +281,38 @@ mod tests {
             // schema is a Python object; verify it has expected attributes
             let node_id: String = schema.getattr("node_id")?.extract()?;
             assert_eq!(node_id, "Example");
+            Ok(())
+        })?;
+
+        Ok(())
+    }
+
+    // cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_execute --nocapture
+    #[test]
+    fn test_execute() -> anyhow::Result<()> {
+        Python::attach(|py| -> PyResult<()> {
+            // 添加模块搜索路径
+            let sys = py.import("sys")?;
+            let binding = sys.getattr("path")?;
+            let path = binding.cast::<PyList>()?;
+            path.insert(0, "/data/ComfyUI")?; // 或者使用 append
+
+            // 测试直接在 Rust 中调用类方法
+            let class = py.get_type::<ExampleNode>();
+
+            let args = PyTuple::new(py, Vec::<i32>::new())?;
+
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("image", "x")?;
+            kwargs.set_item("int_field", 1)?;
+            kwargs.set_item("float_field", 1.0)?;
+            kwargs.set_item("string_field", "Hello world!")?;
+            kwargs.set_item("print_to_screen", "enable")?;
+
+            let result = ExampleNode::execute(&class, py, &args, Some(kwargs))?;
+
+            println!("=== {:?}", result);
+
             Ok(())
         })?;
 

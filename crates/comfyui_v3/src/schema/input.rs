@@ -405,6 +405,8 @@ pub enum Input {
     String(StringInput),
     Bool(BoolInput),
     Combo(ComboInput),
+    MultiCombo(MultiComboInput),
+    Custom(CustomInput),
     Image(ImageInput),
     // -- typed ComfyUI data-flow types --
     Model(TypedInput),
@@ -413,8 +415,6 @@ pub enum Input {
     Conditioning(TypedInput),
     Latent(TypedInput),
     Mask(TypedInput),
-    MultiCombo(MultiComboInput),
-    Custom(CustomInput),
 }
 
 impl Input {
@@ -528,7 +528,7 @@ impl IntInput {
         if self.display_mode != NumberDisplayMode::Number {
             let _ = kwargs.set_item("display_mode", self.display_mode.to_py_variant(py)?);
         }
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -615,7 +615,7 @@ impl FloatInput {
         if self.display_mode != NumberDisplayMode::Number {
             let _ = kwargs.set_item("display_mode", self.display_mode.to_py_variant(py)?);
         }
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -688,7 +688,7 @@ impl StringInput {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
         let cls = io.getattr("String")?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -756,7 +756,7 @@ impl BoolInput {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
         let cls = io.getattr("Bool")?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -779,7 +779,6 @@ pub struct ComboInput {
     #[serde(skip_serializing_if = "Option::is_none")]
     remote: Option<RemoteOptions>,
     socketless: bool,
-    force_input: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     raw_link: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -816,10 +815,6 @@ impl ComboInput {
     }
     pub fn with_socketless(mut self, v: bool) -> Self {
         self.socketless = v;
-        self
-    }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
         self
     }
     pub fn with_default(mut self, v: impl Into<String>) -> Self {
@@ -871,7 +866,7 @@ impl ComboInput {
             let _ = kwargs.set_item("image_folder", folder.to_py_variant(py)?);
         }
 
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -924,7 +919,7 @@ impl ImageInput {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
         let cls = io.getattr("Image")?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -1019,7 +1014,7 @@ impl TypedInput {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
         let cls = io.getattr(self._type_tag)?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
@@ -1092,7 +1087,7 @@ impl MultiComboInput {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
         let cls = io.getattr("MultiCombo")?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
-        cls.call((&self.id,), Some(&kwargs))
+        cls.call((), Some(&kwargs))
     }
 }
 
