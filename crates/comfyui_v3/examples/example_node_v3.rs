@@ -28,7 +28,7 @@ use pyo3::{
 use comfyui_v3::{
     node::{ComfyNode, ExtensionBuilder, PromptServer, extension::pytype_wrapper},
     schema::{
-        NodeSchema,
+        NodeOutput, NodeSchema,
         hidden::Hidden,
         input::{ComboInput, FloatInput, ImageInput, IntInput, StringInput},
         output::Output,
@@ -151,8 +151,18 @@ impl ExampleNode {
         let inverted = one.bind(py).call_method1("__sub__", (image,))?;
 
         // Build return dict { "imageout": inverted }
-        let ret = PyDict::new(py);
-        ret.set_item("imageout", inverted)?;
+        // let ret = PyDict::new(py);
+        // ret.set_item("imageout", inverted)?;
+
+        println!("======================");
+
+        let ret = NodeOutput::new().add_arg(inverted.into()).to_py_obj(py)?;
+
+        {
+            let binding = ret.call_method0("result")?;
+            let result = binding.cast::<PyDict>()?;
+            println!("result: {:?}", result);
+        }
 
         Ok(ret.into_any())
     }
