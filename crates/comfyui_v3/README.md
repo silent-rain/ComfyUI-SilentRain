@@ -30,3 +30,17 @@ rustflags = [
     }
 }
 ```
+
+- 运行单元测试
+
+```sh
+# 启用 ComfyUI 虚拟环境
+source .venv/bin/activate
+
+
+# 手动设置临时环境变量
+# export PYO3_PYTHON="/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12"
+# export LD_LIBRARY_PATH=/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib
+
+cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_execute --nocapture
+```
