@@ -906,6 +906,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "comfyui_v3"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "indexmap",
+ "log",
+ "pyo3",
+ "pythonize",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

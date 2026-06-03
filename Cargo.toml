@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["apps/comfy_app", "apps/llama-flow", "apps/server", "apps/web"]
+members = [
+    "apps/comfy_app",
+    "apps/llama-flow",
+    "apps/server",
+    "apps/web",
+    "crates/comfyui_v3",
+]
 
 
 [profile.dev]

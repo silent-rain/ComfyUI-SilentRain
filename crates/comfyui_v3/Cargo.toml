@@ -1,0 +1,28 @@
+[package]
+name = "comfyui_v3"
+version = "0.1.0"
+edition = "2024"
+# rust-version = "1.85"
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
+[dependencies]
+pyo3 = { workspace = true, features = ["extension-module"] }
+pythonize = { workspace = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
