@@ -393,6 +393,8 @@ impl NodeOutput {
         // Build args tuple
         let py_args = PyTuple::new(py, &self.args)?;
 
+        println!("==================14");
+
         // Build kwargs dict
         let kwargs = PyDict::new(py);
         if let Some(ref ui) = self.ui {
@@ -405,8 +407,13 @@ impl NodeOutput {
             kwargs.set_item("block_execution", msg)?;
         }
 
+        println!("==================1");
+
+        println!("args: {}, kwargs: {:?}", py_args, kwargs);
+
         if kwargs.is_empty() {
             cls.call1(py_args)
+            // cls.call(py_args, Some(&kwargs))
         } else {
             cls.call(py_args, Some(&kwargs))
         }

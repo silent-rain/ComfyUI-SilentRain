@@ -154,8 +154,6 @@ impl ExampleNode {
         // let ret = PyDict::new(py);
         // ret.set_item("imageout", inverted)?;
 
-        println!("======================");
-
         let ret = NodeOutput::new().add_arg(inverted.into()).to_py_obj(py)?;
 
         {
