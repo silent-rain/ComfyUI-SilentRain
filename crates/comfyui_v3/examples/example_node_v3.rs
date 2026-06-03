@@ -14,18 +14,19 @@
 //! Python::with_gil(|py| {
 //!     let ext = ExtensionBuilder::new("ExampleExtension")
 //!         .with_node::<ExampleNode>()
-//!         .build(py)
-//!         .unwrap();
+//!         .build(py)?;
 //! })
 //! ```
 
 use pyo3::{
+    exceptions::PyRuntimeError,
     prelude::*,
-    types::{PyDict, PyTuple},
+    pymethods,
+    types::{PyDict, PyTuple, PyType},
 };
 
 use comfyui_v3::{
-    node::{ComfyNode, ExtensionBuilder},
+    node::{ComfyNode, ExtensionBuilder, PromptServer, extension::pytype_wrapper},
     schema::{
         NodeSchema,
         hidden::Hidden,
@@ -42,17 +43,25 @@ use comfyui_v3::{
 ///
 /// This node inverts an image and optionally prints input values to the screen.
 /// It mirrors the Python `Example` node from `example_node_v3.py`.
+#[pyclass(subclass)]
 #[derive(Default)]
 pub struct ExampleNode;
 
-impl ComfyNode for ExampleNode {
+impl PromptServer for ExampleNode {}
+
+#[pymethods]
+impl ExampleNode {
     /// Define the node's schema (metadata, inputs, outputs).
     ///
     /// Called once at registration time. Returns a Python object compatible
     /// with ComfyUI v3's `NodeOptions` — in this example we build a
     /// [`NodeSchema`] on the Rust side and convert it to Python via
     /// [`NodeSchema::into_py_schema`].
-    fn define_schema<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    #[classmethod]
+    fn define_schema<'py>(
+        _cls: Bound<'py, PyType>,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         NodeSchema::new("Example") // 节点ID
             .with_display_name("Example Node") // 节点显示名称
             .with_category("Example") // 节点分类
@@ -93,19 +102,40 @@ impl ComfyNode for ExampleNode {
     /// Receives `*args` and `**kwargs` exactly as Python would call it.
     /// For this example we pull inputs by name from kwargs (ComfyUI v3
     /// convention) and return a dict with the output value(s).
+    #[classmethod]
+    #[pyo3(signature = (*args, **kwargs))]
     fn execute<'py>(
-        &self,
+        _cls: &Bound<'_, PyType>,
         py: Python<'py>,
-        _args: &Bound<'py, PyTuple>,
-        kwargs: &Bound<'py, PyDict>,
+        args: &Bound<'py, PyTuple>,
+        kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let image: Py<PyAny> = kwargs.get_item("image")?.unwrap().unbind();
-        let print_to_screen: String = kwargs.get_item("print_to_screen")?.unwrap().extract()?;
+        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+
+        let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
+
+        let image: Py<PyAny> = kwargs
+            .get_item("image")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
+            .unbind();
+        let print_to_screen: String = kwargs
+            .get_item("print_to_screen")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
+            .extract()?;
 
         if print_to_screen == "enable" {
-            let string_field: String = kwargs.get_item("string_field")?.unwrap().extract()?;
-            let int_field: i64 = kwargs.get_item("int_field")?.unwrap().extract()?;
-            let float_field: f64 = kwargs.get_item("float_field")?.unwrap().extract()?;
+            let string_field: String = kwargs
+                .get_item("string_field")?
+                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("string_field is None"))?
+                .extract()?;
+            let int_field: i64 = kwargs
+                .get_item("int_field")?
+                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("int_field is None"))?
+                .extract()?;
+            let float_field: f64 = kwargs
+                .get_item("float_field")?
+                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("float_field is None"))?
+                .extract()?;
 
             println!(
                 "Your input contains:\n\
@@ -128,12 +158,22 @@ impl ComfyNode for ExampleNode {
     }
 
     /// Optional: determine which lazy inputs still need evaluation.
+    #[classmethod]
+    #[pyo3(signature = (*args, **kwargs))]
     fn check_lazy_status<'py>(
+        _cls: &Bound<'_, PyType>,
         _py: Python<'py>,
-        _args: &Bound<'py, PyTuple>,
-        kwargs: &Bound<'py, PyDict>,
+        args: &Bound<'py, PyTuple>,
+        kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
-        let print_to_screen: String = kwargs.get_item("print_to_screen")?.unwrap().extract()?;
+        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+
+        let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
+
+        let print_to_screen: String = kwargs
+            .get_item("print_to_screen")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("print_to_screen is None"))?
+            .extract()?;
 
         if print_to_screen == "enable" {
             Ok(vec![
@@ -147,11 +187,15 @@ impl ComfyNode for ExampleNode {
     }
 
     /// Optional: return a fingerprint string for cache invalidation.
+    #[classmethod]
+    #[pyo3(signature = (*args, **kwargs))]
     fn fingerprint_inputs<'py>(
+        _cls: &Bound<'py, PyType>,
         _py: Python<'py>,
-        _args: &Bound<'py, PyTuple>,
-        _kwargs: &Bound<'py, PyDict>,
+        args: &Bound<'py, PyTuple>,
+        kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<Option<String>> {
+        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
         Ok(None)
     }
 }
@@ -168,12 +212,24 @@ impl ComfyNode for ExampleNode {
 /// # Panics
 /// Panics if called outside the Python interpreter (use [`build_extension_py`]
 /// when exposing to Python).
-pub fn build_extension() -> comfyui_v3::node::ComfyExtension {
-    Python::try_attach(|py| {
-        ExtensionBuilder::new("ExampleExtension")
-            .with_node::<ExampleNode>()
-            .build(py)
-    })
+#[pyfunction]
+pub fn build_extension<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
+    ExtensionBuilder::new()
+        .add_node(pytype_wrapper::<ExampleNode>(py))
+        .add_node_wrapper::<ExampleNode>(py)
+        .build(py)
+}
+/// ComfyUI entrypoint function.
+///
+/// ```python
+/// async def comfy_entrypoint() -> (
+///     ExampleExtension
+/// ):  # ComfyUI calls this to load your extension and its nodes.
+///     return ExampleExtension()
+/// ```
+#[pyfunction]
+pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
+    Python::attach(build_extension)
 }
 
 // ---------------------------------------------------------------------------
@@ -191,14 +247,8 @@ pub fn build_extension() -> comfyui_v3::node::ComfyExtension {
 #[pymodule]
 #[pyo3(name = "example_node_v3")]
 fn init_example_node_v3(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(pyo3::wrap_pyfunction!(build_extension_py, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(build_extension, m)?)?;
     Ok(())
-}
-
-/// Python-facing wrapper for [`build_extension`].
-#[pyfunction]
-fn build_extension_py() -> comfyui_v3::node::ComfyExtension {
-    build_extension()
 }
 
 // ---------------------------------------------------------------------------
@@ -207,24 +257,34 @@ fn build_extension_py() -> comfyui_v3::node::ComfyExtension {
 
 #[cfg(test)]
 mod tests {
+    use pyo3::types::PyList;
+
     use super::*;
 
+    // cargo test -p comfyui_v3 --example example_node_v3 -- --nocapture
     #[test]
-    fn test_schema_definition() {
-        pyo3::prepare_freethreaded_python();
-        Python::try_attach(|py| {
-            let schema = ExampleNode::define_schema(py).unwrap();
-            // schema is a Python object; verify it has expected attributes
-            let node_id: String = schema.getattr("node_id").unwrap().extract().unwrap();
-            assert_eq!(node_id, "Example");
-        });
-    }
+    fn test_schema_definition() -> anyhow::Result<()> {
+        Python::attach(|py| -> PyResult<()> {
+            // 添加模块搜索路径
+            let sys = py.import("sys")?;
+            let binding = sys.getattr("path")?;
+            let path = binding.cast::<PyList>()?;
+            path.insert(0, "/data/ComfyUI")?; // 或者使用 append
 
-    #[test]
-    fn test_extension_builder() {
-        let ext = build_extension();
-        assert_eq!(ext.name, "ExampleExtension");
-        assert_eq!(ext.node_classes().len(), 1);
+            // 测试直接在 Rust 中调用类方法
+            let class = py.get_type::<ExampleNode>();
+
+            let schema = ExampleNode::define_schema(class, py)?;
+
+            println!("=== {:?}", schema);
+
+            // schema is a Python object; verify it has expected attributes
+            let node_id: String = schema.getattr("node_id")?.extract()?;
+            assert_eq!(node_id, "Example");
+            Ok(())
+        })?;
+
+        Ok(())
     }
 }
 

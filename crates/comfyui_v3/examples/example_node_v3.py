@@ -21,10 +21,10 @@ class Example(io.ComfyNode):
     @classmethod
     def define_schema(cls) -> io.Schema:
         """
-            Return a schema which contains all information about the node.
-            Some types: "Model", "Vae", "Clip", "Conditioning", "Latent", "Image", "Int", "String", "Float", "Combo".
-            For outputs the "io.Model.Output" should be used, for inputs the "io.Model.Input" can be used.
-            The type can be a "Combo" - this will be a list for selection.
+        Return a schema which contains all information about the node.
+        Some types: "Model", "Vae", "Clip", "Conditioning", "Latent", "Image", "Int", "String", "Float", "Combo".
+        For outputs the "io.Model.Output" should be used, for inputs the "io.Model.Input" can be used.
+        The type can be a "Combo" - this will be a list for selection.
         """
         return io.Schema(
             node_id="Example",
@@ -36,7 +36,7 @@ class Example(io.ComfyNode):
                     "int_field",
                     min=0,
                     max=4096,
-                    step=64, # Slider's step
+                    step=64,  # Slider's step
                     display_mode=io.NumberDisplay.number,  # Cosmetic only: display as "number" or "slider"
                     lazy=True,  # Will only be evaluated if check_lazy_status requires it
                 ),
@@ -46,7 +46,7 @@ class Example(io.ComfyNode):
                     min=0.0,
                     max=10.0,
                     step=0.01,
-                    round=0.001, #The value representing the precision to round to, will be set to the step value by default. Can be set to False to disable rounding.
+                    round=0.001,  # The value representing the precision to round to, will be set to the step value by default. Can be set to False to disable rounding.
                     display_mode=io.NumberDisplay.number,
                     lazy=True,
                 ),
@@ -56,7 +56,7 @@ class Example(io.ComfyNode):
                     multiline=False,  # True if you want the field to look like the one on the ClipTextEncode node
                     default="Hello world!",
                     lazy=True,
-                )
+                ),
             ],
             outputs=[
                 io.Image.Output(),
@@ -64,17 +64,19 @@ class Example(io.ComfyNode):
         )
 
     @classmethod
-    def check_lazy_status(cls, image, string_field, int_field, float_field, print_to_screen):
+    def check_lazy_status(
+        cls, image, string_field, int_field, float_field, print_to_screen
+    ):
         """
-            Return a list of input names that need to be evaluated.
+        Return a list of input names that need to be evaluated.
 
-            This function will be called if there are any lazy inputs which have not yet been
-            evaluated. As long as you return at least one field which has not yet been evaluated
-            (and more exist), this function will be called again once the value of the requested
-            field is available.
+        This function will be called if there are any lazy inputs which have not yet been
+        evaluated. As long as you return at least one field which has not yet been evaluated
+        (and more exist), this function will be called again once the value of the requested
+        field is available.
 
-            Any evaluated inputs will be passed as arguments to this function. Any unevaluated
-            inputs will have the value None.
+        Any evaluated inputs will be passed as arguments to this function. Any unevaluated
+        inputs will have the value None.
         """
         if print_to_screen == "enable":
             return ["int_field", "float_field", "string_field"]
@@ -82,14 +84,16 @@ class Example(io.ComfyNode):
             return []
 
     @classmethod
-    def execute(cls, image, string_field, int_field, float_field, print_to_screen) -> io.NodeOutput:
+    def execute(
+        cls, image, string_field, int_field, float_field, print_to_screen
+    ) -> io.NodeOutput:
         if print_to_screen == "enable":
             print(f"""Your input contains:
                 string_field aka input text: {string_field}
                 int_field: {int_field}
                 float_field: {float_field}
             """)
-        #do some processing on the image, in this example I just invert it
+        # do some processing on the image, in this example I just invert it
         image = 1.0 - image
         return io.NodeOutput(image)
 
@@ -101,9 +105,10 @@ class Example(io.ComfyNode):
         This method is used in the core repo for the LoadImage node where they return the image hash as a string, if the image hash
         changes between executions the LoadImage node is executed again.
     """
-    #@classmethod
-    #def fingerprint_inputs(s, image, string_field, int_field, float_field, print_to_screen):
+    # @classmethod
+    # def fingerprint_inputs(s, image, string_field, int_field, float_field, print_to_screen):
     #    return ""
+
 
 # Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension
 # WEB_DIRECTORY = "./somejs"
@@ -113,12 +118,19 @@ class Example(io.ComfyNode):
 from aiohttp import web
 from server import PromptServer
 
+
 @PromptServer.instance.routes.get("/hello")
 async def get_hello(request):
     return web.json_response("hello")
 
 
 class ExampleExtension(ComfyExtension):
+    nodes: list[type[io.ComfyNode]] = []
+
+    def __init__(self, nodes: list[type[io.ComfyNode]] = []):
+        super().__init__()
+        self.nodes = nodes
+
     @override
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
         return [
@@ -126,5 +138,7 @@ class ExampleExtension(ComfyExtension):
         ]
 
 
-async def comfy_entrypoint() -> ExampleExtension:  # ComfyUI calls this to load your extension and its nodes.
+async def comfy_entrypoint() -> (
+    ExampleExtension
+):  # ComfyUI calls this to load your extension and its nodes.
     return ExampleExtension()

@@ -39,13 +39,44 @@ rustflags = [
 ]
 
 
+[build]
+# 配置构建选项
+rustflags = [
+    # 链接 libpython3.12
+    "-C",
+    "link-arg=-lpython3.12",
+
+    # 添加库搜索路径
+    "-C",
+    "link-arg=-L/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
+
+    # 设置运行时库搜索路径
+    # 设置 LD_LIBRARY_PATH 等价的效果
+    "-C",
+    "link-arg=-Wl,-rpath,/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
+]
+
+
 [alias]
 t = "test -- --nocapture" # 单元测试显示println!宏的打印信息
 
 
+# 通过 rustc-env 设置环境变量
+# 用于在编译Rust时设置环境变量
+# [rust]
+# rustc-env = [
+#     "PYTHONHOME=/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu",
+#     "PYO3_PYTHON=/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12",
+#     "LD_LIBRARY_PATH=/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
+# ]
+
+
+# 设置 cargo 运行时的环境变量
+# 通常只在运行 cargo 命令时生效
 [env]
+# LIBRARY_PATH = "/usr/lib" # g++ clang
 LIBCLANG_PATH = "/usr/lib"
 BINDGEN_EXTRA_CLANG_ARGS = "--target=x86_64-unknown-linux-gnu"
-# LD_LIBRARY_PATH = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib" # python
-# LIBRARY_PATH = "/usr/lib" # g++ clang
-# PYO3_PYTHON = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3" # python
+# PYTHONHOME = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu"
+# PYO3_PYTHON = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12"
+# LD_LIBRARY_PATH = "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib"

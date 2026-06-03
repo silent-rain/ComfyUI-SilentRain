@@ -15,11 +15,19 @@
         "LIBCLANG_PATH": "/usr/lib"
     },
     "terminal.integrated.env.linux": {
-        "LIBCLANG_PATH": "/usr/lib"
+        "LIBCLANG_PATH": "/usr/lib",
+        "PYTHONHOME": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu",
+        "PYO3_PYTHON": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12",
+        "LD_LIBRARY_PATH": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib"
     },
     "rust-analyzer.runnables.extraEnv": {
         "LIBCLANG_PATH": "/usr/lib",
         "LLVM_CONFIG_PATH": "/usr/bin/llvm-config"
     },
+    // "rust-analyzer.testArguments": [
+    //     "--env",
+    //     "LD_LIBRARY_PATH=/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib",
+    //     "--nocapture"
+    // ],
     "codingcopilot.autoRun": true,
 }

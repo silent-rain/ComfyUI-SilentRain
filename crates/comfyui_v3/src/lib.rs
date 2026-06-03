@@ -54,17 +54,17 @@ fn init_comfyui_v3(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Extension / node types
     // Note: Renamed to ComfyExtensionHelper to avoid name conflict with
     // comfy_api.latest.ComfyExtension
-    m.add_class::<node::ComfyExtension>()?;
+    // m.add_class::<node::ComfyExtension>()?;
 
-    // Helper functions for Python inheritance
-    m.add_function(wrap_pyfunction!(
-        node::extension::create_extension_subclass,
-        m
-    )?)?;
-    m.add_function(wrap_pyfunction!(
-        node::extension::get_comfy_extension_base,
-        m
-    )?)?;
+    // // Helper functions for Python inheritance
+    // m.add_function(wrap_pyfunction!(
+    //     node::extension::create_extension_subclass,
+    //     m
+    // )?)?;
+    // m.add_function(wrap_pyfunction!(
+    //     node::extension::get_comfy_extension_base,
+    //     m
+    // )?)?;
 
     Ok(())
 }

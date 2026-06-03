@@ -10,7 +10,11 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = { workspace = true, features = ["extension-module"] }
+pyo3 = { workspace = true, features = [
+    "extension-module",
+    "experimental-async",
+    "auto-initialize",
+] }
 pythonize = { workspace = true }
 
 tokio = { workspace = true }
@@ -26,3 +30,8 @@ log = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+
+# 添加构建依赖
+[build-dependencies]
+# pyo3-build-config = { workspace = true }
+# pkg-config = { workspace = true }
