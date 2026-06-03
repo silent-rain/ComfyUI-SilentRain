@@ -23,6 +23,12 @@ pub use batch_rename::BatchRename;
 mod console_debug;
 pub use console_debug::ConsoleDebug;
 
+pub mod param_hub;
+pub use param_hub::ParamHub;
+
+mod param_port;
+pub use param_port::ParamPort;
+
 // 测试节点
 mod progress_bar_test;
 pub use progress_bar_test::ProgressBarTest;
@@ -35,6 +41,8 @@ pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
     submodule.add_class::<WorkflowInfo>()?;
     submodule.add_class::<BatchRename>()?;
     submodule.add_class::<ConsoleDebug>()?;
+    submodule.add_class::<ParamHub>()?;
+    submodule.add_class::<ParamPort>()?;
     submodule.add_class::<ProgressBarTest>()?;
     Ok(submodule)
 }
@@ -67,6 +75,8 @@ pub fn node_register(py: Python<'_>) -> PyResult<Vec<NodeRegister<'_>>> {
             py.get_type::<ConsoleDebug>(),
             "Sr Console Debug",
         ),
+        NodeRegister("ParamHub", py.get_type::<ParamHub>(), "Sr Param Hub"),
+        NodeRegister("ParamPort", py.get_type::<ParamPort>(), "Sr Param Port"),
         NodeRegister(
             "ProgressBarTest",
             py.get_type::<ProgressBarTest>(),

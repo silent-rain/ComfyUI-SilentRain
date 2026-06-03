@@ -1,0 +1,211 @@
+/* ParamHub 节点专有样式（紧凑模式：尽量压低每行高度） */
+
+.sr-hub-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+}
+
+.sr-hub-hint {
+  font-size: 16px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.sr-hub-edit-btn {
+  padding: 2px 10px;
+  font-size: 16px;
+  line-height: 1.4;
+  border: 1px solid #555;
+  border-radius: 3px;
+  background: #2a2a2a;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.sr-hub-edit-btn:hover {
+  background: #3a3a3a;
+  border-color: #777;
+  color: #fff;
+}
+
+.sr-hub-empty {
+  text-align: center;
+  font-size: 16px;
+  opacity: 0.6;
+  padding: 4px 0;
+}
+
+/* 弹窗遮罩 */
+.sr-hub-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* 弹窗主体 */
+.sr-hub-dialog {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  width: 720px;
+  max-width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+.sr-hub-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #333;
+  font-weight: 600;
+  font-size: 18px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sr-hub-dialog-close {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 6px 12px;
+  border-radius: 3px;
+}
+
+.sr-hub-dialog-close:hover {
+  color: #fff;
+  background: #444;
+}
+
+.sr-hub-dialog-body {
+  padding: 16px 24px;
+  overflow-y: auto;
+}
+
+/* 列表与行 （复用原有类名） */
+.sr-hub-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sr-hub-row {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sr-hub-row-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sr-hub-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.sr-hub .sr-name,
+.sr-hub-dialog .sr-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  height: 32px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  outline: none;
+}
+
+.sr-hub .sr-name:focus,
+.sr-hub-dialog .sr-name:focus {
+  border-color: #5fa8d3;
+}
+
+.sr-input-error {
+  border-color: #d35f5f !important;
+}
+
+.sr-hub .sr-port-status,
+.sr-hub-dialog .sr-port-status {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 18px;
+  line-height: 28px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 64px;
+  text-align: center;
+}
+
+.sr-hub .sr-btn-icon,
+.sr-hub-dialog .sr-btn-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.sr-hub .sr-btn-icon:hover,
+.sr-hub-dialog .sr-btn-icon:hover {
+  background: #c44;
+  border-color: #c44;
+  color: #fff;
+}
+
+.sr-hub .sr-port-status.ok,
+.sr-hub-dialog .sr-port-status.ok {
+  background: rgba(95, 200, 95, 0.18);
+  color: #88e088;
+}
+
+.sr-hub .sr-port-status.warn,
+.sr-hub-dialog .sr-port-status.warn {
+  background: rgba(220, 180, 60, 0.18);
+  color: #e8c870;
+}
+
+.sr-hub .sr-port-status.idle,
+.sr-hub-dialog .sr-port-status.idle {
+  background: rgba(120, 120, 120, 0.18);
+  color: #aaa;
+}

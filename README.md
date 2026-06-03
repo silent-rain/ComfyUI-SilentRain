@@ -56,4 +56,5 @@ uv run comfy node publish
 ## 参考文档
 
 - [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+- [comfy development](https://docs.comfy.org/zh/development/overview)
 - [节点注册](https://registry.comfy.org)

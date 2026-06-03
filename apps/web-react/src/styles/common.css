@@ -1,0 +1,87 @@
+/* 通用控件样式（input / select / button / checkbox 等） */
+/* 由各节点 UI 共享，节点专有样式应放到节点目录下 */
+
+.sr-react-widget {
+  font-family: var(--font-family, sans-serif);
+  color: var(--input-text, #ddd);
+}
+
+.sr-input,
+.sr-select,
+.sr-textarea {
+  background: var(--comfy-input-bg, #222);
+  color: var(--input-text, #ddd);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 3px;
+  padding: 3px 5px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sr-input:focus,
+.sr-select:focus,
+.sr-textarea:focus {
+  border-color: var(--p-primary-color, #4af);
+}
+
+.sr-input-error {
+  border-color: #e55 !important;
+}
+
+.sr-textarea {
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.sr-btn,
+.sr-btn-icon {
+  background: var(--comfy-input-bg, #2c2c2c);
+  color: var(--input-text, #ddd);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.sr-btn:hover,
+.sr-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sr-btn-primary {
+  background: var(--p-primary-color, #2a6cff);
+  border-color: var(--p-primary-color, #2a6cff);
+  color: #fff;
+}
+
+.sr-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.sr-btn-icon {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sr-btn-danger:hover {
+  background: #c33;
+  color: #fff;
+  border-color: #c33;
+}
+
+.sr-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}

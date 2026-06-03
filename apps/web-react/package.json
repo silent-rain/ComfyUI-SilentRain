@@ -1,0 +1,26 @@
+{
+    "name": "@silentrain/web-react",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "description": "React-based UI components for ComfyUI-SilentRain (ParamHub / ParamPort and beyond)",
+    "scripts": {
+        "dev": "vite build --watch",
+        "build": "tsc -b && vite build",
+        "lint": "tsc --noEmit"
+    },
+    "dependencies": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "zustand": "^5.0.14"
+    },
+    "devDependencies": {
+        "@types/node": "^25.9.1",
+        "@types/react": "^18.3.12",
+        "@types/react-dom": "^18.3.1",
+        "@vitejs/plugin-react": "^4.3.4",
+        "typescript": "^5.7.2",
+        "vite": "^6.0.3",
+        "vite-plugin-css-injected-by-js": "^5.0.1"
+    }
+}

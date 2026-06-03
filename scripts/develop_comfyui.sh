@@ -13,7 +13,7 @@ echo "====================== root:${root} ======================"
 # 项目名称, 一般不需要调整
 App=comfyui_silentrain
 # ComfyUI 部署路径
-ComfyUIDir=/data/ComfyUI/custom_nodes
+ComfyUIDir=/home/one/code/ComfyUI/custom_nodes
 # ComfyUI 节点目录
 nodesDir=${root}/nodes
 # 编译目录
@@ -21,9 +21,10 @@ buildDir=./target/wheels
 
 
 # build
-# ./scripts/build.sh
-./scripts/build_vulkan.sh
+./scripts/build.sh
+# ./scripts/build_vulkan.sh
 ./scripts/build_web.sh
+./scripts/build_web_react.sh
 
 
 # 将 ${App} 拷贝到 ComfyUI 的自定义节点目录下

@@ -253,7 +253,7 @@ impl LlamaCppPipeline {
             .write()
             .map_err(|e| Error::LockError(e.to_string()))?;
 
-        let model_hash = cache.cal_hash(&[params.context_history_cache_key.to_string()]);
+        let model_hash = cache.cal_hash(std::slice::from_ref(&params.context_history_cache_key));
 
         let context_history =
             cache.get_or_insert(&params.context_history_cache_key, &model_hash, || {
@@ -286,7 +286,7 @@ impl LlamaCppPipeline {
         let mut context_history = context_history.unwrap_or_default();
         context_history.push(message);
 
-        let model_hash = cache.cal_hash(&[params.context_history_cache_key.to_string()]);
+        let model_hash = cache.cal_hash(std::slice::from_ref(&params.context_history_cache_key));
 
         let context_history_len = context_history.len();
         info!("update context history: {}", context_history_len);
