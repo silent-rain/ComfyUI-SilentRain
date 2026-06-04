@@ -11,7 +11,6 @@ root=$(cd "$(dirname ${0})/../";pwd)
 echo "====================== root:${root} ======================"
 
 
-
 # 项目名称, 一般不需要调整
 App=comfyui_silentrain
 # ComfyUI 节点目录
@@ -23,9 +22,10 @@ echo "switch venv ..."
 source ./apps/server/.venv/bin/activate
 
 
-# build
+# build v1 + v3 + web
 ./scripts/build.sh
 ./scripts/build_web.sh
+./scripts/build_web_react.sh
 
 # 退出服务编译环境
 deactivate

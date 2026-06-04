@@ -6,5 +6,10 @@ node.zip
 comfyui_silentrain
 comfyui_silentrain.libs
 comfyui_silentrain-*.dist-info
+
+comfyui_silentrain_v3
+comfyui_silentrain_v3.libs
+comfyui_silentrain_v3-*.dist-info
+
 web/pkg
 

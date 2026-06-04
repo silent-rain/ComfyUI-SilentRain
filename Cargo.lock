@@ -869,6 +869,7 @@ dependencies = [
  "candle-onnx",
  "candle-transformers",
  "chardet",
+ "comfyui_silentrain_v3",
  "encoding",
  "encoding_rs",
  "futures",
