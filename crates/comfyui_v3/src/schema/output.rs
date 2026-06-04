@@ -1,4 +1,5 @@
 use pyo3::{
+    BoundObject,
     prelude::*,
     types::{PyDict, PyTuple},
 };
@@ -367,6 +368,67 @@ impl NodeOutput {
         self
     }
 
+    /// Add multiple positional arguments at once.
+    pub fn add_args(mut self, args: impl IntoIterator<Item = Py<PyAny>>) -> Self {
+        self.args.extend(args);
+        self
+    }
+
+    pub fn add_arg_from_pyobject<T: Into<Py<PyAny>>>(mut self, arg: T) -> PyResult<Self> {
+        let py_arg = arg.into();
+        self.args.push(py_arg);
+        Ok(self)
+    }
+
+    /// Add an argument from a value that can be converted into a Python object.
+    ///
+    /// This method accepts any type that implements `IntoPyObject`,
+    /// such as `String`, `&str`, `i64`, `f64`, `bool`, etc.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use comfyui_v3::schema::NodeOutput;
+    ///
+    /// let out = NodeOutput::new()
+    ///     .add_arg_from(py, "hello".to_string())
+    ///     .add_arg_from(py, 42_i64)
+    ///     .add_arg_from(py, 3.14_f64);
+    /// ```
+    pub fn add_arg_from<'py, T>(mut self, py: Python<'py>, value: T) -> PyResult<Self>
+    where
+        T: IntoPyObject<'py>,
+        <T as IntoPyObject<'py>>::Error: std::fmt::Debug,
+        pyo3::PyErr: std::convert::From<<T as pyo3::IntoPyObject<'py>>::Error>,
+    {
+        let bound = value.into_pyobject(py)?;
+        self.args.push(bound.into_any().unbind());
+        Ok(self)
+    }
+
+    /// Add an argument from a serializable value, converting it to a Python object
+    /// using `pythonize`.
+    ///
+    /// This is useful for complex types or when you want to pass JSON data.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use comfyui_v3::schema::NodeOutput;
+    /// use serde_json::json;
+    ///
+    /// let out = NodeOutput::new()
+    ///     .add_arg_serializable(py, &json!({"key": "value"}))
+    ///     .unwrap();
+    /// ```
+    pub fn add_arg_serializable<'py, T: Serialize>(
+        mut self,
+        py: Python<'py>,
+        value: &T,
+    ) -> PyResult<Self> {
+        let py_obj = pythonize(py, value)?;
+        self.args.push(py_obj.unbind());
+        Ok(self)
+    }
+
     /// Set the `ui` field with an arbitrary Python object.
     pub fn with_ui(mut self, ui: Py<PyAny>) -> Self {
         self.ui = Some(ui);
@@ -387,13 +449,33 @@ impl NodeOutput {
 
     /// Convert this `NodeOutput` into a real Python `io.NodeOutput` object.
     pub fn to_py_obj<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let io = py.import("comfy_api.latest")?.getattr("io")?;
+        // Use the same approach as test_io_node_output which works
+        let comfy_api = py.import("comfy_api.latest")?;
+        let io = comfy_api.getattr("io")?;
+
+        // Debug: print all attributes of io module
+        // println!("io module dir: {:?}", io.dir()?);
+
+        // Get NodeOutput class - same as test_io_node_output
         let cls = io.getattr("NodeOutput")?;
 
-        // Build args tuple
-        let py_args = PyTuple::new(py, &self.args)?;
+        // Debug: print cls info
+        // println!("cls type: {}", cls.get_type().repr()?);
+        // println!("cls repr: {}", cls.repr()?);
+        // println!("cls is callable: {}", cls.is_callable());
+        // println!("cls is None: {}", cls.is_none());
 
-        println!("==================14");
+        // Debug: check if cls is actually callable (a class)
+        if !cls.is_callable() {
+            return Err(pyo3::exceptions::PyTypeError::new_err(format!(
+                "io.NodeOutput is not callable! type: {}, repr: {}",
+                cls.get_type().repr()?,
+                cls.repr()?
+            )));
+        }
+
+        // Build args tuple from self.args
+        let py_args = PyTuple::new(py, &self.args)?;
 
         // Build kwargs dict
         let kwargs = PyDict::new(py);
@@ -407,13 +489,9 @@ impl NodeOutput {
             kwargs.set_item("block_execution", msg)?;
         }
 
-        println!("==================1");
-
-        println!("args: {}, kwargs: {:?}", py_args, kwargs);
-
+        // Call NodeOutput(*args, **kwargs) - same as test_io_node_output
         if kwargs.is_empty() {
             cls.call1(py_args)
-            // cls.call(py_args, Some(&kwargs))
         } else {
             cls.call(py_args, Some(&kwargs))
         }

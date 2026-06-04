@@ -24,13 +24,14 @@ use pyo3::{
     pymethods,
     types::{PyDict, PyTuple, PyType},
 };
+use tracing::error;
 
 use comfyui_v3::{
     node::{ComfyNode, ExtensionBuilder, PromptServer, extension::pytype_wrapper},
     schema::{
         NodeOutput, NodeSchema,
         hidden::Hidden,
-        input::{ComboInput, FloatInput, ImageInput, IntInput, StringInput},
+        input::{BoolInput, ComboInput, FloatInput, ImageInput, IntInput, StringInput},
         output::Output,
     },
 };
@@ -77,6 +78,7 @@ impl ExampleNode {
                     .with_max(4096)
                     .with_step(64)
                     .with_lazy(true)
+                    .with_tooltip("int tips.")
                     .into(),
                 FloatInput::new("float_field")
                     .with_default(1.0)
@@ -90,9 +92,35 @@ impl ExampleNode {
                     .with_default("Hello world!")
                     .with_lazy(true)
                     .into(),
-                ComboInput::new("print_to_screen", ["enable", "disable"]).into(),
+                BoolInput::new("bool_field").with_default(true).into(),
+                ComboInput::new("combo_field", ["enable", "disable"]).into(),
             ])
-            .with_outputs([Output::image("imageout")])
+            .with_outputs([
+                // Output::image("imageout")
+                //     .with_display_name("image out")
+                //     .with_is_output_list(false)
+                //     .with_tooltip("image tips."),
+                Output::int("int_out")
+                    .with_display_name("int out")
+                    .with_is_output_list(false)
+                    .with_tooltip("int tips."),
+                Output::float("float_out")
+                    .with_display_name("float out")
+                    .with_is_output_list(false)
+                    .with_tooltip("float tips."),
+                Output::string("string_out")
+                    .with_display_name("string out")
+                    .with_is_output_list(false)
+                    .with_tooltip("string tips."),
+                Output::boolean("bool_out")
+                    .with_display_name("bool out")
+                    .with_is_output_list(false)
+                    .with_tooltip("bool tips."),
+                Output::combo("combo_out", ["enable", "disable"])
+                    .with_display_name("combo out")
+                    .with_is_output_list(false)
+                    .with_tooltip("combo tips."),
+            ])
             .with_hidden([Hidden::UNIQUE_ID, Hidden::EXTRA_PNGINFO])
             .into_py_schema(py)
     }
@@ -112,57 +140,21 @@ impl ExampleNode {
     ) -> PyResult<Bound<'py, PyAny>> {
         println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
 
-        let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
+        let result = match Self::execute_rs(py, args, kwargs) {
+            Ok(result) => result,
+            Err(e) => {
+                error!("Error executing node: {e}");
+                if let Err(e) =
+                    Self::send_error(py, "Error executing node".to_string(), e.to_string())
+                {
+                    error!("send error failed, {e}");
+                    return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
+                };
+                return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
+            }
+        };
 
-        let image: Py<PyAny> = kwargs
-            .get_item("image")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
-            .unbind();
-        let print_to_screen: String = kwargs
-            .get_item("print_to_screen")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
-            .extract()?;
-
-        if print_to_screen == "enable" {
-            let string_field: String = kwargs
-                .get_item("string_field")?
-                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("string_field is None"))?
-                .extract()?;
-            let int_field: i64 = kwargs
-                .get_item("int_field")?
-                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("int_field is None"))?
-                .extract()?;
-            let float_field: f64 = kwargs
-                .get_item("float_field")?
-                .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("float_field is None"))?
-                .extract()?;
-
-            println!(
-                "Your input contains:\n\
-                 string_field aka input text: {}\n\
-                 int_field: {}\n\
-                 float_field: {}\n",
-                string_field, int_field, float_field
-            );
-        }
-
-        // Invert the image: image = 1.0 - image
-        let one = py.eval(c"1.0", None, None)?.unbind();
-        let inverted = one.bind(py).call_method1("__sub__", (image,))?;
-
-        // Build return dict { "imageout": inverted }
-        // let ret = PyDict::new(py);
-        // ret.set_item("imageout", inverted)?;
-
-        let ret = NodeOutput::new().add_arg(inverted.into()).to_py_obj(py)?;
-
-        {
-            let binding = ret.call_method0("result")?;
-            let result = binding.cast::<PyDict>()?;
-            println!("result: {:?}", result);
-        }
-
-        Ok(ret.into_any())
+        Ok(result)
     }
 
     /// Optional: determine which lazy inputs still need evaluation.
@@ -205,6 +197,57 @@ impl ExampleNode {
     ) -> PyResult<Option<String>> {
         println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
         Ok(None)
+    }
+}
+
+impl ExampleNode {
+    pub fn execute_rs<'py>(
+        py: Python<'py>,
+        args: &Bound<'py, PyTuple>,
+        kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+
+        let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
+
+        // let image: Py<PyAny> = kwargs
+        //     .get_item("image")?
+        //     .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
+        //     .into();
+
+        let int_field: i64 = kwargs
+            .get_item("int_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("int_field is None"))?
+            .extract()?;
+        let float_field: f64 = kwargs
+            .get_item("float_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("float_field is None"))?
+            .extract()?;
+        let string_field: String = kwargs
+            .get_item("string_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("string_field is None"))?
+            .extract()?;
+        let bool_field: bool = kwargs
+            .get_item("bool_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("bool_field is None"))?
+            .extract()?;
+        let combo_field: String = kwargs
+            .get_item("combo_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("combo_field is None"))?
+            .extract()?;
+
+        // Example: return multiple values using add_arg_from
+        // This method accepts any type that implements IntoPy<PyObject>
+        let ret = NodeOutput::new()
+            // .add_arg(image)
+            .add_arg_from(py, int_field)?
+            .add_arg_from(py, float_field)?
+            .add_arg_from(py, string_field)?
+            .add_arg_from(py, bool_field)?
+            .add_arg_from(py, combo_field)?
+            .to_py_obj(py)?;
+
+        Ok(ret)
     }
 }
 
@@ -269,7 +312,9 @@ mod tests {
 
     use super::*;
 
-    // cargo test -p comfyui_v3 --example example_node_v3 -- --nocapture
+    const TEST_COMFYUI_PATH: &str = "/home/one/code/ComfyUI";
+
+    // cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_schema_definition --nocapture
     #[test]
     fn test_schema_definition() -> anyhow::Result<()> {
         Python::attach(|py| -> PyResult<()> {
@@ -277,7 +322,7 @@ mod tests {
             let sys = py.import("sys")?;
             let binding = sys.getattr("path")?;
             let path = binding.cast::<PyList>()?;
-            path.insert(0, "/data/ComfyUI")?; // 或者使用 append
+            path.insert(0, TEST_COMFYUI_PATH)?; // 或者使用 append
 
             // 测试直接在 Rust 中调用类方法
             let class = py.get_type::<ExampleNode>();
@@ -295,6 +340,41 @@ mod tests {
         Ok(())
     }
 
+    // cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_io_node_output --nocapture
+    #[test]
+    fn test_io_node_output() -> anyhow::Result<()> {
+        Python::attach(|py| -> PyResult<()> {
+            // 添加模块搜索路径
+            let sys = py.import("sys")?;
+            let binding = sys.getattr("path")?;
+            let path = binding.cast::<PyList>()?;
+            path.insert(0, TEST_COMFYUI_PATH)?; // 或者使用 append
+
+            let io = py.import("comfy_api.latest")?.getattr("io")?;
+            let cls = io.getattr("NodeOutput")?;
+
+            // Build args tuple
+            let py_args = PyTuple::new(py, [1])?;
+
+            // Build kwargs dict
+            let kwargs = PyDict::new(py);
+
+            println!("args: {}, kwargs: {:?}", py_args, kwargs);
+
+            let result = if kwargs.is_empty() {
+                cls.call0()?
+            } else {
+                cls.call(py_args, Some(&kwargs))?
+            };
+
+            println!("=== {:?}", result.getattr("result")?);
+
+            Ok(())
+        })?;
+
+        Ok(())
+    }
+
     // cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_execute --nocapture
     #[test]
     fn test_execute() -> anyhow::Result<()> {
@@ -303,7 +383,7 @@ mod tests {
             let sys = py.import("sys")?;
             let binding = sys.getattr("path")?;
             let path = binding.cast::<PyList>()?;
-            path.insert(0, "/data/ComfyUI")?; // 或者使用 append
+            path.insert(0, TEST_COMFYUI_PATH)?; // 或者使用 append
 
             // 测试直接在 Rust 中调用类方法
             let class = py.get_type::<ExampleNode>();
@@ -315,11 +395,23 @@ mod tests {
             kwargs.set_item("int_field", 1)?;
             kwargs.set_item("float_field", 1.0)?;
             kwargs.set_item("string_field", "Hello world!")?;
-            kwargs.set_item("print_to_screen", "enable")?;
+            kwargs.set_item("bool_field", true)?;
+            kwargs.set_item("combo_field", "enable")?;
 
             let result = ExampleNode::execute(&class, py, &args, Some(kwargs))?;
 
-            println!("=== {:?}", result);
+            // Debug: print result info
+            println!("result type: {}", result.get_type().repr()?);
+            println!("result repr: {}", result.repr()?);
+            println!("result is callable: {}", result.is_callable());
+            println!("result is None: {}", result.is_none());
+
+            println!("============================");
+
+            // Debug: print all attributes of result
+            let binding = result.getattr("result")?;
+            let result = binding.cast::<PyTuple>()?;
+            println!("result: {:?}", result);
 
             Ok(())
         })?;

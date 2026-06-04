@@ -7,11 +7,21 @@ def demo2(*args, **kwargs):
     pass
 
 
+def demo3(*args, **kwargs):
+    demo(*args, **kwargs)
+    pass
+
+def demo4(a, b, **kwargs):
+    demo(a, b, **kwargs)
+    pass
+
 def main():
     demo(1, 2, 3, 4)
     demo2(1, 2, 3, 4)
     demo2(1, 2, c=3, d=4)
-    pass
+    demo3(1, 2, 3, 4)
+    demo4(1, 2, c=3, d=4)
+    
 
 
 if __name__ == "__main__":
