@@ -3,6 +3,7 @@
 # 任何命令失败后立即退出
 set -e
 
+ComfyUI=/data/ComfyUI
 OUT_DIR=../../nodes/web/pkg
 
 cd apps/web
@@ -22,4 +23,4 @@ echo -e "\n"
 echo -e "\nBuild Done"
 
 # tmp
-cp -rf ${OUT_DIR} /home/one/code/ComfyUI/custom_nodes/comfyui_silentrain/web/
+cp -rf ${OUT_DIR} ${ComfyUI}/custom_nodes/comfyui_silentrain/web/

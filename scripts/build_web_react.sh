@@ -5,7 +5,10 @@
 set -e
 
 root=$(cd "$(dirname ${0})/../";pwd)
+ComfyUI=/data/ComfyUI
+
 echo "====================== root:${root} ======================"
+
 
 cd "${root}/apps/web-react"
 
@@ -47,7 +50,7 @@ ls -lh "${DEST_DIST}/" || true
 echo -e "\nBuild Done"
 
 # 同步到 ComfyUI 实际安装目录（与 build_web.sh 保持一致行为）
-TARGET_DIR=/home/one/code/ComfyUI/custom_nodes/comfyui_silentrain/web/dist
+TARGET_DIR=${ComfyUI}/custom_nodes/comfyui_silentrain/web/dist
 if [ -d "$(dirname ${TARGET_DIR})" ]; then
     mkdir -p "${TARGET_DIR}"
     cp -rf "${DEST_DIST}/." "${TARGET_DIR}/"
