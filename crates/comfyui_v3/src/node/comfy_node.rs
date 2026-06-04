@@ -1,6 +1,7 @@
+//! pyo3 的 #[pymethods] 宏只能用于 impl StructName 块（即 struct 的固有方法块），而不能用于 impl Trait for StructName 块（即 trait 实现块）。
 use pyo3::{
     prelude::*,
-    types::{PyDict, PyTuple},
+    types::{PyDict, PyTuple, PyType},
 };
 
 /// Trait for ComfyUI v3 nodes.
@@ -38,7 +39,7 @@ pub trait ComfyNode: Send + Sync {
     /// Called once at registration time. Must return a Python object that is
     /// compatible with ComfyUI v3's `NodeOptions` — e.g. a `NodeOptions`
     /// subclass instance or a plain dict with the expected keys.
-    fn define_schema<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>>;
+    fn define_schema<'py>(cls: Bound<'py, PyType>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>>;
 
     /// Execute the node logic.
     ///
@@ -49,10 +50,10 @@ pub trait ComfyNode: Send + Sync {
     /// The return value is a Python object — typically a `dict` mapping output
     /// names to their values, or a `tuple` for multi-output nodes.
     fn execute<'py>(
-        &self,
+        cls: &Bound<'_, PyType>,
         py: Python<'py>,
         args: &Bound<'py, PyTuple>,
-        kwargs: &Bound<'py, PyDict>,
+        kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>>;
 
     /// Optional: determine which lazy inputs still need evaluation.
@@ -62,9 +63,10 @@ pub trait ComfyNode: Send + Sync {
     ///
     /// The default implementation returns an empty list (no lazy inputs needed).
     fn check_lazy_status<'py>(
+        _cls: &Bound<'_, PyType>,
         _py: Python<'py>,
         _args: &Bound<'py, PyTuple>,
-        _kwargs: &Bound<'py, PyDict>,
+        _kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
         Ok(Vec::new())
     }
@@ -79,9 +81,10 @@ pub trait ComfyNode: Send + Sync {
     /// The default implementation returns `None` (fallback to normal
     /// input-change detection).
     fn fingerprint_inputs<'py>(
+        _cls: &Bound<'py, PyType>,
         _py: Python<'py>,
         _args: &Bound<'py, PyTuple>,
-        _kwargs: &Bound<'py, PyDict>,
+        _kwargs: Option<Bound<'py, PyDict>>,
     ) -> PyResult<Option<String>> {
         Ok(None)
     }

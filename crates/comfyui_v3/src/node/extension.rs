@@ -47,6 +47,7 @@ impl ExtensionBuilder {
     }
 
     /// Consume the builder and produce a [`ComfyExtensionWrapper`].
+    /// The wrapper for [`comby_api.latest import.ComfyExtension`]
     pub fn build<'py>(self, py: Python<'py>) -> PyResult<Py<PyAny>> {
         let python_code = c_str!(
             "

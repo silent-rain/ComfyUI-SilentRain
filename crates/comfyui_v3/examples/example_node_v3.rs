@@ -18,16 +18,17 @@
 //! })
 //! ```
 
+use anyhow::Context;
 use pyo3::{
     exceptions::PyRuntimeError,
     prelude::*,
     pymethods,
     types::{PyDict, PyTuple, PyType},
 };
-use tracing::error;
+use tracing::{error, info};
 
 use comfyui_v3::{
-    node::{ComfyNode, ExtensionBuilder, PromptServer, extension::pytype_wrapper},
+    node::{ExtensionBuilder, PromptServer, extension::pytype_wrapper},
     schema::{
         NodeOutput, NodeSchema,
         hidden::Hidden,
@@ -131,23 +132,23 @@ impl ExampleNode {
     /// For this example we pull inputs by name from kwargs (ComfyUI v3
     /// convention) and return a dict with the output value(s).
     #[classmethod]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn execute<'py>(
+    #[pyo3(name = "execute", signature = (*args, **kwargs))]
+    fn execute_py<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
         args: &Bound<'py, PyTuple>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+        info!("execute_py, args: {args}, kwargs: {kwargs:?}");
 
-        let result = match Self::execute_rs(py, args, kwargs) {
+        let result = match ExampleNode.execute_rs(py, args, kwargs) {
             Ok(result) => result,
             Err(e) => {
-                error!("Error executing node: {e}");
+                error!("Error executing node:\n{e:#?}");
                 if let Err(e) =
                     Self::send_error(py, "Error executing node".to_string(), e.to_string())
                 {
-                    error!("send error failed, {e}");
+                    error!("send error failed, {e:#?}");
                     return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
                 };
                 return Err(PyErr::new::<PyRuntimeError, _>(e.to_string()));
@@ -166,16 +167,16 @@ impl ExampleNode {
         args: &Bound<'py, PyTuple>,
         kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Vec<String>> {
-        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+        info!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
 
         let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
 
-        let print_to_screen: String = kwargs
-            .get_item("print_to_screen")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("print_to_screen is None"))?
+        let combo_field: String = kwargs
+            .get_item("combo_field")?
+            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("combo_field is None"))?
             .extract()?;
 
-        if print_to_screen == "enable" {
+        if combo_field == "enable" {
             Ok(vec![
                 "int_field".to_string(),
                 "float_field".to_string(),
@@ -202,44 +203,60 @@ impl ExampleNode {
 
 impl ExampleNode {
     pub fn execute_rs<'py>(
+        &self,
         py: Python<'py>,
         args: &Bound<'py, PyTuple>,
         kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        println!("fingerprint_inputs, args: {args}, kwargs: {kwargs:?}");
+    ) -> anyhow::Result<Bound<'py, PyAny>> {
+        println!("execute_rs, args: {args}, kwargs: {kwargs:?}");
 
-        let kwargs = kwargs.ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?;
+        let kwargs = kwargs.context("kwargs is None")?;
 
-        // let image: Py<PyAny> = kwargs
-        //     .get_item("image")?
-        //     .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("kwargs is None"))?
-        //     .into();
+        let image: Py<PyAny> = kwargs
+            .get_item("image")
+            .context("failed to get 'image' from kwargs")?
+            .context("missing required input 'image'")?
+            .into();
 
         let int_field: i64 = kwargs
-            .get_item("int_field")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("int_field is None"))?
-            .extract()?;
+            .get_item("int_field")
+            .context("failed to get 'int_field' from kwargs")?
+            .context("missing required input 'int_field'")?
+            .extract()
+            .context("'int_field' type mismatch, expected i64")?;
+
         let float_field: f64 = kwargs
-            .get_item("float_field")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("float_field is None"))?
-            .extract()?;
+            .get_item("float_field")
+            .context("failed to get 'float_field' from kwargs")?
+            .context("missing required input 'float_field'")?
+            .extract()
+            .context("'float_field' type mismatch, expected f64")?;
+
         let string_field: String = kwargs
-            .get_item("string_field")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("string_field is None"))?
-            .extract()?;
+            .get_item("string_field")
+            .context("failed to get 'string_field' from kwargs")?
+            .context("missing required input 'string_field'")?
+            .extract()
+            .context("'string_field' type mismatch, expected String")?;
+
         let bool_field: bool = kwargs
-            .get_item("bool_field")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("bool_field is None"))?
-            .extract()?;
+            .get_item("bool_field")
+            .context("failed to get 'bool_field' from kwargs")?
+            .context("missing required input 'bool_field'")?
+            .extract()
+            .context("'bool_field' type mismatch, expected bool")?;
+
         let combo_field: String = kwargs
-            .get_item("combo_field")?
-            .ok_or_else(|| PyErr::new::<PyRuntimeError, _>("combo_field is None"))?
-            .extract()?;
+            .get_item("combo_field")
+            .context("failed to get 'combo_field' from kwargs")?
+            .context("missing required input 'combo_field'")?
+            .extract()
+            .context("'combo_field' type mismatch, expected String")?;
 
         // Example: return multiple values using add_arg_from
         // This method accepts any type that implements IntoPy<PyObject>
         let ret = NodeOutput::new()
-            // .add_arg(image)
+            .add_arg(image)
             .add_arg_from(py, int_field)?
             .add_arg_from(py, float_field)?
             .add_arg_from(py, string_field)?
@@ -378,6 +395,15 @@ mod tests {
     // cargo test -p comfyui_v3 --example example_node_v3 -- tests::test_execute --nocapture
     #[test]
     fn test_execute() -> anyhow::Result<()> {
+        let _ = tracing_subscriber::fmt()
+            .with_ansi(true)
+            .with_max_level(tracing::Level::DEBUG)
+            .with_level(true)
+            .with_file(true)
+            .with_line_number(true)
+            .with_target(false)
+            .try_init();
+
         Python::attach(|py| -> PyResult<()> {
             // 添加模块搜索路径
             let sys = py.import("sys")?;
@@ -398,7 +424,7 @@ mod tests {
             kwargs.set_item("bool_field", true)?;
             kwargs.set_item("combo_field", "enable")?;
 
-            let result = ExampleNode::execute(&class, py, &args, Some(kwargs))?;
+            let result = ExampleNode::execute_py(&class, py, &args, Some(kwargs))?;
 
             // Debug: print result info
             println!("result type: {}", result.get_type().repr()?);

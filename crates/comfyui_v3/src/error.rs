@@ -23,4 +23,8 @@ pub enum Error {
 
     #[error(transparent)]
     PyO3(#[from] pyo3::PyErr),
+
+    /// 透传 anyhow 错误链（用于应用层上下文包装）
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
 }
