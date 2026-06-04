@@ -13,8 +13,11 @@ use crate::text;
 ///     return SilentRainV3Extension()
 /// ```
 #[pyfunction]
-pub fn comfy_entrypoint(py: Python<'_>) -> PyResult<Py<PyAny>> {
-    build_extension(py)
+#[pyo3()]
+pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
+    println!("==============================1");
+
+    Python::attach(|py| -> PyResult<Py<PyAny>> { build_extension(py) })
 }
 
 /// Build the SilentRain v3 extension with all registered nodes.
@@ -22,7 +25,8 @@ pub fn comfy_entrypoint(py: Python<'_>) -> PyResult<Py<PyAny>> {
 /// Each sub-module collects its own nodes via `node_register`;
 /// this function merges all lists and passes them to the builder.
 #[pyfunction]
-fn build_extension<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
+pub fn build_extension<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
+    println!("==============================2");
     let nodes = node_collect(py)?;
 
     let mut builder = ExtensionBuilder::new();

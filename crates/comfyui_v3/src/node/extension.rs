@@ -57,18 +57,19 @@ impl ExtensionBuilder {
     pub fn build<'py>(self, py: Python<'py>) -> PyResult<Py<PyAny>> {
         let python_code = c_str!(
             "
-            from comfy_api.latest import ComfyExtension, io
+from typing_extensions import override
+from comfy_api.latest import ComfyExtension, io
 
-            class ComfyExtensionWrapper(ComfyExtension):
-                nodes: list[type[io.ComfyNode]] = []
+class ComfyExtensionWrapper(ComfyExtension):
+    nodes: list[type[io.ComfyNode]] = []
 
-                def __init__(self, nodes: list[type[io.ComfyNode]] = []):
-                    super().__init__()
-                    self.nodes = nodes
+    def __init__(self, nodes: list[type[io.ComfyNode]] = []):
+        super().__init__()
+        self.nodes = nodes
 
-                @override
-                async def get_node_list(self) -> list[type[io.ComfyNode]]:
-                    return self.nodes
+    @override
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return self.nodes
             "
         );
 

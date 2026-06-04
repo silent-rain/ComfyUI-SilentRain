@@ -50,6 +50,13 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 添加函数demo
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
 
+    // ==================== ComfyUI V3 ====================
+    // ComfyUI V3 核心入口
+    m.add_function(pyo3::wrap_pyfunction!(register::comfy_entrypoint, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(register::build_extension, m)?)?;
+    // ComfyUI V3 添加子模块
+    register::register_submodules(py, m)?;
+
     // ==================== ComfyUI V1 ====================
     // 添加子模块
     m.add_submodule(&core::submodule(py)?)?;
@@ -83,12 +90,7 @@ fn py_init(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("NODE_CLASS_MAPPINGS", node_mapping)?;
     m.add("NODE_DISPLAY_NAME_MAPPINGS", name_mapping)?;
 
-    // ==================== ComfyUI V3 ====================
-    // ComfyUI V3 核心入口
-    m.add_function(pyo3::wrap_pyfunction!(register::comfy_entrypoint, m)?)?;
-    // ComfyUI V3 添加子模块
-    register::register_submodules(py, m)?;
-
+    // ==================== ComfyUI web ====================
     const WEB_DIRECTORY: &str = "./web";
     m.add("WEB_DIRECTORY", WEB_DIRECTORY)?;
 
