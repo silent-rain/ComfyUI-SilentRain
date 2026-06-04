@@ -754,7 +754,7 @@ impl BoolInput {
 
     pub fn to_py_obj<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let io = py.import("comfy_api.latest")?.getattr("io")?;
-        let cls = io.getattr("Bool")?.getattr("Input")?;
+        let cls = io.getattr("Boolean")?.getattr("Input")?;
         let kwargs = pythonize(py, &self)?.extract::<Bound<'py, PyDict>>()?;
         cls.call((), Some(&kwargs))
     }
@@ -878,8 +878,12 @@ pub struct ImageInput {
     optional: bool,
     tooltip: Option<String>,
     lazy: bool,
-    socketless: bool,
-    force_input: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra_dict: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_link: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    advanced: Option<bool>,
 }
 
 impl ImageInput {
@@ -906,12 +910,16 @@ impl ImageInput {
         self.lazy = v;
         self
     }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
+    pub fn with_extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
+        self.extra_dict = Some(v.into());
         self
     }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
+    pub fn with_raw_link(mut self, v: bool) -> Self {
+        self.raw_link = Some(v);
+        self
+    }
+    pub fn with_advanced(mut self, v: bool) -> Self {
+        self.advanced = Some(v);
         self
     }
 
@@ -931,8 +939,12 @@ pub struct TypedInput {
     optional: bool,
     tooltip: Option<String>,
     lazy: bool,
-    socketless: bool,
-    force_input: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra_dict: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_link: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    advanced: Option<bool>,
     #[serde(skip)]
     _type_tag: &'static str,
 }
@@ -997,12 +1009,16 @@ impl TypedInput {
         self.lazy = v;
         self
     }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
+    pub fn with_extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
+        self.extra_dict = Some(v.into());
         self
     }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
+    pub fn with_raw_link(mut self, v: bool) -> Self {
+        self.raw_link = Some(v);
+        self
+    }
+    pub fn with_advanced(mut self, v: bool) -> Self {
+        self.advanced = Some(v);
         self
     }
 

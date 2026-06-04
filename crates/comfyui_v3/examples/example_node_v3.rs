@@ -72,7 +72,7 @@ impl ExampleNode {
             .with_input_list(false) // 输入是否为列表, 可选
             .with_output_node(false) // 是否为输出节点, 可选
             .with_inputs([
-                // ImageInput::new("image").into(),
+                ImageInput::new("image").into(),
                 IntInput::new("int_field")
                     .with_min(0)
                     .with_max(4096)
@@ -96,10 +96,10 @@ impl ExampleNode {
                 ComboInput::new("combo_field", ["enable", "disable"]).into(),
             ])
             .with_outputs([
-                // Output::image("imageout")
-                //     .with_display_name("image out")
-                //     .with_is_output_list(false)
-                //     .with_tooltip("image tips."),
+                Output::image("imageout")
+                    .with_display_name("image out")
+                    .with_is_output_list(false)
+                    .with_tooltip("image tips."),
                 Output::int("int_out")
                     .with_display_name("int out")
                     .with_is_output_list(false)
