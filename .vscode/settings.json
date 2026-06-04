@@ -14,12 +14,12 @@
     "rust-analyzer.server.extraEnv": {
         "LIBCLANG_PATH": "/usr/lib"
     },
-    "terminal.integrated.env.linux": {
-        "LIBCLANG_PATH": "/usr/lib",
-        "PYTHONHOME": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu",
-        "PYO3_PYTHON": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12",
-        "LD_LIBRARY_PATH": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib"
-    },
+    // "terminal.integrated.env.linux": {
+    //     "LIBCLANG_PATH": "/usr/lib",
+    //     "PYTHONHOME": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu",
+    //     "PYO3_PYTHON": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/bin/python3.12",
+    //     "LD_LIBRARY_PATH": "/home/one/.local/share/uv/python/cpython-3.12.9-linux-x86_64-gnu/lib"
+    // }, // vscode 单元测试的环境变量
     "rust-analyzer.runnables.extraEnv": {
         "LIBCLANG_PATH": "/usr/lib",
         "LLVM_CONFIG_PATH": "/usr/bin/llvm-config"
