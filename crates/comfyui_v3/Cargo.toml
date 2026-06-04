@@ -13,7 +13,6 @@ crate-type = ["rlib"]
 pyo3 = { workspace = true, features = [
     "extension-module",
     "experimental-async",
-    "auto-initialize",
 ] }
 pythonize = { workspace = true }
 
@@ -35,3 +34,10 @@ tracing-subscriber = { workspace = true }
 [build-dependencies]
 # pyo3-build-config = { workspace = true }
 # pkg-config = { workspace = true }
+
+[dev-dependencies]
+pyo3 = { workspace = true, features = [
+    "extension-module",
+    "experimental-async",
+    "auto-initialize",
+] }
