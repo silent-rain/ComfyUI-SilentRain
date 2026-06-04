@@ -1,0 +1,51 @@
+[project]
+name = "comfyui_silentrain_v3"
+description = "ComfyUI v3 Extension nodes for SilentRain — built with Rust."
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dynamic = ["version"]
+# version = "1.0.1"
+dependencies = [
+    "comfy-cli>=1.10.3",
+    "maturin>=1.13.3",
+    "numpy>=2.2.6",
+    "torch>=2.7.0",
+] # Filled in from requirements.txt
+
+
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+# python-source = "python"  # 如果有纯Python代码
+# strip = true  # 减小二进制文件大小
+
+
+[[tool.uv.index]]
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+default = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+#url = "https://download.pytorch.org/whl/cu128"
+url = "https://mirrors.aliyun.com/pytorch-wheels/cu128"
+explicit = true
+
+[dependency-groups]
+dev = ["pip>=25.0.1", "setuptools>=76.1.0"]
+
+
+[tool.uv]
+link-mode = "symlink"

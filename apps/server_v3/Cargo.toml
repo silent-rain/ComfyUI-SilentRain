@@ -8,7 +8,7 @@ license = "MIT"
 
 [lib]
 name = "comfyui_silentrain_v3"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 comfyui_v3 = { path = "../../crates/comfyui_v3" }
@@ -16,6 +16,7 @@ comfyui_v3 = { path = "../../crates/comfyui_v3" }
 pyo3 = { workspace = true, features = [
     "extension-module",
     "experimental-async",
+    "abi3-py310",         # 支持Python 3.10及以上版本
 ] }
 
 anyhow = { workspace = true }
