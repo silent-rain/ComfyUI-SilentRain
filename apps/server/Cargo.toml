@@ -100,9 +100,10 @@ llama-cpp-2 = { workspace = true, features = [
     "mtmd",
 ] }
 
-# 本地推理引擎
-llama-flow = { path = "../llama-flow" }
+
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+llama-flow = { path = "../llama-flow" }                      # 本地推理引擎
+comfyui_silentrain_v3 = { path = "../server_v3" }
 
 # ONNX Runtime
 # [target.'cfg(not(target_os = "macos"))'.dependencies]

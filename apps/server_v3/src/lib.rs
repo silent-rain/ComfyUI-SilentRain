@@ -34,7 +34,7 @@ fn init_module(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // ComfyUI V3 核心入口
     m.add_function(pyo3::wrap_pyfunction!(register::comfy_entrypoint, m)?)?;
 
-    // 添加子模块
+    // ComfyUI V3 添加子模块
     register::register_submodules(py, m)?;
 
     Ok(())
