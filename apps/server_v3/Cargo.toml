@@ -8,7 +8,7 @@ license = "MIT"
 
 [lib]
 name = "comfyui_silentrain_v3"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 comfyui_v3 = { path = "../../crates/comfyui_v3" }
