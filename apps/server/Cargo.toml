@@ -9,6 +9,35 @@ name = "comfyui_silentrain"
 crate-type = ["cdylib"]
 
 
+[features]
+default = ["mkl"]
+mkl = [
+    # "dep:intel-mkl-src",
+    "candle-nn/mkl",
+    "candle-transformers/mkl",
+    "candle-core/mkl",
+] # Intel 平台
+cuda = [
+    "llama-flow/cuda",
+    "llama-cpp-2/cuda",
+    # "candle-core/cuda",
+    # "candle-nn/cuda",
+    # "candle-transformers/cuda",
+    # "ort/cuda",
+] # NVIDIA 平台
+metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
+vulkan = [
+    "llama-flow/vulkan",
+    "llama-cpp-2/vulkan",
+] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
+cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
+flash-attn = [
+    "cuda",
+    "candle-transformers/flash-attn",
+    "dep:candle-flash-attn",
+] # 优化后的注意力机制实现，通过分块计算等方法提升Transformer模型的效率。它显著减少了内存占用和计算时间
+
+
 [dependencies]
 pyo3 = { workspace = true, features = [
     "extension-module",
@@ -90,30 +119,3 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 # cc = { version="1.2.34", features=["parallel"] }
 # cmake = "0.1"
 # find_cuda_helper = "0.2.0"
-
-[features]
-default = ["mkl"]
-mkl = [
-    # "dep:intel-mkl-src",
-    "candle-nn/mkl",
-    "candle-transformers/mkl",
-    "candle-core/mkl",
-] # Intel 平台
-cuda = [
-    # "candle-core/cuda",
-    # "candle-nn/cuda",
-    # "candle-transformers/cuda",
-    "llama-cpp-2/cuda",
-    # "ort/cuda",
-] # NVIDIA 平台
-metal = ["candle-core/metal", "candle-nn/metal"] # macOS/iOS 平台
-vulkan = [
-    "llama-cpp-2/vulkan",
-] # 允许在 AMD/Intel GPU 或移动设备上利用跨平台图形接口加速推理, 需 Vulkan 驱动支持。
-# native = ["llama-cpp-2/native"]
-cudnn = ["candle-core/cudnn"] # 深度神经网络的加速库
-flash-attn = [
-    "cuda",
-    "candle-transformers/flash-attn",
-    "dep:candle-flash-attn",
-] # 优化后的注意力机制实现，通过分块计算等方法提升Transformer模型的效率。它显著减少了内存占用和计算时间
