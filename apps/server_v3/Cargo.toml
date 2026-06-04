@@ -1,0 +1,23 @@
+[package]
+name = "comfyui_silentrain_v3"
+version = "0.1.0"
+edition = "2024"
+authors = ["SilentRain contributors"]
+description = "ComfyUI v3 extension nodes for SilentRain"
+license = "MIT"
+
+[lib]
+name = "comfyui_silentrain_v3"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+comfyui_v3 = { path = "../../crates/comfyui_v3" }
+
+pyo3 = { workspace = true, features = [
+    "extension-module",
+    "experimental-async",
+] }
+
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

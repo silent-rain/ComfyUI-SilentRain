@@ -25,6 +25,12 @@ impl ExtensionBuilder {
     }
 
     /// Register multiple node types.
+    pub fn add_nodes(mut self, nodes: Vec<Py<PyType>>) -> Self {
+        self.nodes.extend(nodes);
+        self
+    }
+
+    /// Register multiple node types.
     pub fn with_nodes(mut self, nodes: Vec<Py<PyType>>) -> Self {
         self.nodes = nodes;
         self

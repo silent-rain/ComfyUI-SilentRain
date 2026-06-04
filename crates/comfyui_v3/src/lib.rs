@@ -42,29 +42,18 @@ use crate::schema::Output;
 #[pymodule]
 #[pyo3(name = "comfyui_v3")]
 fn init_comfyui_v3(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Logging (best-effort; safe to call multiple times).
+    // Initialize tracing
     let _ = tracing_subscriber::fmt()
         .with_ansi(true)
         .with_max_level(tracing::Level::DEBUG)
+        .with_level(true)
+        .with_file(true)
+        .with_line_number(true)
+        .with_target(false)
         .try_init();
 
     // Schema types (only pyclass-backed types can be registered)
     m.add_class::<Output>()?;
-
-    // Extension / node types
-    // Note: Renamed to ComfyExtensionHelper to avoid name conflict with
-    // comfy_api.latest.ComfyExtension
-    // m.add_class::<node::ComfyExtension>()?;
-
-    // // Helper functions for Python inheritance
-    // m.add_function(wrap_pyfunction!(
-    //     node::extension::create_extension_subclass,
-    //     m
-    // )?)?;
-    // m.add_function(wrap_pyfunction!(
-    //     node::extension::get_comfy_extension_base,
-    //     m
-    // )?)?;
 
     Ok(())
 }

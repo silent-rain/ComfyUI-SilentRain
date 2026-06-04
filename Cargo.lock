@@ -906,6 +906,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "comfyui_silentrain_v3"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "comfyui_v3",
+ "pyo3",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "comfyui_v3"
 version = "0.1.0"
 dependencies = [
