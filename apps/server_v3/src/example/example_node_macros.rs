@@ -32,10 +32,14 @@ impl ComfyNode for ExampleNodeMacros {
     }
 
     fn define_schema() -> Result<NodeSchema> {
-        Ok(NodeSchema::new("GrayscaleImage")
-            .with_display_name("SR Grayscale Image")
-            .with_category(Category::Image)
-            .with_description("Convert an image to grayscale.")
+        Ok(NodeSchema::new("ExampleNodeMacros")
+            .with_display_name("SR Example Node Macros")
+            .with_category(Category::Example)
+            .with_description("An example node that demonstrates the use of node macros.")
+            .with_deprecated(false)
+            .with_experimental(true)
+            .with_input_list(false)
+            .with_output_node(false)
             .with_inputs([ImageInput::new("image").into()])
             .with_outputs([Output::image("image_out")
                 .display_name("image")

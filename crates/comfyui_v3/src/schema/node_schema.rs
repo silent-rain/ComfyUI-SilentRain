@@ -295,7 +295,7 @@ impl NodeSchema {
         // --- build hidden list ---
         let hidden = PyList::empty(py);
         for h in &self.hidden {
-            hidden.append(h.to_string())?;
+            hidden.append(h.to_py_obj(py)?)?;
         }
 
         // Assemble kwargs dict.

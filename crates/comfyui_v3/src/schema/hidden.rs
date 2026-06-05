@@ -36,15 +36,38 @@ pub enum Hidden {
     API_KEY_COMFY_ORG,
 }
 
+impl Hidden {
+    /// 将 Rust 的 Hidden 枚举转换为 Python 的 io.Hidden 枚举成员
+    pub fn to_py_obj<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        // 1. 导入 comfy_api.latest.io 模块
+        let io_module = py.import("comfy_api.latest")?.getattr("io")?;
+
+        // 2. 获取 io.Hidden 枚举类
+        let hidden_enum = io_module.getattr("Hidden")?;
+
+        // 3. 根据 Rust 的枚举变体，获取对应的 Python 枚举成员属性
+        let member_name = match self {
+            Hidden::UNIQUE_ID => "unique_id",
+            Hidden::EXTRA_PNGINFO => "extra_pnginfo",
+            Hidden::PROMPT => "prompt",
+            Hidden::DYNPROMPT => "dynprompt",
+            Hidden::AUTH_TOKEN_COMFY_ORG => "auth_token_comfy_org",
+            Hidden::API_KEY_COMFY_ORG => "api_key_comfy_org",
+        };
+
+        hidden_enum.getattr(member_name)
+    }
+}
+
 impl fmt::Display for Hidden {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Hidden::UNIQUE_ID => write!(f, "UNIQUE_ID"),
-            Hidden::PROMPT => write!(f, "PROMPT"),
-            Hidden::EXTRA_PNGINFO => write!(f, "EXTRA_PNGINFO"),
-            Hidden::DYNPROMPT => write!(f, "DYNPROMPT"),
-            Hidden::AUTH_TOKEN_COMFY_ORG => write!(f, "AUTH_TOKEN_COMFY_ORG"),
-            Hidden::API_KEY_COMFY_ORG => write!(f, "API_KEY_COMFY_ORG"),
+            Hidden::UNIQUE_ID => write!(f, "unique_id"),
+            Hidden::PROMPT => write!(f, "prompt"),
+            Hidden::EXTRA_PNGINFO => write!(f, "extra_pnginfo"),
+            Hidden::DYNPROMPT => write!(f, "dynprompt"),
+            Hidden::AUTH_TOKEN_COMFY_ORG => write!(f, "auth_token_comfy_org"),
+            Hidden::API_KEY_COMFY_ORG => write!(f, "api_key_comfy_org"),
         }
     }
 }

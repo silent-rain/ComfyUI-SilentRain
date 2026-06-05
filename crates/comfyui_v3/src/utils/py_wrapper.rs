@@ -41,18 +41,54 @@ pub fn pytype_wrapper<'py, T: PyTypeInfo>(py: Python<'py>) -> Py<PyType> {
 /// ```
 pub fn create_comfy_node_subclass<'py>(
     py: Python<'py>,
-    rust_class: Py<PyType>,
+    rust_class: Bound<'py, PyType>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let python_code = c_str!(
         "
+from comfy_api.latest import io
+
 def make_comfy_node_subclass(rust_class):
     '''
-    Create a subclass that inherits from both rust_class and io.ComfyNode.
-    This ensures the class has all required methods and attributes from ComfyNode.
+    Create a pure Python proxy class that inherits from io.ComfyNode,
+    and delegates method calls to the rust_class.
     '''
-    class Subclass(rust_class, io.ComfyNode):
-        pass
-    # Preserve the original class name and module for compatibility
+    class Subclass(io.ComfyNode):
+        @classmethod
+        def define_schema(cls):
+            # 代理调用 Rust 类的 define_schema
+            return rust_class.define_schema()
+        
+        @classmethod
+        def execute(cls, *args, **kwargs):
+            # 代理调用 Rust 类的 execute
+            # ComfyUI V3 传递的是关键字参数，Rust 侧的强类型参数会自动匹配对应的 key
+            return rust_class.execute(*args, **kwargs)
+            
+        @classmethod
+        def validate_inputs(cls, *args, **kwargs):
+            # 如果 Rust 类实现了 validate_inputs
+            if hasattr(rust_class, 'validate_inputs'):
+                return rust_class.validate_inputs(*args, **kwargs)
+            # 否则默认返回 True
+            return True
+        
+        @classmethod
+        def fingerprint_inputs(cls, *args, **kwargs):
+            # 如果 Rust 类实现了 fingerprint_inputs
+            if hasattr(rust_class, 'fingerprint_inputs'):
+                return rust_class.fingerprint_inputs(*args, **kwargs)
+            # 否则忽略调用
+            return None
+        
+        @classmethod
+        def check_lazy_status(cls, *args, **kwargs):
+            # 如果 Rust 类实现了 check_lazy_status
+            if hasattr(rust_class, 'check_lazy_status'):
+                return rust_class.check_lazy_status(*args, **kwargs)
+            # 否则默认返回空列表
+            return []
+
+    # 保留原始 Rust 类的名字，以便 ComfyUI 识别节点名称
     Subclass.__name__ = rust_class.__name__
     Subclass.__qualname__ = rust_class.__qualname__
     Subclass.__module__ = rust_class.__module__

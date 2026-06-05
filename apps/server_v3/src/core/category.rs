@@ -29,6 +29,10 @@ pub enum Category {
     LlamaCpp,
     /// Math
     Math,
+    /// Experimental
+    Experimental,
+    /// 示例
+    Example,
 }
 
 impl fmt::Display for Category {
@@ -45,6 +49,8 @@ impl fmt::Display for Category {
             Category::JoyCaption => f.write_str(&format!("{CATEGORY_PREFIX}/JoyCaption")),
             Category::LlamaCpp => f.write_str(&format!("{CATEGORY_PREFIX}/LlamaCpp")),
             Category::Math => f.write_str(&format!("{CATEGORY_PREFIX}/Math")),
+            Category::Experimental => f.write_str(&format!("{CATEGORY_PREFIX}/Experimental")),
+            Category::Example => f.write_str(&format!("{CATEGORY_PREFIX}/Example")),
         }
     }
 }

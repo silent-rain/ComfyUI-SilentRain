@@ -1,9 +1,4 @@
-use pyo3::{
-    exceptions::PyRuntimeError,
-    prelude::*,
-    pymethods,
-    types::{PyDict, PyType},
-};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, pymethods, types::PyType};
 use tracing::{error, info};
 
 use comfyui_v3::{
@@ -14,6 +9,7 @@ use comfyui_v3::{
         input::{BoolInput, ImageInput},
         output::Output,
     },
+    utils::py_wrapper::create_comfy_node_subclass,
 };
 
 use crate::core::category::Category;
@@ -71,7 +67,7 @@ impl InvertImage {
     /// The method signature matches io.ComfyNode.execute() expectation.
     #[classmethod]
     #[pyo3(name = "execute")]
-    fn execute_py<'py>(
+    fn execute<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
         image: Py<PyAny>,
@@ -98,35 +94,10 @@ impl InvertImage {
         Ok(result)
     }
 
-    /// Optional: Validate inputs before execution.
-    ///
-    /// This method is called by ComfyUI to validate inputs.
-    /// Return None if inputs are valid, or an error message if not.
-    #[classmethod]
-    #[pyo3(name = "validate_inputs")]
-    fn validate_inputs_py<'py>(
-        _cls: &Bound<'_, PyType>,
-        py: Python<'py>,
-        _kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        // Default implementation: always valid
-        Ok(py.None().into_bound(py))
-    }
-
-    /// Optional: Control when the node is re-executed.
-    ///
-    /// This method returns a value that will be compared to the one returned
-    /// the last time the node was executed. If it is different, the node will
-    /// be executed again.
-    #[classmethod]
-    #[pyo3(name = "fingerprint_inputs")]
-    fn fingerprint_inputs_py<'py>(
-        _cls: &Bound<'_, PyType>,
-        py: Python<'py>,
-        _kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        // Default implementation: return empty string (always re-execute if inputs change)
-        Ok("".into_pyobject(py).unwrap().into_any())
+    /// Convert into io.ComfyNode subclass (Returns a CLASS, not an instance)
+    pub fn as_comfy_node_class<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        // py.get_type_bound::<Self>() 获取当前实例的 Python 类型
+        create_comfy_node_subclass(py, py.get_type::<Self>())
     }
 }
 

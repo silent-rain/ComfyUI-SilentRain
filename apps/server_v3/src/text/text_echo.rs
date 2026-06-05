@@ -2,7 +2,7 @@ use pyo3::{
     exceptions::PyRuntimeError,
     prelude::*,
     pymethods,
-    types::{PyDict, PyTuple, PyType},
+    types::{PyBool, PyDict, PyTuple, PyType},
 };
 use tracing::{error, info};
 
@@ -70,7 +70,7 @@ impl TextEcho {
     /// Execute the node logic.
     #[classmethod]
     #[pyo3(name = "execute", signature = (*args, **kwargs))]
-    fn execute_py<'py>(
+    fn execute<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
         args: &Bound<'py, PyTuple>,
@@ -91,6 +91,22 @@ impl TextEcho {
         };
 
         Ok(result)
+    }
+
+    /// Optional: Validate inputs before execution.
+    ///
+    /// This method is called by ComfyUI to validate inputs.
+    /// Return true if inputs are valid, or an error message if not.
+    #[classmethod]
+    #[pyo3(name = "validate_inputs", signature = (*_args, **_kwargs))]
+    fn validate_inputs<'py>(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'py>,
+        _args: &Bound<'py, PyTuple>,
+        _kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        // Default implementation: always valid
+        Ok(PyBool::new(py, true).as_any().clone())
     }
 
     /// Check lazy inputs — return names of inputs that still need evaluation.

@@ -2,7 +2,7 @@ use pyo3::{
     exceptions::PyRuntimeError,
     prelude::*,
     pymethods,
-    types::{PyDict, PyType},
+    types::{PyBool, PyDict, PyTuple, PyType},
 };
 use tracing::{error, info};
 
@@ -42,12 +42,12 @@ impl ExamplePytype {
         _cls: Bound<'py, PyType>,
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        NodeSchema::new("InvertImage")
-            .with_display_name("SR Invert Image")
-            .with_category(Category::Image)
-            .with_description("Invert the colours of an image.")
+        NodeSchema::new("ExamplePytype")
+            .with_display_name("SR Example Pytype")
+            .with_category(Category::Example)
+            .with_description("An example node that demonstrates the use of Pytypes.")
             .with_deprecated(false)
-            .with_experimental(false)
+            .with_experimental(true)
             .with_input_list(false)
             .with_output_node(false)
             .with_inputs([
@@ -101,16 +101,19 @@ impl ExamplePytype {
     /// Optional: Validate inputs before execution.
     ///
     /// This method is called by ComfyUI to validate inputs.
-    /// Return None if inputs are valid, or an error message if not.
+    /// Return true if inputs are valid, or an error message if not.
     #[classmethod]
-    #[pyo3(name = "validate_inputs")]
-    fn validate_inputs_py<'py>(
+    #[pyo3(name = "validate_inputs", signature = (*_args, **_kwargs))]
+    fn validate_inputs<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
+        _args: &Bound<'py, PyTuple>,
         _kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         // Default implementation: always valid
-        Ok(py.None().into_bound(py))
+        // Ok(PyBool::new(py, true).into_bound().into_any())
+        // true.into_bound_py_any(py)
+        Ok(PyBool::new(py, true).as_any().clone())
     }
 
     /// Optional: Control when the node is re-executed.
@@ -119,14 +122,28 @@ impl ExamplePytype {
     /// the last time the node was executed. If it is different, the node will
     /// be executed again.
     #[classmethod]
-    #[pyo3(name = "fingerprint_inputs")]
-    fn fingerprint_inputs_py<'py>(
+    #[pyo3(name = "fingerprint_inputs", signature = (*_args, **_kwargs))]
+    fn fingerprint_inputs<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
+        _args: &Bound<'py, PyTuple>,
         _kwargs: Option<Bound<'_, PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         // Default implementation: return empty string (always re-execute if inputs change)
         Ok("".into_pyobject(py).unwrap().into_any())
+    }
+
+    /// Check lazy inputs — return names of inputs that still need evaluation.
+    #[classmethod]
+    #[pyo3(name = "check_lazy_status", signature = (*_args, **_kwargs))]
+    fn check_lazy_status<'py>(
+        _cls: &Bound<'_, PyType>,
+        _py: Python<'py>,
+        _args: &Bound<'py, PyTuple>,
+        _kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Vec<String>> {
+        // No lazy inputs needed for this simple node.
+        Ok(vec![])
     }
 }
 

@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 
 use comfyui_v3::node::ExtensionBuilder;
 
+use crate::example;
 use crate::image;
 use crate::text;
 
@@ -37,6 +38,7 @@ fn node_collect(py: Python<'_>) -> PyResult<Vec<Py<pyo3::types::PyType>>> {
     let mut nodes: Vec<Py<pyo3::types::PyType>> = Vec::new();
     nodes.extend(image::node_register(py)?);
     nodes.extend(text::node_register(py)?);
+    nodes.extend(example::node_register(py)?);
     Ok(nodes)
 }
 
@@ -51,4 +53,7 @@ pub mod v3 {
 
     #[pymodule_export]
     use text::text;
+
+    #[pymodule_export]
+    use example::example;
 }

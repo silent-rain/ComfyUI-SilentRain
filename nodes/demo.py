@@ -1,19 +1,22 @@
 #!/home/one/code/ComfyUI/.venv/bin/python
 # -*- coding:utf-8 -*-
 # source /home/one/code/ComfyUI/.venv/bin/activate
+# source /data/ComfyUI/.venv/bin/activate
 import asyncio
 import sys
 import inspect
 
 sys.path.append("/home/one/code/ComfyUI")
+sys.path.append("/data/ComfyUI")
 
 from typing_extensions import override
-from comfy_api.latest import ComfyExtension, io # type: ignore
+from comfy_api.latest import ComfyExtension, io  # type: ignore
 
-from comfyui_silentrain import build_extension, comfy_entrypoint # type: ignore
+from comfyui_silentrain import build_extension, comfy_entrypoint  # type: ignore
 
 # 子模导入, 当前仅支持该方式导入
-from comfyui_silentrain import v3 # type: ignore
+from comfyui_silentrain import v3  # type: ignore
+
 
 class ExampleExtension(ComfyExtension):
     nodes: list[type[io.ComfyNode]] = []
@@ -88,7 +91,6 @@ class Example(io.ComfyNode):
         return io.NodeOutput(image)
 
 
-
 def comfy_entrypoint_py() -> (
     ExampleExtension
 ):  # ComfyUI calls this to load your extension and its nodes.
@@ -137,47 +139,50 @@ def demo_node():
     print("image: ", dir(v3.image))
     print("image: ", dir(v3.image.InvertImage))
     print("image: ", type(v3.image.InvertImage))
-    
+
     node_instance = v3.image.InvertImage()
     print(type(node_instance))
     print(f"isinstance io.ComfyNode: {isinstance(node_instance, io.ComfyNode)}")
-    
+
     print("===========================\n")
-    
+
     example_instance = Example()
     print(type(Example))
     print(type(example_instance))
     print(f"isinstance io.ComfyNode: {isinstance(example_instance, io.ComfyNode)}")
-    
-    
-    
+
     # define_schema = v3.image.InvertImage.define_schema()
     # print("define_schema: ", define_schema)
     # print(type(define_schema))
     # print(f"isinstance io.ComfyNode: {isinstance(define_schema, io.ComfyNode)}")
-    
 
-"""
-(ComfyUI) ➜  nodes git:(dev) ✗ python demo.py
 
-image:  ['__all__', '__doc__', '__loader__', '__name__', '__package__', '__spec__', 'image', 'text']
-image:  ['InvertImage', '__all__', '__doc__', '__loader__', '__name__', '__package__', '__spec__']
-image:  ['__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'define_schema', 'execute']
-image:  <class 'type'>
-<class 'builtins.InvertImage'>
-isinstance io.ComfyNode: False
-===========================
+def demo_into_comfy_node():
+    node_instance = v3.image.InvertImage()
+    print(f"Rust Instance Type: {type(node_instance)}")
+    print(f"Instance of io.ComfyNode: {isinstance(node_instance, io.ComfyNode)}")
 
-<class 'type'>
-<class '__main__.Example'>
-isinstance io.ComfyNode: True
-"""
+    # 获取代理类（这是一个类，不是实例）
+    ComfyNodeClass = node_instance.as_comfy_node_class()
+
+    print(
+        f"ComfyNode Class Type: {ComfyNodeClass}"
+    )  # 应该是 <class 'comfy_node_subclass.Subclass'>
+    print(
+        f"Is subclass of io.ComfyNode: {issubclass(ComfyNodeClass, io.ComfyNode)}"
+    )  # 应该是 True
+
+    # 检查代理的方法是否都在
+    print(f"Has define_schema: {hasattr(ComfyNodeClass, 'define_schema')}")
+    print(f"Has execute: {hasattr(ComfyNodeClass, 'execute')}")
+
 
 def main():
     # demo_comfy_entrypoint()
     # demo_extension()
     # demo_extension_nodes()
-    demo_node()
+    # demo_node()
+    demo_into_comfy_node()
     pass
 
 

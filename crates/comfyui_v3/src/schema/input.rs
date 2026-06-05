@@ -316,7 +316,7 @@ impl Input {
 pub struct IntInput {
     #[serde(flatten)]
     pub spec: InputSpec,
-    pub default_value: i64,
+    pub default: i64,
     pub min: Option<i64>,
     pub max: Option<i64>,
     pub step: Option<i64>,
@@ -340,7 +340,7 @@ impl IntInput {
     }
 
     pub fn default_value(mut self, v: i64) -> Self {
-        self.default_value = v;
+        self.default = v;
         self
     }
     pub fn min(mut self, v: i64) -> Self {
@@ -389,7 +389,7 @@ impl IntInput {
 pub struct FloatInput {
     #[serde(flatten)]
     pub spec: InputSpec,
-    pub default_value: f64,
+    pub default: f64,
     pub min: Option<f64>,
     pub max: Option<f64>,
     pub step: Option<f64>,
@@ -413,7 +413,7 @@ impl FloatInput {
     }
 
     pub fn default_value(mut self, v: f64) -> Self {
-        self.default_value = v;
+        self.default = v;
         self
     }
     pub fn min(mut self, v: f64) -> Self {
@@ -462,7 +462,7 @@ impl FloatInput {
 pub struct StringInput {
     #[serde(flatten)]
     pub spec: InputSpec,
-    pub default_value: String,
+    pub default: String,
     pub multiline: bool,
     pub placeholder: Option<String>,
     pub dynamic_prompts: bool,
@@ -484,7 +484,7 @@ impl StringInput {
     }
 
     pub fn default_value(mut self, v: impl Into<String>) -> Self {
-        self.default_value = v.into();
+        self.default = v.into();
         self
     }
     pub fn multiline(mut self, v: bool) -> Self {
@@ -521,7 +521,8 @@ impl StringInput {
 pub struct BoolInput {
     #[serde(flatten)]
     pub spec: InputSpec,
-    pub default_value: bool,
+    #[serde(default, rename = "default")]
+    pub default: bool,
     pub label_on: Option<String>,
     pub label_off: Option<String>,
     pub socketless: bool,
@@ -542,7 +543,7 @@ impl BoolInput {
     }
 
     pub fn default_value(mut self, v: bool) -> Self {
-        self.default_value = v;
+        self.default = v;
         self
     }
     pub fn label_on(mut self, v: impl Into<String>) -> Self {
@@ -576,7 +577,7 @@ pub struct ComboInput {
     #[serde(flatten)]
     pub spec: InputSpec,
     pub options: Vec<String>,
-    pub default_value: Option<String>,
+    pub default: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub control_after_generate: Option<ControlAfterGenerate>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -606,7 +607,7 @@ impl ComboInput {
     }
 
     pub fn default_value(mut self, v: impl Into<String>) -> Self {
-        self.default_value = Some(v.into());
+        self.default = Some(v.into());
         self
     }
     pub fn control_after_generate(mut self, v: ControlAfterGenerate) -> Self {
@@ -787,7 +788,7 @@ pub struct MultiComboInput {
     #[serde(flatten)]
     pub spec: InputSpec,
     pub options: Vec<String>,
-    pub default_value: Vec<String>,
+    pub default: Vec<String>,
     pub placeholder: Option<String>,
     pub chip: bool,
     pub control_after_generate: bool,
@@ -812,7 +813,7 @@ impl MultiComboInput {
     }
 
     pub fn default_value(mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.default_value = v.into_iter().map(Into::into).collect();
+        self.default = v.into_iter().map(Into::into).collect();
         self
     }
     pub fn placeholder(mut self, v: impl Into<String>) -> Self {

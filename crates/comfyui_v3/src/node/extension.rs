@@ -60,7 +60,7 @@ impl ExtensionBuilder {
         // Wrap each node as a ComfyNode subclass
         let mut comfy_nodes: Vec<Py<PyAny>> = Vec::new();
         for node in self.nodes {
-            let subclass = create_comfy_node_subclass(py, node)?;
+            let subclass = create_comfy_node_subclass(py, node.into_bound(py))?;
             comfy_nodes.push(subclass.into());
         }
 

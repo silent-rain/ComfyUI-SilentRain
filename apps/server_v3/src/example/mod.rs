@@ -8,7 +8,7 @@ mod example_pytype;
 pub use example_pytype::ExamplePytype;
 
 #[pymodule]
-pub mod image {
+pub mod example {
     pub use super::*;
 
     #[pymodule_export]
