@@ -1,74 +1,111 @@
-//! pyo3 的 #[pymethods] 宏只能用于 impl StructName 块（即 struct 的固有方法块），而不能用于 impl Trait for StructName 块（即 trait 实现块）。
+//! Pure Rust trait for ComfyUI v3 node development.
+//!
+//! This trait is designed to be used with the `#[comfy_node]` proc-macro
+//! from the `comfy_node_macros` crate.
+//!
+//! # Example
+//!
+//! ```ignore
+//! use comfyui_v3::node::ComfyNode;
+//! use comfyui_v3::schema::{NodeSchema, NodeOutput};
+//! use comfyui_v3::error::Result;
+//!
+//! struct MyNode;
+//!
+//! impl ComfyNode for MyNode {
+//!     fn define_schema() -> Result<NodeSchema> {
+//!         Ok(NodeSchema::new("MyNode")
+//!             .with_display_name("My Node")
+//!             .with_category("image"))
+//!     }
+//!
+//!     fn execute(py: Python<'_>, kwargs: Option<&Bound<'_, PyDict>>) -> Result<NodeOutput> {
+//!         // implementation
+//!     }
+//! }
+//! ```
 use pyo3::{
     prelude::*,
-    types::{PyDict, PyTuple, PyType},
+    types::{PyDict, PyTuple},
 };
 
-/// Trait for ComfyUI v3 nodes.
+use crate::error::Result;
+use crate::schema::{NodeOutput, NodeSchema};
+
+/// Pure Rust trait for ComfyUI v3 nodes.
 ///
-/// Every node must implement this trait so that it can be registered with a
-/// `ComfyExtension` and executed by the ComfyUI engine.
+/// Implement this trait for your node struct, then apply `#[comfy_node]`
+/// attribute macro to automatically generate the Python interop layer.
 ///
-/// The trait methods map 1-to-1 to the Python `io.ComfyNode` classmethods:
+/// The trait methods return Rust types (`NodeSchema`, `NodeOutput`) instead
+/// of raw Python objects, making the implementation more idiomatic and safe.
 ///
-/// | Python                    | Rust (`ComfyNode`)      |
-/// |---------------------------|-------------------------|
-/// | `define_schema`           | `define_schema`         |
-/// | `execute`                 | `execute`               |
-/// | `check_lazy_status`       | `check_lazy_status`     |
-/// | `fingerprint_inputs`      | `fingerprint_inputs`    |
+/// # Example
 ///
-/// # Design Philosophy
+/// ```ignore
+/// #[comfy_node]
+/// struct InvertImage;
 ///
-/// The trait signatures intentionally use raw Python types (`Bound<'py, PyAny>`,
-/// `Bound<'py, PyTuple>`, `Bound<'py, PyDict>`) rather than Rust wrappers:
+/// impl ComfyNode for InvertImage {
+///     fn define_schema() -> NodeSchema {
+///         NodeSchema::new("InvertImage")
+///             .with_display_name("Invert Image")
+///             .with_category("image")
+///     }
 ///
-/// - **Return types**: `define_schema` and `execute` return Python objects directly,
-///   so that ComfyUI v3 sees the same types as pure-Python nodes.
-/// - **Execute arguments**: Instead of a single `PyDict`, `execute` receives
-///   `*args` and `**kwargs` exactly as Python would call it.  This allows node
-///   implementations to declare strongly-typed parameter lists and let pyo3's
-///   `#[pymethods]` machinery do the unpacking.
-///
-/// # Safety
-/// Implementors must be `Send + Sync` because node instances may be shared
-/// across async task boundaries by the ComfyUI runtime.
-pub trait ComfyNode: Send + Sync {
+///     fn execute(py: Python<'_>, kwargs: Option<&Bound<'_, PyDict>>) -> NodeOutput {
+///         // implementation
+///     }
+/// }
+/// ```
+pub trait ComfyNode: Send + Sync + Default {
+    /// Create a new instance of the node.
+    ///
+    /// This is required for Python instantiation via `#[new]`.
+    /// The `#[comfy_node]` macro will automatically generate the
+    /// Python constructor that calls this method.
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
+        Self::default()
+    }
+
     /// Define the node's schema (metadata, inputs, outputs).
     ///
-    /// Called once at registration time. Must return a Python object that is
-    /// compatible with ComfyUI v3's `NodeOptions` — e.g. a `NodeOptions`
-    /// subclass instance or a plain dict with the expected keys.
-    fn define_schema<'py>(cls: Bound<'py, PyType>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>>;
+    /// This should return a [`NodeSchema`] value that describes the node.
+    /// The `#[comfy_node]` macro will automatically convert this to a Python
+    /// `io.Schema` object.
+    fn define_schema() -> Result<NodeSchema>;
 
     /// Execute the node logic.
     ///
-    /// `args` and `kwargs` mirror the Python call `self.execute(*args, **kwargs)`.
-    /// ComfyUI v3 passes evaluated inputs as positional / keyword arguments
-    /// according to the node's INPUT_TYPES definition.
+    /// - `py`: The Python GIL token.
+    /// - `args`: Positional arguments (usually empty for v3 nodes).
+    /// - `kwargs`: Keyword arguments containing the input values.
     ///
-    /// The return value is a Python object — typically a `dict` mapping output
-    /// names to their values, or a `tuple` for multi-output nodes.
+    /// Returns a [`NodeOutput`] value that will be converted to a Python object
+    /// by the `#[comfy_node]` macro.
     fn execute<'py>(
-        cls: &Bound<'_, PyType>,
         py: Python<'py>,
         args: &Bound<'py, PyTuple>,
-        kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<Bound<'py, PyAny>>;
+        kwargs: Option<Bound<'py, PyDict>>,
+    ) -> Result<NodeOutput>;
 
-    /// Optional: determine which lazy inputs still need evaluation.
+    /// Optional: validate node inputs before execution.
     ///
-    /// Same calling convention as `execute`.  Return a list of input **names**
-    /// that must be evaluated before `execute` can proceed.
+    /// Equivalent to V1's `VALIDATE_INPUTS`.
     ///
-    /// The default implementation returns an empty list (no lazy inputs needed).
-    fn check_lazy_status<'py>(
-        _cls: &Bound<'_, PyType>,
+    /// Return `Ok(())` to indicate validation success.
+    /// Return `Err(Error::Validation(msg))` to indicate validation failure.
+    ///
+    /// The default implementation returns `Ok(())` (no validation needed).
+    fn validate_inputs<'py>(
         _py: Python<'py>,
         _args: &Bound<'py, PyTuple>,
-        _kwargs: Option<Bound<'_, PyDict>>,
-    ) -> PyResult<Vec<String>> {
-        Ok(Vec::new())
+        _kwargs: Option<Bound<'py, PyDict>>,
+    ) -> Result<()> {
+        Ok(())
     }
 
     /// Optional: return a fingerprint string for cache invalidation.
@@ -81,11 +118,24 @@ pub trait ComfyNode: Send + Sync {
     /// The default implementation returns `None` (fallback to normal
     /// input-change detection).
     fn fingerprint_inputs<'py>(
-        _cls: &Bound<'py, PyType>,
         _py: Python<'py>,
         _args: &Bound<'py, PyTuple>,
         _kwargs: Option<Bound<'py, PyDict>>,
-    ) -> PyResult<Option<String>> {
+    ) -> Result<Option<String>> {
         Ok(None)
+    }
+
+    /// Optional: determine which lazy inputs still need evaluation.
+    ///
+    /// Return a list of input **names** that must be evaluated before
+    /// `execute` can proceed.
+    ///
+    /// The default implementation returns an empty list (no lazy inputs needed).
+    fn check_lazy_status<'py>(
+        _py: Python<'py>,
+        _args: &Bound<'py, PyTuple>,
+        _kwargs: Option<Bound<'py, PyDict>>,
+    ) -> Result<Vec<String>> {
+        Ok(Vec::new())
     }
 }

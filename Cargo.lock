@@ -857,6 +857,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "comfy_node_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+ "synstructure",
+]
+
+[[package]]
 name = "comfyui_silentrain"
 version = "0.1.1"
 dependencies = [
@@ -923,6 +933,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "comfy_node_macros",
  "indexmap",
  "log",
  "pyo3",

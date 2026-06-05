@@ -12,6 +12,12 @@ pub mod schema;
 pub mod types;
 pub mod utils;
 
+// Re-export the #[comfy_node] proc-macro
+pub use comfy_node_macros::comfy_node;
+
+// Re-export error types for convenience
+pub use error::{Error, Result};
+
 use crate::schema::Output;
 
 // --------------------------------------------------------------------------

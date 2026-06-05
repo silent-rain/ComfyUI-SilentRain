@@ -29,6 +29,9 @@ log = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+# ComfyNode proc-macro
+comfy_node_macros = { path = "../comfy_node_macros" }
+
 
 # 添加构建依赖
 [build-dependencies]
