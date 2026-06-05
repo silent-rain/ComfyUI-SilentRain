@@ -1,11 +1,11 @@
 /// ComfyUI v3 Extension — SilentRain
 ///
 /// This crate provides ComfyUI nodes implemented in Rust using the `comfyui_v3` SDK.
-use pyo3::prelude::*;
-
-pub mod register;
+use pyo3::{pyfunction, pymodule};
 
 pub mod core;
+pub mod register;
+
 pub mod image;
 pub mod text;
 pub mod utils;
@@ -20,22 +20,45 @@ pub mod utils;
 /// ```
 #[pymodule]
 #[pyo3(name = "comfyui_silentrain_v3")]
-fn init_module(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Initialize tracing
-    let _ = tracing_subscriber::fmt()
-        .with_ansi(true)
-        .with_max_level(tracing::Level::DEBUG)
-        .with_level(true)
-        .with_file(true)
-        .with_line_number(true)
-        .with_target(false)
-        .try_init();
+mod extension_module {
+    use pyo3::{
+        Bound, PyResult,
+        types::{PyAnyMethods, PyModule, PyModuleMethods},
+    };
 
-    // ComfyUI V3 核心入口
-    m.add_function(pyo3::wrap_pyfunction!(register::comfy_entrypoint, m)?)?;
+    use crate::core::init_log;
 
-    // ComfyUI V3 添加子模块
-    register::register_submodules(py, m)?;
+    #[pymodule_export]
+    use super::double;
 
-    Ok(())
+    #[pymodule_export]
+    use super::register::comfy_entrypoint;
+
+    #[pymodule_export]
+    use crate::register::v3;
+
+    // 模块初始化时运行代码
+    #[pymodule_init]
+    fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        // Initialize tracing
+        init_log();
+
+        // Arbitrary code to run at the module initialization
+        m.add("double2", m.getattr("double")?)?;
+        m.add_class::<crate::text::TextEcho>()?;
+
+        // 子模块注册
+        {
+            let sub = PyModule::new(m.py(), "v3")?;
+            sub.add_class::<crate::text::TextEcho>()?;
+            m.add_submodule(&sub)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[pyfunction]
+fn double(x: usize) -> usize {
+    x * 2
 }

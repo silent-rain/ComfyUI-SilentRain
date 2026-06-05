@@ -1,17 +1,15 @@
 /// Image processing nodes for SilentRain v3.
-use pyo3::{
-    prelude::*,
-    types::{PyModule, PyModuleMethods, PyType},
-};
+use pyo3::{prelude::*, types::PyType};
 
 pub mod example;
 pub use example::InvertImage;
 
-/// Create the `image` Python submodule.
-pub fn submodule(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
-    let sub = PyModule::new(py, "image")?;
-    sub.add_class::<example::InvertImage>()?;
-    Ok(sub)
+#[pymodule]
+pub mod image {
+    pub use super::*;
+
+    #[pymodule_export]
+    pub use InvertImage;
 }
 
 /// Collect all image nodes as Python types.

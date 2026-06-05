@@ -8,13 +8,12 @@ import inspect
 sys.path.append("/home/one/code/ComfyUI")
 
 from typing_extensions import override
-from comfy_api.latest import ComfyExtension, io
+from comfy_api.latest import ComfyExtension, io # type: ignore
 
-from comfyui_silentrain import build_extension, comfy_entrypoint
+from comfyui_silentrain import build_extension, comfy_entrypoint # type: ignore
 
 # 子模导入, 当前仅支持该方式导入
-from comfyui_silentrain import v3
-
+from comfyui_silentrain import v3 # type: ignore
 
 class ExampleExtension(ComfyExtension):
     nodes: list[type[io.ComfyNode]] = []

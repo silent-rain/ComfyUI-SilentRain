@@ -40,23 +40,15 @@ fn node_collect(py: Python<'_>) -> PyResult<Vec<Py<pyo3::types::PyType>>> {
     Ok(nodes)
 }
 
-/// Register sub-modules into the given Python module.
-///
-/// # Errors
-///
-/// Returns `Err` if any submodule fails to initialize.
-pub fn register_submodules<'py>(py: Python<'py>, m: &Bound<'py, PyModule>) -> PyResult<()> {
-    m.add_submodule(&image::submodule(py)?)?;
-    m.add_submodule(&text::submodule(py)?)?;
-    Ok(())
-}
+/// 顶层模块导出
+#[pymodule]
+pub mod v3 {
+    use crate::*;
 
-/// Register V3 sub-modules into the given Python module.
-pub fn register_v3_submodules<'py>(py: Python<'py>, m: &Bound<'py, PyModule>) -> PyResult<()> {
-    let sub = PyModule::new(py, "v3")?;
-    register_submodules(py, &sub)?;
+    // 顶层子模块
+    #[pymodule_export]
+    use image::image;
 
-    m.add_submodule(&sub)?;
-
-    Ok(())
+    #[pymodule_export]
+    use text::text;
 }
