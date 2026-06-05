@@ -23,12 +23,17 @@ use comfyui_v3::{
 /// in a production crate.
 #[pyclass(subclass)]
 #[derive(Default)]
-pub struct InvertImage;
+pub struct InvertImage {}
 
 impl PromptServer for InvertImage {}
 
 #[pymethods]
 impl InvertImage {
+    #[new]
+    fn new() -> Self {
+        Self {}
+    }
+
     /// Define the node's schema (metadata, inputs, outputs).
     #[classmethod]
     fn define_schema<'py>(
@@ -69,7 +74,7 @@ impl InvertImage {
     ) -> PyResult<Bound<'py, PyAny>> {
         info!("InvertImage::execute_py args={args}, kwargs={kwargs:?}");
 
-        let result = match InvertImage.execute_rs(py, args, kwargs) {
+        let result = match InvertImage::new().execute_rs(py, args, kwargs) {
             Ok(result) => result,
             Err(e) => {
                 error!("Error executing InvertImage:\n{e:#?}");

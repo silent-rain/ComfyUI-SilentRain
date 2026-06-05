@@ -21,12 +21,17 @@ use comfyui_v3::{
 /// Demonstrates how a text-processing / conditioning node is structured.
 #[pyclass(subclass)]
 #[derive(Default)]
-pub struct TextEcho;
+pub struct TextEcho {}
 
 impl PromptServer for TextEcho {}
 
 #[pymethods]
 impl TextEcho {
+    #[new]
+    fn new() -> Self {
+        Self {}
+    }
+
     /// Define the node's schema.
     #[classmethod]
     fn define_schema<'py>(
@@ -71,7 +76,7 @@ impl TextEcho {
     ) -> PyResult<Bound<'py, PyAny>> {
         info!("TextEcho::execute_py args={args}, kwargs={kwargs:?}");
 
-        let result = match TextEcho.execute_rs(py, args, kwargs) {
+        let result = match TextEcho::new().execute_rs(py, args, kwargs) {
             Ok(result) => result,
             Err(e) => {
                 error!("Error executing TextEcho:\n{e:#?}");

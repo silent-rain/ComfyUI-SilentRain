@@ -9,15 +9,12 @@ use crate::text;
 /// ComfyUI entrypoint function.
 ///
 /// ```python
-/// async def comfy_entrypoint():
+/// def comfy_entrypoint():
 ///     return SilentRainV3Extension()
 /// ```
 #[pyfunction]
-#[pyo3()]
-pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
-    println!("==============================1");
-
-    Python::attach(|py| -> PyResult<Py<PyAny>> { build_extension(py) })
+pub fn comfy_entrypoint<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
+    build_extension(py)
 }
 
 /// Build the SilentRain v3 extension with all registered nodes.
@@ -26,7 +23,6 @@ pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
 /// this function merges all lists and passes them to the builder.
 #[pyfunction]
 pub fn build_extension<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
-    println!("==============================2");
     let nodes = node_collect(py)?;
 
     let mut builder = ExtensionBuilder::new();
@@ -52,5 +48,15 @@ fn node_collect(py: Python<'_>) -> PyResult<Vec<Py<pyo3::types::PyType>>> {
 pub fn register_submodules<'py>(py: Python<'py>, m: &Bound<'py, PyModule>) -> PyResult<()> {
     m.add_submodule(&image::submodule(py)?)?;
     m.add_submodule(&text::submodule(py)?)?;
+    Ok(())
+}
+
+/// Register V3 sub-modules into the given Python module.
+pub fn register_v3_submodules<'py>(py: Python<'py>, m: &Bound<'py, PyModule>) -> PyResult<()> {
+    let sub = PyModule::new(py, "v3")?;
+    register_submodules(py, &sub)?;
+
+    m.add_submodule(&sub)?;
+
     Ok(())
 }
