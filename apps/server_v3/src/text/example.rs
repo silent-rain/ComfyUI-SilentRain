@@ -16,6 +16,8 @@ use comfyui_v3::{
     },
 };
 
+use crate::core::category::Category;
+
 /// An example ComfyUI v3 text node — echoes input text.
 ///
 /// Demonstrates how a text-processing / conditioning node is structured.
@@ -40,7 +42,7 @@ impl TextEcho {
     ) -> PyResult<Bound<'py, PyAny>> {
         NodeSchema::new("TextEcho")
             .with_display_name("SR Text Echo")
-            .with_category("SilentRain/text")
+            .with_category(Category::Text)
             .with_description("Echo the input text unchanged.")
             .with_deprecated(false)
             .with_experimental(false)

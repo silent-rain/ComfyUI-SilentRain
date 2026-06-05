@@ -287,17 +287,16 @@ pub fn build_extension<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
         .add_node_wrapper::<ExampleNode>(py)
         .build(py)
 }
+
 /// ComfyUI entrypoint function.
 ///
 /// ```python
-/// async def comfy_entrypoint() -> (
-///     ExampleExtension
-/// ):  # ComfyUI calls this to load your extension and its nodes.
-///     return ExampleExtension()
+/// def comfy_entrypoint():
+///     return SilentRainV3Extension()
 /// ```
 #[pyfunction]
-pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
-    Python::attach(build_extension)
+pub fn comfy_entrypoint<'py>(py: Python<'py>) -> PyResult<Py<PyAny>> {
+    build_extension(py)
 }
 
 // ---------------------------------------------------------------------------
@@ -309,19 +308,31 @@ pub async fn comfy_entrypoint() -> PyResult<Py<PyAny>> {
 /// When compiled as a `cdylib`, this module can be imported from Python:
 ///
 /// ```python
-/// import example_node_v3
-/// ext = example_node_v3.build_extension()
+/// import example_node
+/// ext = example_node.build_extension()
 /// ```
 #[pymodule]
-#[pyo3(name = "example_node_v3")]
-fn init_example_node_v3(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(pyo3::wrap_pyfunction!(build_extension, m)?)?;
-    Ok(())
-}
+#[pyo3(name = "example_node")]
+mod extension_module {
+    use pyo3::{Bound, PyResult, types::PyModule};
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+    use comfyui_v3::core::logger::init_log;
+
+    #[pymodule_export]
+    use super::comfy_entrypoint;
+
+    #[pymodule_export]
+    use super::build_extension;
+
+    // 模块初始化时运行代码
+    #[pymodule_init]
+    fn init(_m: &Bound<'_, PyModule>) -> PyResult<()> {
+        // Initialize tracing
+        init_log();
+
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod tests {

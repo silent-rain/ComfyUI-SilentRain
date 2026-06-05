@@ -3,6 +3,7 @@
 /// This crate provides ComfyUI nodes implemented in Rust using the `comfyui_v3` SDK.
 use pyo3::{pyfunction, pymodule};
 
+pub mod constant;
 pub mod core;
 pub mod register;
 

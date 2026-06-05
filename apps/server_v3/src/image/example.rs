@@ -16,6 +16,8 @@ use comfyui_v3::{
     },
 };
 
+use crate::core::category::Category;
+
 /// An example ComfyUI v3 image node — inverts an image.
 ///
 /// Mirrors the functionality of the `example_node_v3.py` image processing
@@ -42,7 +44,7 @@ impl InvertImage {
     ) -> PyResult<Bound<'py, PyAny>> {
         NodeSchema::new("InvertImage")
             .with_display_name("SR Invert Image")
-            .with_category("SilentRain/image")
+            .with_category(Category::Image)
             .with_description("Invert the colours of an image.")
             .with_deprecated(false)
             .with_experimental(false)

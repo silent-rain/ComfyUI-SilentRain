@@ -1,33 +1,16 @@
 //! ComfyUI v3 Extension Crate
 //!
 //! Provides type-safe, Rust-native node development for ComfyUI v3.
-//!
-//! # Quick Start
-//!
-//! ```ignore
-//! use comfyui_v3::prelude::*;
-//!
-//! let schema = NodeSchema::new(
-//!     "InvertImage".into(),
-//!     "Invert Image".into(),
-//!     "image".into(),
-//!     Some(vec![ImageInput::new("image".into(), false, None).into()]),
-//!     Some(vec![TypedOutput::image(None).into()]),
-//! );
-//!
-//! let ext = ExtensionBuilder::new("MyExtension")
-//!     .with_node_schema(schema)
-//!     .build();
-//! ```
 
-// pub mod core;
+use pyo3::prelude::*;
+
+pub mod core;
 pub mod error;
 pub mod node;
 pub mod prelude;
 pub mod schema;
+pub mod types;
 pub mod utils;
-
-use pyo3::prelude::*;
 
 use crate::schema::Output;
 
