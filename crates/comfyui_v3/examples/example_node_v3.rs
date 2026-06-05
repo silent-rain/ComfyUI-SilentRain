@@ -28,13 +28,14 @@ use pyo3::{
 use tracing::{error, info};
 
 use comfyui_v3::{
-    node::{ExtensionBuilder, PromptServer, extension::pytype_wrapper},
+    node::{ExtensionBuilder, PromptServer},
     schema::{
         NodeOutput, NodeSchema,
         hidden::Hidden,
         input::{BoolInput, ComboInput, FloatInput, ImageInput, IntInput, StringInput},
         output::Output,
     },
+    utils::py_wrapper::pytype_wrapper,
 };
 
 // ---------------------------------------------------------------------------

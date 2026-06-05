@@ -1,4 +1,6 @@
-use pyo3::{PyTypeInfo, ffi::c_str, prelude::*, types::PyType};
+use pyo3::{PyTypeInfo, prelude::*, types::PyType};
+
+use crate::utils::py_wrapper::{create_comfy_node_subclass, create_extension_wrapper};
 
 /// Builder for [`ComfyExtension`].
 ///
@@ -55,43 +57,14 @@ impl ExtensionBuilder {
     /// Consume the builder and produce a [`ComfyExtensionWrapper`].
     /// The wrapper for [`comby_api.latest import.ComfyExtension`]
     pub fn build<'py>(self, py: Python<'py>) -> PyResult<Py<PyAny>> {
-        let python_code = c_str!(
-            "
-from typing_extensions import override
-from comfy_api.latest import ComfyExtension, io
+        // Wrap each node as a ComfyNode subclass
+        let mut comfy_nodes: Vec<Py<PyAny>> = Vec::new();
+        for node in self.nodes {
+            let subclass = create_comfy_node_subclass(py, node)?;
+            comfy_nodes.push(subclass.into());
+        }
 
-class ComfyExtensionWrapper(ComfyExtension):
-    nodes: list[type[io.ComfyNode]] = []
-
-    def __init__(self, nodes: list[type[io.ComfyNode]] = []):
-        super().__init__()
-        self.nodes = nodes
-
-    @override
-    async def get_node_list(self) -> list[type[io.ComfyNode]]:
-        return self.nodes
-            "
-        );
-
-        // 使用PyModule::from_code创建Python模块
-        let module = PyModule::from_code(
-            py,
-            python_code,
-            c"comfy_extension_wrapper.py",
-            c"comfy_extension_wrapper",
-        )?;
-
-        // 从模块中获取类
-        let py_class = module.getattr("ComfyExtensionWrapper")?;
-
-        // 调用Python类的构造函数
-        let py_class_obj = py_class.call1((self.nodes,))?;
-
-        Ok(py_class_obj.into())
+        // Create the extension wrapper with all wrapped nodes
+        create_extension_wrapper(py, comfy_nodes)
     }
-}
-
-/// A utility function to get the Python type wrapper for a Rust type.
-pub fn pytype_wrapper<'py, T: PyTypeInfo>(py: Python<'py>) -> Py<PyType> {
-    py.get_type::<T>().into()
 }

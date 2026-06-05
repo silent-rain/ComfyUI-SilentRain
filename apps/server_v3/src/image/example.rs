@@ -2,7 +2,7 @@ use pyo3::{
     exceptions::PyRuntimeError,
     prelude::*,
     pymethods,
-    types::{PyDict, PyTuple, PyType},
+    types::{PyDict, PyType},
 };
 use tracing::{error, info};
 
@@ -66,17 +66,23 @@ impl InvertImage {
     }
 
     /// Execute the node logic.
+    ///
+    /// This method is called by ComfyUI to execute the node.
+    /// The method signature matches io.ComfyNode.execute() expectation.
     #[classmethod]
-    #[pyo3(name = "execute", signature = (*args, **kwargs))]
+    #[pyo3(name = "execute")]
     fn execute_py<'py>(
         _cls: &Bound<'_, PyType>,
         py: Python<'py>,
-        args: &Bound<'py, PyTuple>,
-        kwargs: Option<Bound<'_, PyDict>>,
+        image: Py<PyAny>,
+        include_alpha: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
-        info!("InvertImage::execute_py args={args}, kwargs={kwargs:?}");
+        info!(
+            "InvertImage::execute_py called with include_alpha={}",
+            include_alpha
+        );
 
-        let result = match InvertImage::new().execute_rs(py, args, kwargs) {
+        let result = match InvertImage::new().execute_rs(py, image, include_alpha) {
             Ok(result) => result,
             Err(e) => {
                 error!("Error executing InvertImage:\n{e:#?}");
@@ -91,35 +97,59 @@ impl InvertImage {
 
         Ok(result)
     }
+
+    /// Optional: Validate inputs before execution.
+    ///
+    /// This method is called by ComfyUI to validate inputs.
+    /// Return None if inputs are valid, or an error message if not.
+    #[classmethod]
+    #[pyo3(name = "validate_inputs")]
+    fn validate_inputs_py<'py>(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'py>,
+        _kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        // Default implementation: always valid
+        Ok(py.None().into_bound(py))
+    }
+
+    /// Optional: Control when the node is re-executed.
+    ///
+    /// This method returns a value that will be compared to the one returned
+    /// the last time the node was executed. If it is different, the node will
+    /// be executed again.
+    #[classmethod]
+    #[pyo3(name = "fingerprint_inputs")]
+    fn fingerprint_inputs_py<'py>(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'py>,
+        _kwargs: Option<Bound<'_, PyDict>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        // Default implementation: return empty string (always re-execute if inputs change)
+        Ok("".into_pyobject(py).unwrap().into_any())
+    }
 }
 
 impl InvertImage {
     pub fn execute_rs<'py>(
         &self,
         py: Python<'py>,
-        _args: &Bound<'py, PyTuple>,
-        kwargs: Option<Bound<'_, PyDict>>,
+        image: Py<PyAny>,
+        include_alpha: bool,
     ) -> anyhow::Result<Bound<'py, PyAny>> {
-        let kwargs = kwargs.ok_or_else(|| anyhow::anyhow!("kwargs is None"))?;
-
-        let image: Py<PyAny> = kwargs
-            .get_item("image")
-            .ok()
-            .flatten()
-            .ok_or_else(|| anyhow::anyhow!("missing input 'image'"))?
-            .into();
-
-        let _include_alpha: bool = kwargs
-            .get_item("include_alpha")
-            .ok()
-            .flatten()
-            .and_then(|v| v.extract().ok())
-            .unwrap_or(false);
+        info!(
+            "InvertImage::execute_rs called with include_alpha={}",
+            include_alpha
+        );
 
         // ------------------------------------------------------------------
-        // TEMPLATE: 这里可以接入实际的图像处理逻辑（例如 numpy 操作）
+        // TODO: 这里可以接入实际的图像处理逻辑（例如 numpy 操作）
         // ------------------------------------------------------------------
         // 目前作为示例，直接将输入原样返回。
+        // 实际实现时，应该使用 numpy 或 torch 进行图像反转操作：
+        // let np = py.import("numpy")?;
+        // let inverted = np.call_method1("invert", (image,))?;
+
         let ret = NodeOutput::new().add_arg(image).to_py_obj(py)?;
 
         Ok(ret)
