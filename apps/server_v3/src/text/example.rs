@@ -48,19 +48,19 @@ impl TextEcho {
             .with_output_node(false)
             .with_inputs([
                 StringInput::new("text")
-                    .with_default("Hello SilentRain!")
-                    .with_lazy(true)
-                    .with_tooltip("Input text string.")
+                    .default_value("Hello SilentRain!")
+                    .lazy(true)
+                    .tooltip("Input text string.")
                     .into(),
                 BoolInput::new("print_to_console")
-                    .with_default(false)
-                    .with_tooltip("Print the text to the Rust console.")
+                    .default_value(false)
+                    .tooltip("Print the text to the Rust console.")
                     .into(),
             ])
             .with_outputs([Output::string("text_out")
-                .with_display_name("text")
-                .with_is_output_list(false)
-                .with_tooltip("Same text that was input.")])
+                .display_name("text")
+                .is_output_list(false)
+                .tooltip("Same text that was input.")])
             .with_hidden([Hidden::UNIQUE_ID, Hidden::EXTRA_PNGINFO])
             .into_py_schema(py)
     }

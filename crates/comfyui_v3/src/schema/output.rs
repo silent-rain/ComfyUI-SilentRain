@@ -1,3 +1,4 @@
+//! output schema
 use pyo3::{
     BoundObject,
     prelude::*,
@@ -270,19 +271,19 @@ impl Output {
     // ----- builder chain -----
 
     /// Set display name.
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
+    pub fn display_name(mut self, v: impl Into<String>) -> Self {
         self.spec.display_name = Some(v.into());
         self
     }
 
     /// Set tooltip.
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
+    pub fn tooltip(mut self, v: impl Into<String>) -> Self {
         self.spec.tooltip = Some(v.into());
         self
     }
 
     /// Set `is_output_list` flag.
-    pub fn with_is_output_list(mut self, v: bool) -> Self {
+    pub fn is_output_list(mut self, v: bool) -> Self {
         self.spec.is_output_list = v;
         self
     }

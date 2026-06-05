@@ -51,14 +51,14 @@ impl InvertImage {
             .with_inputs([
                 ImageInput::new("image").into(),
                 BoolInput::new("include_alpha")
-                    .with_default(false)
-                    .with_tooltip("Also invert the alpha channel.")
+                    .default_value(false)
+                    .tooltip("Also invert the alpha channel.")
                     .into(),
             ])
             .with_outputs([Output::image("image_out")
-                .with_display_name("image")
-                .with_is_output_list(false)
-                .with_tooltip("Inverted image.")])
+                .display_name("image")
+                .is_output_list(false)
+                .tooltip("Inverted image.")])
             .with_hidden([Hidden::UNIQUE_ID, Hidden::EXTRA_PNGINFO])
             .into_py_schema(py)
     }

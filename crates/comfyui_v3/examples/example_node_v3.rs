@@ -75,52 +75,52 @@ impl ExampleNode {
             .with_inputs([
                 ImageInput::new("image").into(),
                 IntInput::new("int_field")
-                    .with_min(0)
-                    .with_max(4096)
-                    .with_step(64)
-                    .with_lazy(true)
-                    .with_tooltip("int tips.")
+                    .min(0)
+                    .max(4096)
+                    .step(64)
+                    .lazy(true)
+                    .tooltip("int tips.")
                     .into(),
                 FloatInput::new("float_field")
-                    .with_default(1.0)
-                    .with_min(0.0)
-                    .with_max(10.0)
-                    .with_step(0.01)
-                    .with_round(0.001)
-                    .with_lazy(true)
+                    .default_value(1.0)
+                    .min(0.0)
+                    .max(10.0)
+                    .step(0.01)
+                    .round(0.001)
+                    .lazy(true)
                     .into(),
                 StringInput::new("string_field")
-                    .with_default("Hello world!")
-                    .with_lazy(true)
+                    .default_value("Hello world!")
+                    .lazy(true)
                     .into(),
-                BoolInput::new("bool_field").with_default(true).into(),
+                BoolInput::new("bool_field").default_value(true).into(),
                 ComboInput::new("combo_field", ["enable", "disable"]).into(),
             ])
             .with_outputs([
                 Output::image("imageout")
-                    .with_display_name("image out")
-                    .with_is_output_list(false)
-                    .with_tooltip("image tips."),
+                    .display_name("image out")
+                    .is_output_list(false)
+                    .tooltip("image tips."),
                 Output::int("int_out")
-                    .with_display_name("int out")
-                    .with_is_output_list(false)
-                    .with_tooltip("int tips."),
+                    .display_name("int out")
+                    .is_output_list(false)
+                    .tooltip("int tips."),
                 Output::float("float_out")
-                    .with_display_name("float out")
-                    .with_is_output_list(false)
-                    .with_tooltip("float tips."),
+                    .display_name("float out")
+                    .is_output_list(false)
+                    .tooltip("float tips."),
                 Output::string("string_out")
-                    .with_display_name("string out")
-                    .with_is_output_list(false)
-                    .with_tooltip("string tips."),
+                    .display_name("string out")
+                    .is_output_list(false)
+                    .tooltip("string tips."),
                 Output::boolean("bool_out")
-                    .with_display_name("bool out")
-                    .with_is_output_list(false)
-                    .with_tooltip("bool tips."),
+                    .display_name("bool out")
+                    .is_output_list(false)
+                    .tooltip("bool tips."),
                 Output::combo("combo_out", ["enable", "disable"])
-                    .with_display_name("combo out")
-                    .with_is_output_list(false)
-                    .with_tooltip("combo tips."),
+                    .display_name("combo out")
+                    .is_output_list(false)
+                    .tooltip("combo tips."),
             ])
             .with_hidden([Hidden::UNIQUE_ID, Hidden::EXTRA_PNGINFO])
             .into_py_schema(py)

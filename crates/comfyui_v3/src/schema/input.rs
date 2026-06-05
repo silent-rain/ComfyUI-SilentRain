@@ -3,234 +3,99 @@ use pyo3::types::PyDict;
 use pythonize::pythonize;
 use serde::{Deserialize, Serialize};
 
-/*
-## Input Types
+// ---------------------------------------------------------------------------
+// InputSpec — shared metadata for all node inputs
+// ---------------------------------------------------------------------------
 
-### Basic Inputs
+/// Shared metadata for every ComfyUI node input.
+///
+/// Mirrors the common constructor parameters of Python's `io.Input` base
+/// class: `id`, `display_name`, `optional`, `tooltip`, `lazy`, `raw_link`,
+/// `advanced`.
+///
+/// # Example
+/// ```no_run
+/// let spec = InputSpec {
+///     id: "image".to_string(),
+///     display_name: Some("Source Image".to_string()),
+///     ..Default::default()
+/// };
+/// ```
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct InputSpec {
+    /// Unique identifier for this input within the node.
+    pub id: String,
 
-```python
-# Integer input
-io.Int.Input(
-    id: str,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    default: int = None,
-    min: int = None,
-    max: int = None,
-    step: int = None,
-    control_after_generate: bool = None,
-    display_mode: NumberDisplay = None,
-    socketless: bool = None,
-    force_input: bool = None
-)
+    /// Display name shown on the node socket. Defaults to `id` when `None`.
+    pub display_name: Option<String>,
 
-# Float input
-io.Float.Input(
-    id: str,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    default: float = None,
-    min: float = None,
-    max: float = None,
-    step: float = None,
-    round: float = None,
-    display_mode: NumberDisplay = None,
-    socketless: bool = None,
-    force_input: bool = None
-)
+    /// Whether the input is optional.
+    pub optional: bool,
 
-# String input
-io.String.Input(
-    id: str,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    multiline: bool = False,
-    placeholder: str = None,
-    default: str = None,
-    dynamic_prompts: bool = None,
-    socketless: bool = None,
-    force_input: bool = None
-)
+    /// Tooltip shown when hovering over the input socket.
+    pub tooltip: Option<String>,
 
-# Boolean input
-io.Boolean.Input(
-    id: str,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    default: bool = None,
-    label_on: str = None,
-    label_off: str = None,
-    socketless: bool = None,
-    force_input: bool = None
-)
+    /// Mark input as lazily evaluated.
+    pub lazy: bool,
 
-# Combo (dropdown) input
-io.Combo.Input(
-    id: str,
-    options: list[str] = None,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    default: str = None,
-    control_after_generate: bool = None,
-    upload: UploadType = None,
-    image_folder: FolderType = None,
-    remote: RemoteOptions = None,
-    socketless: bool = None
-)
+    /// When `true`, pass raw link information instead of parsed value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub raw_link: Option<bool>,
 
-# Multi-select combo
-io.MultiCombo.Input(
-    id: str,
-    options: list[str],
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    default: list[str] = None,
-    placeholder: str = None,
-    chip: bool = None,
-    control_after_generate: bool = None,
-    socketless: bool = None
-)
-# cusotm type
-io.Custom(io_type="MY_TYPE").Input(
-    id: str,
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None,
-    placeholder: str = None,
-)
-```
+    /// When `true`, input is hidden behind an "Advanced" toggle in the UI.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub advanced: Option<bool>,
+}
 
-### ComfyUI Types
+// ---------------------------------------------------------------------------
+// Macro — inject common builder methods into any input struct
+// ---------------------------------------------------------------------------
 
-```python
-# Core types
-io.Image.Input(id, ...)        # Type: torch.Tensor [B,H,W,C]
-io.Mask.Input(id, ...)         # Type: torch.Tensor [H,W] or [B,H,W]
-io.Latent.Input(id, ...)       # Type: dict with 'samples' tensor
-io.Conditioning.Input(id, ...)  # Type: list[tuple[tensor, dict]]
-io.Model.Input(id, ...)        # Type: ModelPatcher
-io.Clip.Input(id, ...)         # Type: CLIP
-io.Vae.Input(id, ...)          # Type: VAE
-io.ControlNet.Input(id, ...)   # Type: ControlNet
+/// Macro that injects the standard builder chain methods for `InputSpec`
+/// fields into an input struct.
+///
+/// The struct must have a field named `spec` of type `InputSpec`.
+macro_rules! impl_input_common {
+    ($ty:ty) => {
+        impl $ty {
+            /// Set the display name.
+            pub fn display_name(mut self, v: impl Into<String>) -> Self {
+                self.spec.display_name = Some(v.into());
+                self
+            }
 
-# Sampling types
-io.Sampler.Input(id, ...)      # Type: Sampler
-io.Sigmas.Input(id, ...)       # Type: torch.Tensor
-io.Noise.Input(id, ...)        # Type: torch.Tensor
-io.Guider.Input(id, ...)       # Type: CFGGuider
+            /// Set whether the input is optional.
+            pub fn optional(mut self, v: bool) -> Self {
+                self.spec.optional = v;
+                self
+            }
 
-# Additional types
-io.ClipVision.Input(id, ...)         # Type: ClipVisionModel
-io.ClipVisionOutput.Input(id, ...)   # Type: ClipVisionOutput
-io.StyleModel.Input(id, ...)         # Type: StyleModel
-io.Gligen.Input(id, ...)             # Type: ModelPatcher
-io.UpscaleModel.Input(id, ...)       # Type: ImageModelDescriptor
-io.Audio.Input(id, ...)              # Type: dict with 'waveform' and 'sample_rate'
-io.Video.Input(id, ...)              # Type: VideoInput
-io.Webcam.Input(id, ...)             # Type: str (filepath)
-io.WanCameraEmbedding.Input(id, ...) # Type: torch.Tensor
-io.LoraModel.Input(id, ...)          # Type: dict[str, Tensor]
-io.Hooks.Input(id, ...)              # Type: HookGroup
-io.HookKeyframes.Input(id, ...)      # Type: HookKeyframeGroup
-io.SVG.Input(id, ...)                # Type: SVG (custom class)
-io.Voxel.Input(id, ...)              # Type: Voxel data (custom class)
-io.Mesh.Input(id, ...)               # Type: Mesh data (custom class)
-```
+            /// Set the tooltip.
+            pub fn tooltip(mut self, v: impl Into<String>) -> Self {
+                self.spec.tooltip = Some(v.into());
+                self
+            }
 
-### Advanced Inputs
+            /// Set whether the input is lazily evaluated.
+            pub fn lazy(mut self, v: bool) -> Self {
+                self.spec.lazy = v;
+                self
+            }
 
-```python
-# Multi-type input (accepts multiple types)
-io.MultiType.Input(
-    id: str | InputV3,  # Can override from existing input
-    types: list[type[ComfyType]],
-    display_name: str = None,
-    optional: bool = False,
-    tooltip: str = None,
-    lazy: bool = None
-)
+            /// Set the raw_link flag.
+            pub fn raw_link(mut self, v: bool) -> Self {
+                self.spec.raw_link = Some(v);
+                self
+            }
 
-# Dynamic growing input
-io.AutogrowDynamic.Input(
-    id: str,
-    template_input: InputV3,  # Template for each new input
-    min: int = 1,             # Minimum inputs
-    max: int = None           # Maximum inputs
-)
-
-# Custom type
-@io.comfytype(io_type="MY_CUSTOM")
-class MyCustom:
-    Type = MyDataClass
-    class Input(io.InputV3):
-        ...
-    class Output(io.OutputV3):
-        ...
-```
-
-## Output Types
-
-```python
-# Basic output
-io.Image.Output(
-    id: str = None,
-    display_name: str = None,
-    tooltip: str = None,
-    is_output_list: bool = False  # Output is list
-)
-
-# All ComfyUI types have corresponding outputs
-io.Mask.Output(id, ...)
-io.Latent.Output(id, ...)
-io.Model.Output(id, ...)
-io.Clip.Output(id, ...)
-io.Vae.Output(id, ...)
-io.Conditioning.Output(id, ...)
-io.String.Output(id, ...)
-io.Int.Output(id, ...)
-io.Float.Output(id, ...)
-io.Boolean.Output(id, ...)
-# ... etc
-```
-
-## Hidden Inputs
-
-```python
-from comfy_api.latest import Hidden
-
-# Available hidden inputs
-Hidden.unique_id            # Node's unique ID
-Hidden.prompt              # Complete prompt
-Hidden.extra_pnginfo       # PNG metadata dict
-Hidden.dynprompt           # Dynamic prompt object
-Hidden.auth_token_comfy_org # ComfyOrg auth token
-Hidden.api_key_comfy_org   # ComfyOrg API key
-
-# Usage in schema
-hidden=[
-    Hidden.unique_id,
-    Hidden.prompt
-]
-
-# Access in execute
-unique_id = cls.hidden.unique_id
-prompt = cls.hidden.prompt
-```
-
-*/
+            /// Set the advanced flag.
+            pub fn advanced(mut self, v: bool) -> Self {
+                self.spec.advanced = Some(v);
+                self
+            }
+        }
+    };
+}
 
 // ---------------------------------------------------------------------------
 // NumberDisplayMode
@@ -388,27 +253,28 @@ impl RemoteOptions {
 }
 
 // ---------------------------------------------------------------------------
-// NodeInput — unified enum for all input descriptors (storage only)
+// Input — unified enum for all input descriptors (storage only)
 // ---------------------------------------------------------------------------
 
 /// Every ComfyUI node input is represented by a variant of this enum.
 ///
-/// All variants are pure Rust types, so a `Vec<NodeInput>` (the list of
+/// All variants are pure Rust types, so a `Vec<Input>` (the list of
 /// inputs on a `NodeSchema`) can be cloned without ever touching the GIL.
 ///
 /// To convert to a Python `io.*.Input` object, pattern-match and call
 /// `to_py_obj` on the inner struct.
 #[derive(Debug, Clone)]
 pub enum Input {
+    // -- base types --
     Int(IntInput),
     Float(FloatInput),
     String(StringInput),
     Bool(BoolInput),
+    // -- typed ComfyUI data-flow types --
     Combo(ComboInput),
     MultiCombo(MultiComboInput),
     Custom(CustomInput),
     Image(ImageInput),
-    // -- typed ComfyUI data-flow types --
     Model(TypedInput),
     Vae(TypedInput),
     Clip(TypedInput),
@@ -448,74 +314,60 @@ impl Input {
 /// Int input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct IntInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    default: i64,
-    min: Option<i64>,
-    max: Option<i64>,
-    step: Option<i64>,
-    control_after_generate: bool,
-    display_mode: NumberDisplayMode,
-    socketless: bool,
-    force_input: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub default_value: i64,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
+    pub step: Option<i64>,
+    pub control_after_generate: bool,
+    pub display_mode: NumberDisplayMode,
+    pub socketless: bool,
+    pub force_input: bool,
 }
+
+impl_input_common!(IntInput);
 
 impl IntInput {
     pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: i64) -> Self {
+        self.default_value = v;
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_default(mut self, v: i64) -> Self {
-        self.default = v;
-        self
-    }
-    pub fn with_min(mut self, v: i64) -> Self {
+    pub fn min(mut self, v: i64) -> Self {
         self.min = Some(v);
         self
     }
-    pub fn with_max(mut self, v: i64) -> Self {
+    pub fn max(mut self, v: i64) -> Self {
         self.max = Some(v);
         self
     }
-    pub fn with_step(mut self, v: i64) -> Self {
+    pub fn step(mut self, v: i64) -> Self {
         self.step = Some(v);
         self
     }
-    pub fn with_control_after_generate(mut self, v: bool) -> Self {
+    pub fn control_after_generate(mut self, v: bool) -> Self {
         self.control_after_generate = v;
         self
     }
-    pub fn with_display_mode(mut self, v: NumberDisplayMode) -> Self {
+    pub fn display_mode(mut self, v: NumberDisplayMode) -> Self {
         self.display_mode = v;
         self
     }
-    pub fn with_socketless(mut self, v: bool) -> Self {
+    pub fn socketless(mut self, v: bool) -> Self {
         self.socketless = v;
         self
     }
-    pub fn with_force_input(mut self, v: bool) -> Self {
+    pub fn force_input(mut self, v: bool) -> Self {
         self.force_input = v;
         self
     }
@@ -535,75 +387,61 @@ impl IntInput {
 /// Float input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct FloatInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    default: f64,
-    min: Option<f64>,
-    max: Option<f64>,
-    step: Option<f64>,
-    round: Option<f64>,
-    display_mode: NumberDisplayMode,
-    socketless: bool,
-    force_input: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub default_value: f64,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub step: Option<f64>,
+    pub round: Option<f64>,
+    pub display_mode: NumberDisplayMode,
+    pub socketless: bool,
+    pub force_input: bool,
 }
+
+impl_input_common!(FloatInput);
 
 impl FloatInput {
     pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: f64) -> Self {
+        self.default_value = v;
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
-        self
-    }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
-        self
-    }
-    pub fn with_default(mut self, v: f64) -> Self {
-        self.default = v;
-        self
-    }
-    pub fn with_min(mut self, v: f64) -> Self {
+    pub fn min(mut self, v: f64) -> Self {
         self.min = Some(v);
         self
     }
-    pub fn with_max(mut self, v: f64) -> Self {
+    pub fn max(mut self, v: f64) -> Self {
         self.max = Some(v);
         self
     }
-    pub fn with_step(mut self, v: f64) -> Self {
+    pub fn step(mut self, v: f64) -> Self {
         self.step = Some(v);
         self
     }
-    pub fn with_round(mut self, v: f64) -> Self {
+    pub fn round(mut self, v: f64) -> Self {
         self.round = Some(v);
         self
     }
-    pub fn with_display_mode(mut self, v: NumberDisplayMode) -> Self {
+    pub fn display_mode(mut self, v: NumberDisplayMode) -> Self {
         self.display_mode = v;
+        self
+    }
+    pub fn socketless(mut self, v: bool) -> Self {
+        self.socketless = v;
+        self
+    }
+    pub fn force_input(mut self, v: bool) -> Self {
+        self.force_input = v;
         self
     }
 
@@ -622,65 +460,51 @@ impl FloatInput {
 /// String input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct StringInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    default: String,
-    multiline: bool,
-    placeholder: Option<String>,
-    dynamic_prompts: bool,
-    socketless: bool,
-    force_input: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub default_value: String,
+    pub multiline: bool,
+    pub placeholder: Option<String>,
+    pub dynamic_prompts: bool,
+    pub socketless: bool,
+    pub force_input: bool,
 }
+
+impl_input_common!(StringInput);
 
 impl StringInput {
     pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: impl Into<String>) -> Self {
+        self.default_value = v.into();
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
-        self
-    }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
-        self
-    }
-    pub fn with_default(mut self, v: impl Into<String>) -> Self {
-        self.default = v.into();
-        self
-    }
-    pub fn with_multiline(mut self, v: bool) -> Self {
+    pub fn multiline(mut self, v: bool) -> Self {
         self.multiline = v;
         self
     }
-    pub fn with_placeholder(mut self, v: impl Into<String>) -> Self {
+    pub fn placeholder(mut self, v: impl Into<String>) -> Self {
         self.placeholder = Some(v.into());
         self
     }
-    pub fn with_dynamic_prompts(mut self, v: bool) -> Self {
+    pub fn dynamic_prompts(mut self, v: bool) -> Self {
         self.dynamic_prompts = v;
+        self
+    }
+    pub fn socketless(mut self, v: bool) -> Self {
+        self.socketless = v;
+        self
+    }
+    pub fn force_input(mut self, v: bool) -> Self {
+        self.force_input = v;
         self
     }
 
@@ -695,60 +519,46 @@ impl StringInput {
 /// Boolean input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct BoolInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    default: bool,
-    label_on: Option<String>,
-    label_off: Option<String>,
-    socketless: bool,
-    force_input: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub default_value: bool,
+    pub label_on: Option<String>,
+    pub label_off: Option<String>,
+    pub socketless: bool,
+    pub force_input: bool,
 }
+
+impl_input_common!(BoolInput);
 
 impl BoolInput {
     pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: bool) -> Self {
+        self.default_value = v;
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
-        self
-    }
-    pub fn with_force_input(mut self, v: bool) -> Self {
-        self.force_input = v;
-        self
-    }
-    pub fn with_default(mut self, v: bool) -> Self {
-        self.default = v;
-        self
-    }
-    pub fn with_label_on(mut self, v: impl Into<String>) -> Self {
+    pub fn label_on(mut self, v: impl Into<String>) -> Self {
         self.label_on = Some(v.into());
         self
     }
-    pub fn with_label_off(mut self, v: impl Into<String>) -> Self {
+    pub fn label_off(mut self, v: impl Into<String>) -> Self {
         self.label_off = Some(v.into());
+        self
+    }
+    pub fn socketless(mut self, v: bool) -> Self {
+        self.socketless = v;
+        self
+    }
+    pub fn force_input(mut self, v: bool) -> Self {
+        self.force_input = v;
         self
     }
 
@@ -763,27 +573,22 @@ impl BoolInput {
 /// Combo (dropdown) input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ComboInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    options: Vec<String>,
-    default: Option<String>,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub options: Vec<String>,
+    pub default_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    control_after_generate: Option<ControlAfterGenerate>,
+    pub control_after_generate: Option<ControlAfterGenerate>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    upload: Option<UploadType>,
+    pub upload: Option<UploadType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    image_folder: Option<FolderType>,
+    pub image_folder: Option<FolderType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    remote: Option<RemoteOptions>,
-    socketless: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    raw_link: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    advanced: Option<bool>,
+    pub remote: Option<RemoteOptions>,
+    pub socketless: bool,
 }
+
+impl_input_common!(ComboInput);
 
 impl ComboInput {
     pub fn new(
@@ -791,58 +596,37 @@ impl ComboInput {
         options: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             options: options.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: impl Into<String>) -> Self {
+        self.default_value = Some(v.into());
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
-        self
-    }
-    pub fn with_default(mut self, v: impl Into<String>) -> Self {
-        self.default = Some(v.into());
-        self
-    }
-    pub fn with_control_after_generate(mut self, v: ControlAfterGenerate) -> Self {
+    pub fn control_after_generate(mut self, v: ControlAfterGenerate) -> Self {
         self.control_after_generate = Some(v);
         self
     }
-    pub fn with_upload(mut self, v: UploadType) -> Self {
+    pub fn upload(mut self, v: UploadType) -> Self {
         self.upload = Some(v);
         self
     }
-    pub fn with_image_folder(mut self, v: FolderType) -> Self {
+    pub fn image_folder(mut self, v: FolderType) -> Self {
         self.image_folder = Some(v);
         self
     }
-    pub fn with_remote(mut self, v: RemoteOptions) -> Self {
+    pub fn remote(mut self, v: RemoteOptions) -> Self {
         self.remote = Some(v);
         self
     }
-    pub fn with_raw_link(mut self, v: bool) -> Self {
-        self.raw_link = Some(v);
-        self
-    }
-    pub fn with_advanced(mut self, v: bool) -> Self {
-        self.advanced = Some(v);
+    pub fn socketless(mut self, v: bool) -> Self {
+        self.socketless = v;
         self
     }
 
@@ -873,53 +657,27 @@ impl ComboInput {
 /// Image input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ImageInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_dict: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    raw_link: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    advanced: Option<bool>,
+    pub extra_dict: Option<serde_json::Value>,
 }
+
+impl_input_common!(ImageInput);
 
 impl ImageInput {
     pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
-        self
-    }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
+    pub fn extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
         self.extra_dict = Some(v.into());
-        self
-    }
-    pub fn with_raw_link(mut self, v: bool) -> Self {
-        self.raw_link = Some(v);
-        self
-    }
-    pub fn with_advanced(mut self, v: bool) -> Self {
-        self.advanced = Some(v);
         self
     }
 
@@ -934,91 +692,80 @@ impl ImageInput {
 /// Generic typed input for flow types (MODEL, VAE, CLIP, CONDITIONING, LATENT, MASK).
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct TypedInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_dict: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    raw_link: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    advanced: Option<bool>,
+    pub extra_dict: Option<serde_json::Value>,
     #[serde(skip)]
     _type_tag: &'static str,
 }
 
+impl_input_common!(TypedInput);
+
 impl TypedInput {
     pub fn model(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "MODEL",
             ..Default::default()
         }
     }
     pub fn vae(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "VAE",
             ..Default::default()
         }
     }
     pub fn clip(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "CLIP",
             ..Default::default()
         }
     }
     pub fn conditioning(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "CONDITIONING",
             ..Default::default()
         }
     }
     pub fn latent(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "LATENT",
             ..Default::default()
         }
     }
     pub fn mask(id: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             _type_tag: "MASK",
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
-        self
-    }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
+    pub fn extra_dict(mut self, v: impl Into<serde_json::Value>) -> Self {
         self.extra_dict = Some(v.into());
-        self
-    }
-    pub fn with_raw_link(mut self, v: bool) -> Self {
-        self.raw_link = Some(v);
-        self
-    }
-    pub fn with_advanced(mut self, v: bool) -> Self {
-        self.advanced = Some(v);
         self
     }
 
@@ -1037,18 +784,17 @@ impl TypedInput {
 /// Multi-select combo (dropdown) input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct MultiComboInput {
-    id: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    options: Vec<String>,
-    default: Vec<String>,
-    placeholder: Option<String>,
-    chip: bool,
-    control_after_generate: bool,
-    socketless: bool,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub options: Vec<String>,
+    pub default_value: Vec<String>,
+    pub placeholder: Option<String>,
+    pub chip: bool,
+    pub control_after_generate: bool,
+    pub socketless: bool,
 }
+
+impl_input_common!(MultiComboInput);
 
 impl MultiComboInput {
     pub fn new(
@@ -1056,46 +802,33 @@ impl MultiComboInput {
         options: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
         Self {
-            id: id.into(),
+            spec: InputSpec {
+                id: id.into(),
+                ..Default::default()
+            },
             options: options.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
+    pub fn default_value(mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.default_value = v.into_iter().map(Into::into).collect();
         self
     }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_socketless(mut self, v: bool) -> Self {
-        self.socketless = v;
-        self
-    }
-    pub fn with_default(mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.default = v.into_iter().map(Into::into).collect();
-        self
-    }
-    pub fn with_placeholder(mut self, v: impl Into<String>) -> Self {
+    pub fn placeholder(mut self, v: impl Into<String>) -> Self {
         self.placeholder = Some(v.into());
         self
     }
-    pub fn with_chip(mut self, v: bool) -> Self {
+    pub fn chip(mut self, v: bool) -> Self {
         self.chip = v;
         self
     }
-    pub fn with_control_after_generate(mut self, v: bool) -> Self {
+    pub fn control_after_generate(mut self, v: bool) -> Self {
         self.control_after_generate = v;
+        self
+    }
+    pub fn socketless(mut self, v: bool) -> Self {
+        self.socketless = v;
         self
     }
 
@@ -1110,46 +843,31 @@ impl MultiComboInput {
 /// Custom type input.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct CustomInput {
-    id: String,
-    io_type: String,
-    display_name: Option<String>,
-    optional: bool,
-    tooltip: Option<String>,
-    lazy: bool,
-    placeholder: Option<String>,
-    socketless: bool,
+    pub id: String,
+    pub io_type: String,
+    #[serde(flatten)]
+    pub spec: InputSpec,
+    pub placeholder: Option<String>,
+    pub socketless: bool,
 }
+
+impl_input_common!(CustomInput);
 
 impl CustomInput {
     pub fn new(id: impl Into<String>, io_type: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             io_type: io_type.into(),
+            spec: InputSpec::default(),
             ..Default::default()
         }
     }
 
-    pub fn with_display_name(mut self, v: impl Into<String>) -> Self {
-        self.display_name = Some(v.into());
-        self
-    }
-    pub fn with_optional(mut self, v: bool) -> Self {
-        self.optional = v;
-        self
-    }
-    pub fn with_tooltip(mut self, v: impl Into<String>) -> Self {
-        self.tooltip = Some(v.into());
-        self
-    }
-    pub fn with_lazy(mut self, v: bool) -> Self {
-        self.lazy = v;
-        self
-    }
-    pub fn with_placeholder(mut self, v: impl Into<String>) -> Self {
+    pub fn placeholder(mut self, v: impl Into<String>) -> Self {
         self.placeholder = Some(v.into());
         self
     }
-    pub fn with_socketless(mut self, v: bool) -> Self {
+    pub fn socketless(mut self, v: bool) -> Self {
         self.socketless = v;
         self
     }
