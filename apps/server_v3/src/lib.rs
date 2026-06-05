@@ -7,6 +7,7 @@ pub mod constant;
 pub mod core;
 pub mod register;
 
+pub mod example;
 pub mod image;
 pub mod text;
 pub mod utils;
