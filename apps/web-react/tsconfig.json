@@ -2,17 +2,19 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "composite": true,
-
     // 基础配置
     "target": "ES2023",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
     "jsx": "react",
     "useDefineForClassFields": true,
     "resolvePackageJsonImports": true,
-
     // 类型与模块
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
@@ -20,12 +22,14 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client", "react", "react-dom"],
-
+    "types": [
+      "vite/client",
+      "react",
+      "react-dom"
+    ],
     // 输出
     "noEmit": true,
     "sourceMap": true,
-
     // 严格模式（strict 已包含 strictNullChecks 等）
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -35,13 +39,16 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-
     // 路径映射
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["src"],
+  "include": [
+    "src",
+  ],
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

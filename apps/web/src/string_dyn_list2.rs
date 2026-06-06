@@ -7,6 +7,7 @@ use web_sys::console;
 
 pub struct StringDynList2 {}
 
+#[allow(dead_code)]
 impl StringDynList2 {
     pub fn on_connections_change(node_type: &NodeType) -> Result<(), JsValue> {
         node_type.prototype()?.on_connections_change(

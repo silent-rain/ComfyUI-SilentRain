@@ -21,8 +21,8 @@ buildDir=./target/wheels
 
 
 # build
-./scripts/build.sh
-# ./scripts/build_vulkan.sh
+# ./scripts/build.sh
+./scripts/build_vulkan.sh
 ./scripts/build_web.sh
 ./scripts/build_web_react.sh
 

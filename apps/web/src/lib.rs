@@ -5,7 +5,7 @@ use web_sys::console;
 use comfy_app::{ComfyApp, Extension};
 
 mod string_dyn_list2;
-use string_dyn_list2::StringDynList2;
+// use string_dyn_list2::StringDynList2;
 
 mod string_dyn_list;
 use string_dyn_list::StringDynList;
@@ -34,12 +34,12 @@ fn run() -> Result<(), JsValue> {
     })?;
 
     extension.before_register_node_def(|node_type, node_data, _app| {
-        if node_data.name()? == "StringDynList2" {
-            let _ = StringDynList2::on_connections_change(&node_type).map_err(|e| {
-                console::log_1(&format!("🔗 更新 StringDynList2 UI 失败， err: {:#?}", e).into());
-                e
-            });
-        }
+        // if node_data.name()? == "StringDynList2" {
+        //     let _ = StringDynList2::on_connections_change(&node_type).map_err(|e| {
+        //         console::log_1(&format!("🔗 更新 StringDynList2 UI 失败， err: {:#?}", e).into());
+        //         e
+        //     });
+        // }
 
         if node_data.name()? == "StringDynList" {
             let _ = StringDynList::on_node_created(&node_type).map_err(|e| {

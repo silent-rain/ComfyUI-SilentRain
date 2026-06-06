@@ -1,6 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client';
 import type { ReactNode } from 'react';
-import type { LGraphNode, IWidget } from './types/comfy';
 
 export interface ReactWidgetHandle {
   widget: IWidget;
@@ -181,7 +180,7 @@ export function hideWidget(widget: IWidget) {
   w.computedHeight = 0;
   w.computeSize = () => [0, -4];
   // 拦截绘制与交互，避免新版 ComfyUI 仍然把字符串/JSON 画到节点上
-  w.draw = () => {};
+  w.draw = () => { };
   w.onMouseDown = () => false;
   // 如果 widget 之前作为 DOM widget 挂了 element，也一并隐藏
   if (w.element) {

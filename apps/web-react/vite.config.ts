@@ -23,6 +23,11 @@ export default defineConfig({
     'process.version': JSON.stringify(''),
     global: 'globalThis',
   },
+  resolve: {
+    alias: {
+      '@/*': resolve(__dirname, 'src/*'),
+    },
+  },
   build: {
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
@@ -31,7 +36,7 @@ export default defineConfig({
     sourcemap: false,
     cssCodeSplit: false,
     lib: {
-      entry: resolve(__dirname, 'src/main.ts'),
+      entry: resolve(__dirname, 'src/main.tsx'),
       name: 'SilentRainUI',
       formats: ['iife'],
       fileName: () => 'silentrain.bundle.js',

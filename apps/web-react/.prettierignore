@@ -1,28 +1,34 @@
 # Dependencies
+
 node_modules/
 
 # Build outputs
+
 dist/
 build/
 coverage/
 
 # Lock files
+
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
 
 # Logs & runtime
+
 *.log
 pids
 *.pid
 *.seed
 
 # OS / IDE artifacts
+
 .DS_Store
 Thumbs.db
 .idea/
 
 # Local environment overrides
+
 .env
 .env.local
 .env.*.local
