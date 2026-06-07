@@ -1,6 +1,8 @@
+import React from "react";
 import { NODE_EXTENSIONS } from "./nodes";
 
-const App = () => {
+
+export default function App() {
     const app = window.app!;
 
     const names: string[] = [];
@@ -16,8 +18,9 @@ const App = () => {
     }
 
     console.log(`[SilentRain] React extensions registered: ${names.join(', ')}`);
+
+    return (
+        <>
+        </>
+    );
 }
-
-
-
-export default App

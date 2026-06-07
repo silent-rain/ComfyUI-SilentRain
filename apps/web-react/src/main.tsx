@@ -3,7 +3,10 @@
 // 通过 nodes/web/main.js 在 ComfyUI 环境中加载，
 // 注册所有 React 节点扩展。
 // import { app } from "../../../scripts/app.js";
+import { createRoot } from 'react-dom/client';
 import App from './App';
+import { StrictMode } from 'react';
+import React from 'react';
 
 // 等待 ComfyUI 环境准备就绪
 function ready(cb: () => void) {
@@ -30,3 +33,16 @@ ready(() => {
   console.log('[SilentRain] App initialized');
   App()
 });
+
+
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Failed to find the root element');
+}
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
