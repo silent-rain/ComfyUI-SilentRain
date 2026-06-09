@@ -2,47 +2,11 @@
 //
 // 通过 nodes/web/main.js 在 ComfyUI 环境中加载，
 // 注册所有 React 节点扩展。
-// import { app } from "../../../scripts/app.js";
-import { createRoot } from 'react-dom/client';
+//
+// ⚠️ 注意：本 bundle 不再需要一个全局 React 根节点。
+// React UI 通过 defineReactNode + mountReactWidget 直接嵌入到
+// 每个 LiteGraph 节点的 DOM widget 中。
+
 import App from './App';
-import { StrictMode } from 'react';
-import React from 'react';
 
-// 等待 ComfyUI 环境准备就绪
-function ready(cb: () => void) {
-  // window.app = app;
-  if (typeof window === 'undefined') return;
-  if (window.app) {
-    cb();
-    return;
-  }
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.app) {
-      clearInterval(timer);
-      cb();
-    } else if (attempts > 200) {
-      clearInterval(timer);
-      console.error('[SilentRain] window.app not ready after 20s, abort');
-    }
-  }, 100);
-}
-
-ready(() => {
-  console.log('[SilentRain] App initialized');
-  App()
-});
-
-
-const rootElement = document.getElementById('root');
-
-if (!rootElement) {
-  throw new Error('Failed to find the root element');
-}
-
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+App();

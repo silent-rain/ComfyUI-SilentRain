@@ -6,7 +6,7 @@
     "description": "React-based UI components for ComfyUI-SilentRain (ParamHub / ParamPort and beyond)",
     "scripts": {
         "dev": "vite build --watch",
-        "build": "tsc -b && vite build",
+        "build": "vite build",
         "lint": "tsc --noEmit"
     },
     "dependencies": {
@@ -17,11 +17,12 @@
     "devDependencies": {
         "@comfyorg/comfyui-frontend-types": "^1.45.10",
         "@types/node": "^25.9.1",
-        "@types/react": "^18.3.12",
-        "@types/react-dom": "^18.3.1",
-        "@vitejs/plugin-react": "^4.3.4",
-        "typescript": "^5.7.2",
-        "vite": "^6.0.3",
+        "@types/react": "^18.3.31",
+        "@types/react-dom": "^18.3.7",
+        "@vitejs/plugin-react": "^6.0.2",
+        "sass": "^1.100.0",
+        "typescript": "^6.0.3",
+        "vite": "^8.0.16",
         "vite-plugin-css-injected-by-js": "^5.0.1"
     }
 }
