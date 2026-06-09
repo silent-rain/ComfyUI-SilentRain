@@ -33,13 +33,11 @@ export const StringDynList2 = (): ComfyExtension => {
         if (type !== ISlotType.Input) return;
 
         if (isConnected) {
+          // 添加一个空闲 slot
           const strInputTotal = this.inputs.filter(slot => slot.name !== 'delimiter').length;
           const strLinkCount = this.inputs
             .filter(slot => slot.name !== 'delimiter')
             .filter(slot => !slot.link).length;
-          console.log(`inputTotal: ${strInputTotal}, linkCount: ${strLinkCount}`);
-
-          // 添加一个空闲 slot
           if (strLinkCount === 0) {
             const firstInput = this.inputs[0];
             if (!firstInput) return;
