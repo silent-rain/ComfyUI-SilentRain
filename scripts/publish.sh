@@ -24,7 +24,7 @@ source ./apps/server/.venv/bin/activate
 
 # build v1 + v3 + web
 ./scripts/build.sh
-./scripts/build_web.sh
+# ./scripts/build_web.sh
 ./scripts/build_web_react.sh
 
 # 退出服务编译环境
