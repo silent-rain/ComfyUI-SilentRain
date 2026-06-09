@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParamHubStore } from '../../../store';
+import { saveNodeSlotsToProperties } from '../index';
 import styles from './EditSlotModal.module.scss';
 
 interface EditSlotModalProps {
@@ -19,22 +20,27 @@ interface SlotData {
  * - 检查重复名称并显示红框提醒
  */
 export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose }) => {
-  const getHubSlots = useParamHubStore(state => state.getHubSlots);
+  // 订阅整个 hubs Map，确保任何内部变化都能触发重渲染
+  // 不能订阅 state.hubs.get(nodeId)，因为内层 Map 引用变化不会被检测到
+  const hubs = useParamHubStore(state => state.hubs);
+  const slots = hubs.get(nodeId);
   const updateSlotLabel = useParamHubStore(state => state.updateSlotLabel);
-
-  const slots = getHubSlots(nodeId);
   const [slotData, setSlotData] = useState<SlotData[]>([]);
   const [nameErrors, setNameErrors] = useState<{ [key: number]: boolean }>({});
 
-  // 初始化 slot 数据
+  // 初始化 slot 数据：当 slots 变化时重新初始化
+  // 注意：slots 为 undefined 或 size === 0 时，需要清空 slotData
   useEffect(() => {
     if (slots && slots.size > 0) {
       const data: SlotData[] = Array.from(slots.entries()).map(([linkId, slot]) => ({
         linkId,
-        currentName: slot.label ?? slot.name ?? '',
+        currentName: slot.name ?? slot.label ?? '',
         type: String(slot.type),
       }));
       setSlotData(data);
+    } else {
+      // slots 为空或 undefined 时，清空数据
+      setSlotData([]);
     }
   }, [slots]);
 
@@ -81,6 +87,8 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
       const trimmedName = slot.currentName.trim();
       updateSlotLabel(nodeId, slot.linkId, trimmedName);
     });
+    // 同步到 properties
+    saveNodeSlotsToProperties(nodeId);
     onClose();
   };
 
@@ -102,6 +110,7 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
               <div key={slot.linkId} className={styles.slotItem}>
                 <div className={styles.slotInfo}>
                   <span className={styles.slotId}>Link {slot.linkId}</span>
+                  <span className={styles.name}>{slot.currentName}</span>
                   <span className={styles.slotType}>{slot.type}</span>
                 </div>
                 <div className={styles.field}>

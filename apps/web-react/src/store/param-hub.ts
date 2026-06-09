@@ -91,7 +91,7 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
     return allSlots;
   },
 
-  /** 更新指定 slot 的标签 */
+  /** 更新指定 slot 的 label */
   updateSlotLabel: (nodeId: NodeId, linkId: number, label: string) =>
     set(state => {
       const slots = state.hubs.get(nodeId);
@@ -102,6 +102,9 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
       const nextSlots = new Map(slots);
       nextSlots.set(linkId, { ...slot, label });
 
+      // 将更新后的 slots 设置回 next
+      next.set(nodeId, nextSlots);
+
       // 同步更新 LiteGraph 节点的 input label
       try {
         const app = (window as any).app;
@@ -110,7 +113,6 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
           if (node?.inputs) {
             const input = node.inputs.find((inp: any) => inp.link === linkId);
             if (input) {
-              input.name = label;
               input.label = label;
             }
           }
