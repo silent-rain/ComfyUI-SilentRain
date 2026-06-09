@@ -1,0 +1,182 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--comfy-menu-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  min-width: 350px;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+.title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--input-text, #ddd);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--descrip-text, #aaa);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+
+  &:hover {
+    color: var(--input-text, #ddd);
+  }
+}
+
+.body {
+  padding: 12px 16px;
+}
+
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.slotItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.slotInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.slotId {
+  font-size: 10px;
+  color: var(--descrip-text, #aaa);
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.slotType {
+  font-size: 10px;
+  color: var(--input-text, #ddd);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--descrip-text, #aaa);
+}
+
+.input {
+  background: var(--input-bg, #333);
+  border: 1px solid var(--border-color, #555);
+  border-radius: 3px;
+  height: 20px;
+  padding: 0px 4px;
+  font-size: 12px;
+  color: var(--input-text, #ddd);
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: var(--accent-color, #4a9eff);
+  }
+}
+
+.inputError {
+  border-color: #ff4444 !important;
+  box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.3);
+}
+
+.errorMsg {
+  font-size: 10px;
+  color: #ff6666;
+  margin-top: 2px;
+  padding: 2px 6px;
+  background: rgba(255, 68, 68, 0.1);
+  border-radius: 2px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  line-height: 1.2;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color, #444);
+}
+
+.cancelBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--descrip-text, #aaa);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--input-text, #ddd);
+  }
+}
+
+.saveBtn {
+  background: var(--accent-color, #4a9eff);
+  border: 1px solid var(--accent-color, #4a9eff);
+  border-radius: 4px;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover, #6db3ff);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

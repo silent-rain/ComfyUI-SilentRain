@@ -12,9 +12,12 @@ export default async function App() {
   // 动态导入 app.js（该文件是动态生成的，无法静态导入）
   let app: ComfyApp;
   try {
-    // @ts-ignore: 动态导入的文件
+    // @ts-expect-error: 动态导入的文件
     const module = await import('../../../scripts/app.js');
     app = module.app || window.app;
+    if (!window.app) {
+      window.app = app;
+    }
   } catch (e) {
     console.warn('[SilentRain] failed to dynamically import app.js, using window.app', e);
     app = window.app!;

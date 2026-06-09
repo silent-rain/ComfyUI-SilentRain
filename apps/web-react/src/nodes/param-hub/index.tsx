@@ -1,138 +1,140 @@
-/* ParamHub Node */
+/**
+ * ParamHub 节点扩展
+ *
+ * 保留原始 ComfyExtension 的所有回调结构，便于参考与扩展。
+ * React UI（HubPanel）在 loadedGraphNode / nodeCreated 中直接挂载。
+ */
+import React from 'react';
+import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
+import { ISlotType } from '../../enums/comfy';
+import { mountReactWidget } from '../../core';
+import { getParamHubStoreState } from '../../store';
+import type { Slot, SlotType } from '../../types/comfy';
+import { HubPanel } from './components/HubPanel';
 
-// import { useParamHubStore } from "../../store";
-import { ISlotType } from "../../enums/comfy";
-import type { ComfyExtension } from "@comfyorg/comfyui-frontend-types";
+const NODE_NAME = 'ParamHub';
 
+/** 将 React UI 挂载到指定节点（仅在首次调用时执行一次） */
+function bindReactUI(node: any): void {
+  if ((node as any).__sr_ui_bound) return;
+  (node as any).__sr_ui_bound = true;
 
+  mountReactWidget(node, 'hub_panel', <HubPanel nodeId={node.id} />, {
+    minHeight: 30,
+  });
+}
 
-const NODE_NAME = "ParamHub";
-
+// ──  ParamHub factory  ─────────────────────
 
 const ParamHub = (): ComfyExtension => {
-    return {
-        name: NODE_NAME,
-        init: async (_app) => {
-            // Node initialization
-        },
-        setup: async (_app) => {
-            // Node setup
-        },
-        loadedGraphNode: (node, _app) => {
-            if (node.type !== NODE_NAME) return;
-            // Graph node loaded callback
-            console.log("loaded Graph Node:", node);
-            console.log("loaded _app Node:", _app);
-            console.log("loaded Graph Node widgets_values:", (node as any).widgets_values);
-        },
-        nodeCreated: (_node, _app) => {
-            // Node created callback
-        },
-        getCanvasMenuItems: (_canvas) => {
-            return [];
-        },
-        beforeRegisterNodeDef: async (nodeType, nodeData, _app) => {
-            // Only handle specific node
-            if (nodeData.name !== NODE_NAME) return;
+  return {
+    // 扩展名的名称
+    name: `SilentRain.${NODE_NAME}`,
 
+    // 允许任何初始化，例如加载资源。在画布创建后但在添加节点之前调用
+    init: async _app => {
+      // Node initialization
+    },
 
+    // 允许在应用程序完全设置并运行后调用任何其他设置
+    setup: async _app => {
+      // Node setup
+    },
 
-            nodeType.prototype.onConnectionsChange = function (type, index, isConnected, link_info) {
-                if (!link_info) return;
+    // 允许扩展将上下文菜单项添加到画布右键菜单
+    getCanvasMenuItems: _canvas => {
+      return [];
+    },
 
-                // const _paramHubStore = useParamHubStore();
-                // console.log("===================: ", _paramHubStore.getHub(1))
+    // 允许扩展在节点构造函数之后运行代码
+    nodeCreated: (node, _app) => {
+      if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
+      // bindReactUI(node);
+    },
 
-                const id = _app.rootGraph.id;
-                console.log("===================: ", _app)
-                console.log("===================: ", _app.rootGraph)
-                console.log("===================: ", id)
+    // 允许扩展修改已重新加载到图形上的节点。
+    // 如果你破坏了后端的某些东西，并想修补前端的工作流
+    loadedGraphNode: (node, _app) => {
+      if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
+      console.log('loaded Graph Node widgets_values:', (node as any).widgets_values);
+      bindReactUI(node);
+    },
 
-                console.log("0", type, index, isConnected, link_info)
-                if (type !== ISlotType.Input) return;
+    // 允许扩展在向 LGraph 注册节点之前向其添加额外的处理
+    beforeRegisterNodeDef: async (nodeType, nodeData, _app) => {
+      // Only handle specific node
+      if (nodeData.name !== NODE_NAME) return;
 
-                if (isConnected) {
-                    console.log("11", type, index, isConnected, link_info)
+      nodeType.prototype.onConnectionsChange = function (
+        type,
+        index,
+        isConnected,
+        link_info,
+        _inputOrOutput,
+      ) {
+        if (!link_info) return;
 
-                    // 更新输入slot的类型
-                    if (this.inputs[index]) {
-                        // this.inputs[index].name = String(link_info!.type);
-                        // this.inputs[index].label = String(link_info!.type);
-                        this.inputs[index].type = link_info!.type;
-                    }
+        if (type !== ISlotType.Input) return;
 
-                    // if (linkCount === 0) {
-                    //     // 添加一个空闲slot
-                    //     const newIndex = inputTotal + 1;
-                    //     this.addInput(`param_${newIndex}`, '*');
-                    // }
+        const store = getParamHubStoreState();
+        const nodeId = this.id;
 
-                } else {
-                    console.log("22", type, index, isConnected, link_info)
+        if (isConnected) {
+          // 更新当前的 slot 信息为 link_info
+          if (this.inputs[index]) {
+            // this.inputs[index].name = String(link_info!.type);
+            this.inputs[index].label = String(link_info!.type);
+            this.inputs[index].type = link_info.type;
+          }
 
-                    // 延迟移除
-                    setTimeout(() => {
-                        if (this.inputs[index]?.link) {
-                            // 如果有连接，则不移除
-                            return
-                        }
-                        this.removeInput(index);
-                        console.log(`removeInput: ${index}`);
-                    }, 1500);
+          // 同步到 store：添加/更新 slot
+          const slot: Slot = {
+            linkId: link_info.id as number,
+            name: this.inputs[index]?.name ?? '',
+            label: this.inputs[index]?.label ?? '',
+            type: link_info.type as SlotType,
+          };
+          store.setHubSlot(nodeId, slot);
 
-                    // 移除所有的空闲slot
-                    // const inputTotal = this.inputs.length;
-                    // const inputTotal = this.inputs.length;
-                    // let linkCount = this.inputs.filter((slot) => !slot.link).length;
-                    // console.log(`inputTotal: ${inputTotal}, linkCount: ${linkCount}`);
-                    // for (let i = 0; i < inputTotal - 1; i++) {
-                    //     const input = this.inputs[i];
-                    //     if (!input) continue;
+          // 添加一个空闲 slot
+          const inputTotal = this.inputs.length;
+          const linkCount = this.inputs.filter(slot => !slot.link).length;
+          if (linkCount === 0) {
+            const firstInput = this.inputs[0];
+            if (!firstInput) return;
 
-                    //     // 保留至少一个空闲slot
-                    //     if (linkCount <= 1) {
-                    //         break;
-                    //     }
+            const newIndex = inputTotal + 1;
+            this.addInput(`param_${newIndex}`, '*');
+          }
+        } else {
+          setTimeout(() => {
+            // 如果slot有连接，则不删除
+            if (this.inputs[index]?.link) return;
 
-                    //     if (!input.link) {
-                    //         this.removeInput(i);
-                    //         linkCount -= 1;
-                    //     }
-                    // }
-                }
+            // 从 store 移除 slot
+            const linkId = this.inputs[index]?.link;
+            if (linkId) {
+              store.removeHubSlot(nodeId, linkId);
+            }
 
+            // 如果只有一个 string slot，则不删除
+            if (this.inputs.length === 1) return;
 
-                {
-                    // 添加一个空闲slot
-                    const inputTotal = this.inputs.length;
-                    const linkCount = this.inputs.filter((slot) => !slot.link).length;
-                    console.log(`inputTotal: ${inputTotal}, linkCount: ${linkCount}`);
-                    if (linkCount === 0) {
-                        const newIndex = inputTotal + 1;
-                        this.addInput(`param_${newIndex}`, '*');
-                    }
-                }
+            this.removeInput(index);
 
-                // this.inputs
-                console.log(this.inputs)
-
-
-
-
-
-
-                // let nameCount = 0;
-                // for (const item of this.inputs) {
-                //     nameCount += 1;
-                //     const name = `string_${nameCount}`;
-                //     item.name = name;
-                //     item.label = name;
-                // }
-            };
-        },
-    };
+            // 重命名所有slot
+            let nameCount = 0;
+            for (const item of this.inputs) {
+              nameCount += 1;
+              const label = `param_${nameCount}`;
+              item.name = label;
+              // item.label = label;
+            }
+          }, 500);
+        }
+      };
+    },
+  };
 };
-
-
 
 export default ParamHub;

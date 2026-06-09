@@ -7,7 +7,25 @@
     "scripts": {
         "dev": "vite build --watch",
         "build": "vite build",
-        "lint": "tsc --noEmit"
+        "type-check": "npx tsc -b --noEmit",
+        "type-check:watch": "npx tsc -b --noEmit --watch",
+        "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
+        "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
+        "lint:type-check": "npm run type-check && npm run lint",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "preview": "vite preview",
+        "prepare": "husky",
+        "postinstall": "npm run type-check && npm run build"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,md,mdx,css,scss,yml,yaml}": [
+            "prettier --write"
+        ]
     },
     "dependencies": {
         "react": "^18.3.1",
@@ -16,12 +34,27 @@
     },
     "devDependencies": {
         "@comfyorg/comfyui-frontend-types": "^1.45.10",
+        "@eslint/js": "^9.15.0",
         "@types/node": "^25.9.1",
         "@types/react": "^18.3.31",
         "@types/react-dom": "^18.3.7",
+        "@typescript-eslint/eslint-plugin": "^8.59.3",
         "@vitejs/plugin-react": "^6.0.2",
+        "esbuild": "^0.28.0",
+        "eslint": "^9.15.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-jsx-a11y": "^6.10.2",
+        "eslint-plugin-prettier": "^5.2.1",
+        "eslint-plugin-react-hooks": "^5.0.0",
+        "eslint-plugin-react-refresh": "^0.4.14",
+        "globals": "^15.12.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^15.2.10",
+        "prettier": "^3.3.3",
         "sass": "^1.100.0",
         "typescript": "^6.0.3",
+        "typescript-eslint": "^8.59.2",
         "vite": "^8.0.16",
         "vite-plugin-css-injected-by-js": "^5.0.1"
     }

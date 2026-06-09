@@ -8,9 +8,9 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 /**
- * ESLint flat config for Admin Dashboard.
+ * ESLint flat config for ComfyUI-SilentRain web-react.
  *
- * Stack: ESLint 9 + TypeScript 5 + React 19 + Vite 6
+ * Stack: ESLint 9 + TypeScript 5 + React 18 + Vite 8
  */
 export default defineConfig([
   // Global ignores
@@ -39,13 +39,7 @@ export default defineConfig([
     files: ['**/*.{ts,tsx}'],
   })),
 
-  // Type-checked rules ONLY for src/**, since tsconfig.app.json only includes src
-  ...tseslint.configs.recommendedTypeChecked.map(config => ({
-    ...config,
-    files: ['src/**/*.{ts,tsx}'],
-  })),
-
-  // Source files (src/**) — full TypeScript + project type information
+  // Source files (src/**) — TypeScript syntax checking only (no type-checking for performance)
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
@@ -54,15 +48,16 @@ export default defineConfig([
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: { jsx: true },
-        project: './tsconfig.app.json',
-        tsconfigRootDir: import.meta.dirname,
+        // Disable project reference for better performance
+        // project: './tsconfig.app.json',
+        // tsconfigRootDir: import.meta.dirname,
       },
     },
     plugins: { prettier },
     rules: {
       'prettier/prettier': ['error', { endOfLine: 'auto', semi: true }],
 
-      // TypeScript
+      // TypeScript syntax rules (no type-checking)
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -71,7 +66,7 @@ export default defineConfig([
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-inferrable-types': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
       '@typescript-eslint/consistent-type-imports': [

@@ -1,0 +1,28 @@
+.srHubPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: fit-content;
+  height: fit-content;
+
+  .srHubHeader {
+    .srEditAllBtn {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color, #555);
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: var(--descrip-text, #aaa);
+      cursor: pointer;
+      transition: all 0.15s;
+      line-height: 1.2;
+
+      &:hover {
+        background: rgba(74, 158, 255, 0.15);
+        border-color: var(--accent-color, #4a9eff);
+        color: var(--input-text, #ddd);
+      }
+    }
+  }
+}
