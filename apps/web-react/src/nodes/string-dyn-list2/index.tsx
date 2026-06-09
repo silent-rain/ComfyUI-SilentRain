@@ -14,75 +14,58 @@ export const StringDynList2 = (): ComfyExtension => {
     setup: async _app => {
       // Node setup
     },
-    getCanvasMenuItems: _canvas => {
-      return [];
-    },
     nodeCreated: (_node, _app) => {
       // Node created callback
     },
     loadedGraphNode: (_node, _app) => {
       // Graph node loaded callback
     },
+    getCanvasMenuItems: _canvas => {
+      return [];
+    },
     beforeRegisterNodeDef: async (nodeType, nodeData, _app) => {
       // Only handle specific node
       if (nodeData.name !== NODE_NAME) return;
 
-      nodeType.prototype.onConnectionsChange = function (type, _index, isConnected, link_info) {
+      nodeType.prototype.onConnectionsChange = function (type, index, isConnected, link_info) {
         if (!link_info) return;
 
         if (type !== ISlotType.Input) return;
 
         if (isConnected) {
-          const inputTotal = this.inputs.length;
-          const linkCount = this.inputs
+          const strInputTotal = this.inputs.filter(slot => slot.name !== 'delimiter').length;
+          const strLinkCount = this.inputs
             .filter(slot => slot.name !== 'delimiter')
             .filter(slot => !slot.link).length;
-          console.log(`inputTotal: ${inputTotal}, linkCount: ${linkCount}`);
+          console.log(`inputTotal: ${strInputTotal}, linkCount: ${strLinkCount}`);
 
-          if (linkCount === 0) {
+          // 添加一个空闲 slot
+          if (strLinkCount === 0) {
             const firstInput = this.inputs[0];
             if (!firstInput) return;
 
-            // 添加一个空闲slot
-            const newIndex = inputTotal + 1;
+            const newIndex = strInputTotal + 1;
             this.addInput(`string_${newIndex}`, firstInput.type);
           }
         } else {
-          // Only remove if this slot has no other connections
-          // const hasConnection = this.inputs[index]?.link !== null;
-          // if (!hasConnection) {
-          //     this.removeInput(index);
-          // }
+          setTimeout(() => {
+            // 如果slot有连接，则不删除
+            if (this.inputs[index]?.link) return;
 
-          // 移除所有的空闲slot
-          const inputTotal = this.inputs.length;
-          let linkCount = this.inputs
-            .filter(slot => slot.name !== 'delimiter')
-            .filter(slot => !slot.link).length;
-          console.log(`inputTotal: ${inputTotal}, linkCount: ${linkCount}`);
-          for (let i = 0; i < inputTotal - 1; i++) {
-            const input = this.inputs[i];
-            if (!input || input.name === 'delimiter') continue;
+            // 如果只有一个 string slot，则不删除
+            if (this.inputs.filter(slot => slot.name !== 'delimiter').length === 1) return;
 
-            // 保留至少一个空闲slot
-            if (linkCount <= 1) {
-              break;
+            this.removeInput(index);
+
+            // 重命名所有slot
+            let nameCount = 0;
+            for (const item of this.inputs.filter(slot => slot.name !== 'delimiter')) {
+              nameCount += 1;
+              const label = `string_${nameCount}`;
+              item.name = label;
+              item.label = label;
             }
-
-            if (!input.link) {
-              this.removeInput(i);
-              linkCount -= 1;
-            }
-          }
-        }
-
-        let nameCount = 0;
-        for (const item of this.inputs) {
-          if (item.name === 'delimiter') continue;
-          nameCount += 1;
-          const name = `string_${nameCount}`;
-          item.name = name;
-          item.label = name;
+          }, 500);
         }
       };
     },
