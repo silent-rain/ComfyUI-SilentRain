@@ -10,99 +10,132 @@ export interface HubSlot extends Slot {
 interface ParamHubStore {
   /**
    * 所有 ParamHub 节点的 slot 映射
-   * key: hubNodeId, value: Map<linkId, Slot>
    */
-  hubs: Map<NodeId, Map<number, Slot>>;
+  hubs: Map<NodeId, Slot[]>;
 
-  /** 设置或替换整个 hub */
-  setHub: (nodeId: NodeId, slots: Map<number, Slot>) => void;
+  /** 设置或替换整个 hub 的 slots */
+  setHub: (nodeId: NodeId, slots: Slot[]) => void;
 
   /** 移除整个 hub */
   removeHub: (nodeId: NodeId) => void;
 
-  /** 设置/更新单个 slot */
+  /**
+   * 设置/更新单个 slot
+   * 根据 linkId 查找，如果找到则更新，否则追加到末尾
+   */
   setHubSlot: (nodeId: NodeId, slot: Slot) => void;
 
-  /** 移除单个 slot */
+  /** 移除单个 slot（根据 linkId） */
   removeHubSlot: (nodeId: NodeId, linkId: number) => void;
 
-  /** 获取一个 hub 的所有 slots（不存在时返回空 Map） */
-  getHubSlots: (nodeId: NodeId) => Map<number, Slot>;
+  /** 根据 index 移除单个 slot */
+  removeHubSlotByIndex: (nodeId: NodeId, index: number) => void;
+
+  /** 获取一个 hub 的所有 slots（不存在时返回空数组） */
+  getHubSlots: (nodeId: NodeId) => Slot[];
 
   /**
    * 获取所有 hub 的 slots，供 ParamPort 使用
-   * 返回扁平化的 slot 数组，每个 slot 包含 hubNodeId
    */
   getAllHubSlots: () => HubSlot[];
 
-  /** 更新指定 slot 的标签 */
+  /** 更新指定 slot 的标签（根据 linkId） */
   updateSlotLabel: (nodeId: NodeId, linkId: number, label: string) => void;
 }
 
 export const useParamHubStore = create<ParamHubStore>((set, get) => ({
   hubs: new Map(),
 
-  setHub: (hubNodeId, slots) =>
+  setHub: (nodeId, slots) => {
     set(state => {
       const next = new Map(state.hubs);
-      next.set(hubNodeId, slots);
+      next.set(nodeId, [...slots]); // 浅拷贝数组
       return { hubs: next };
-    }),
+    });
+  },
 
-  removeHub: hubNodeId =>
+  removeHub: nodeId => {
     set(state => {
       const next = new Map(state.hubs);
-      next.delete(hubNodeId);
+      next.delete(nodeId);
       return { hubs: next };
-    }),
+    });
+  },
 
-  setHubSlot: (hubNodeId, slot) =>
+  setHubSlot: (nodeId, slot) => {
     set(state => {
       const next = new Map(state.hubs);
-      const slots = new Map(next.get(hubNodeId) ?? []);
-      slots.set(slot.linkId, slot);
-      next.set(hubNodeId, slots);
-      return { hubs: next };
-    }),
+      const slots = next.get(nodeId) ?? [];
 
-  removeHubSlot: (hubNodeId, linkId) =>
+      // 根据 linkId 查找是否已存在
+      const existingIndex = slots.findIndex(s => s.linkId === slot.linkId);
+
+      const nextSlots = [...slots];
+      if (existingIndex >= 0) {
+        // 更新已存在的 slot
+        nextSlots[existingIndex] = slot;
+      } else {
+        // 追加新 slot
+        nextSlots.push(slot);
+      }
+
+      next.set(nodeId, nextSlots);
+      return { hubs: next };
+    });
+  },
+
+  removeHubSlot: (nodeId, linkId) => {
     set(state => {
-      const slots = state.hubs.get(hubNodeId);
+      const slots = state.hubs.get(nodeId);
       if (!slots) return state;
-      const next = new Map(state.hubs);
-      const nextSlots = new Map(slots);
-      nextSlots.delete(linkId);
-      next.set(hubNodeId, nextSlots);
-      return { hubs: next };
-    }),
 
-  getHubSlots: hubNodeId => {
-    return get().hubs.get(hubNodeId) ?? new Map();
+      const next = new Map(state.hubs);
+      const nextSlots = slots.filter(s => s.linkId !== linkId);
+      next.set(nodeId, nextSlots);
+      return { hubs: next };
+    });
+  },
+
+  removeHubSlotByIndex: (nodeId, index) => {
+    set(state => {
+      const slots = state.hubs.get(nodeId);
+      if (!slots || index < 0 || index >= slots.length) return state;
+
+      const next = new Map(state.hubs);
+      const nextSlots = [...slots];
+      nextSlots.splice(index, 1);
+      next.set(nodeId, nextSlots);
+      return { hubs: next };
+    });
+  },
+
+  getHubSlots: nodeId => {
+    return get().hubs.get(nodeId) ?? [];
   },
 
   getAllHubSlots: () => {
     const { hubs } = get();
     const allSlots: HubSlot[] = [];
-    for (const [hubNodeId, slots] of hubs.entries()) {
-      for (const [, slot] of slots.entries()) {
-        allSlots.push({ ...slot, hubNodeId });
+    for (const [nodeId, slots] of hubs.entries()) {
+      for (const slot of slots) {
+        allSlots.push({ ...slot, hubNodeId: nodeId });
       }
     }
     return allSlots;
   },
 
-  /** 更新指定 slot 的 label */
-  updateSlotLabel: (nodeId: NodeId, linkId: number, label: string) =>
+  /** 更新指定 slot 的 label（根据 linkId） */
+  updateSlotLabel: (nodeId, linkId, label) => {
     set(state => {
       const slots = state.hubs.get(nodeId);
       if (!slots) return state;
-      const slot = slots.get(linkId);
-      if (!slot) return state;
-      const next = new Map(state.hubs);
-      const nextSlots = new Map(slots);
-      nextSlots.set(linkId, { ...slot, label });
 
-      // 将更新后的 slots 设置回 next
+      const slotIndex = slots.findIndex(s => s.linkId === linkId);
+      if (slotIndex < 0) return state;
+
+      const next = new Map(state.hubs);
+      const nextSlots = [...slots];
+      nextSlots[slotIndex] = Object.assign({}, nextSlots[slotIndex], { label });
       next.set(nodeId, nextSlots);
 
       // 同步更新 LiteGraph 节点的 input label
@@ -116,15 +149,14 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
               input.label = label;
             }
           }
-          // 强制刷新画布
-          node?.setDirtyCanvas(true, true);
         }
       } catch (error) {
         console.error('Failed to update input label:', error);
       }
 
       return { hubs: next };
-    }),
+    });
+  },
 }));
 
 /**

@@ -5,7 +5,6 @@ export declare interface Slot {
   /** 显示的标签名称，在 EditSlot 窗口中编辑 */
   label?: string;
   type: SlotType; // 输入的类型
-  value?: any; // 输入的值
 }
 
 export declare type NodeId = number | string;

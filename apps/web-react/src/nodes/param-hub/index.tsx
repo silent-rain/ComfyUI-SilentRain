@@ -13,7 +13,7 @@ import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
 import { ISlotType } from '../../enums/comfy';
 import { mountReactWidget } from '../../core';
 import { getParamHubStoreState } from '../../store';
-import type { Slot, SlotType } from '../../types/comfy';
+import type { Slot } from '../../types/comfy';
 import { HubPanel } from './components/HubPanel';
 
 const NODE_NAME = 'ParamHub';
@@ -29,14 +29,9 @@ function saveSlotsToProperties(node: any): void {
   const store = getParamHubStoreState();
   const slots = store.getHubSlots(node.id);
 
-  // 将 Map<linkId, Slot> 转为普通对象以便 JSON 序列化
-  const obj: Record<string, Slot> = {};
-  for (const [linkId, slot] of slots.entries()) {
-    obj[String(linkId)] = slot;
-  }
-
+  // 直接存储 Slot[] 数组
   node.properties = node.properties ?? {};
-  node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(obj);
+  node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
 }
 
 /** 从 node.properties[HUB_SLOTS_PROPERTY] 恢复 slots 到 store 和 input labels */
@@ -44,66 +39,54 @@ function loadSlotsFromProperties(node: any): void {
   if (!node?.properties?.[HUB_SLOTS_PROPERTY]) return;
 
   try {
-    const raw = JSON.parse(node.properties[HUB_SLOTS_PROPERTY]);
-    const slotsMap = new Map<number, Slot>();
-
-    for (const [linkIdStr, slotRaw] of Object.entries(raw as Record<string, any>)) {
-      const linkId = Number(linkIdStr);
-      // 兼容旧数据：确保 linkId 字段存在，且 label 不为空
-      const slot: Slot = {
-        linkId,
-        name: slotRaw?.name ?? '',
-        label: slotRaw?.label ?? '',
-        type: slotRaw?.type ?? '*',
-        value: slotRaw?.value,
-      };
-      slotsMap.set(linkId, slot);
-    }
-
+    const slots = JSON.parse(node.properties[HUB_SLOTS_PROPERTY]) as Slot[];
     // 恢复到 store
     const store = getParamHubStoreState();
-    store.setHub(node.id, slotsMap);
+    store.setHub(node.id, slots);
 
     // 恢复 input label（匹配 linkId）
-    if (node.inputs) {
-      for (const input of node.inputs) {
-        if (input.link != null) {
-          const savedSlot = slotsMap.get(input.link);
-          if (savedSlot) {
-            if (savedSlot.label) {
-              input.label = savedSlot.label;
-            }
-          }
-        }
-      }
-    }
+    // if (node.inputs) {
+    //   for (const input of node.inputs) {
+    //     if (input.link != null) {
+    //       const savedSlot = slots.find(s => s.linkId === input.link);
+    //       if (savedSlot) {
+    //         if (savedSlot.label) {
+    //           input.label = savedSlot.label;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
   } catch (e) {
     console.error('[ParamHub] Failed to load slots from properties:', e);
   }
 }
 
-// ── 导出函数：供 React 组件调用 ────────────────────────────
-
-/** 保存指定节点的 slots 到 properties（可从 React 组件调用） */
-export function saveNodeSlotsToProperties(nodeId: number): void {
-  const app = (window as any).app;
-  if (!app?.graph) return;
-  const node = app.graph.getNodeById(nodeId);
-  if (node) {
-    saveSlotsToProperties(node);
-  }
-}
-
 // ── React UI 绑定 ──────────────────────────────────────────
 
-/** 将 React UI 挂载到指定节点（仅在首次调用时执行一次） */
+/**
+ * 将 React UI 挂载到指定节点
+ * - 首次调用时创建 UI 并保存 handle
+ * - 后续调用时（如 loadedGraphNode）使用 rerender 更新 props
+ */
 function bindReactUI(node: any): void {
-  if ((node as any).__sr_ui_bound) return;
-  (node as any).__sr_ui_bound = true;
+  const nodeAny = node as any;
 
-  mountReactWidget(node, HUB_PANEL_NAME, <HubPanel nodeId={node.id} />, {
+  // 如果已经创建过 widget，使用 rerender 更新
+  if (nodeAny.__sr_widget_handle) {
+    // 使用 rerender 传入正确的 nodeId
+    nodeAny.__sr_widget_handle.rerender(<HubPanel nodeId={node.id} />);
+    return;
+  }
+
+  // 首次创建 UI
+  const handle = mountReactWidget(node, HUB_PANEL_NAME, <HubPanel nodeId={node.id} />, {
     minHeight: 30,
   });
+
+  // 保存 handle 引用，供后续 rerender 使用
+  nodeAny.__sr_widget_handle = handle;
+  nodeAny.__sr_ui_bound = true;
 }
 
 // ──  ParamHub factory  ─────────────────────
@@ -163,11 +146,21 @@ const ParamHub = (): ComfyExtension => {
         const nodeId = this.id;
 
         if (isConnected) {
-          // 更新当前的 slot 信息为 link_info
+          // 先尝试从 store 中获取已保存的 slot 数据（避免刷新页面后数据重置）
+          const slots = store.getHubSlots(nodeId);
+          const existingSlot = slots.find(s => s.linkId === link_info.id);
+
+          // 重置名称和类型
           if (this.inputs[index]) {
-            // this.inputs[index].name = String(link_info!.type);
-            this.inputs[index].label = String(link_info!.type);
-            this.inputs[index].type = link_info.type;
+            if (existingSlot) {
+              // 如果 store 中存在，使用 store 中的 label（保留用户自定义的）
+              this.inputs[index].label = existingSlot.label || String(link_info.type);
+              this.inputs[index].type = existingSlot.type;
+            } else {
+              // 如果 store 中不存在，使用 link_info 创建新的
+              this.inputs[index].label = String(link_info.type);
+              this.inputs[index].type = link_info.type;
+            }
           }
 
           // 同步到 store：添加/更新 slot
@@ -175,7 +168,7 @@ const ParamHub = (): ComfyExtension => {
             linkId: link_info.id as number,
             name: this.inputs[index]?.name ?? '',
             label: this.inputs[index]?.label ?? '',
-            type: link_info.type as SlotType,
+            type: this.inputs[index]?.type ?? '*',
           };
           store.setHubSlot(nodeId, slot);
 
@@ -193,37 +186,40 @@ const ParamHub = (): ComfyExtension => {
             this.addInput(`param_${newIndex}`, '*');
           }
         } else {
-          const self = this;
-          // 在断开时立即获取 linkId， delayed 后 inputs[index].link 已被清除
+          // 在断开时立即获取 linkId，delayed 后 inputs[index].link 已被清除
           const disconnectedLinkId = link_info.id as number;
+          const nodeId = this.id;
 
           setTimeout(() => {
             // 如果slot已重新连接，则不删除
-            if (self.inputs[index]?.link) return;
+            if (this.inputs[index]?.link) return;
 
             // 从 store 移除 slot（使用断开时就保存的 linkId）
-            store.removeHubSlot(self.id, disconnectedLinkId);
+            store.removeHubSlot(nodeId, disconnectedLinkId);
 
             // 如果只有一个 string slot，则不删除
-            if (self.inputs.length === 1) {
-              // 保存 properties（即使没删除也要同步）
-              saveSlotsToProperties(self);
+            if (this.inputs.length === 1) {
+              // 保存 properties
+              saveSlotsToProperties(this);
               return;
             }
 
-            self.removeInput(index);
+            this.removeInput(index);
 
-            // 重命名所有slot
-            let nameCount = 0;
-            for (const item of self.inputs) {
-              nameCount += 1;
-              const label = `param_${nameCount}`;
-              item.label = label;
-            }
-
-            // 同步到 properties
-            saveSlotsToProperties(self);
+            // 保存 properties
+            saveSlotsToProperties(this);
           }, 500);
+        }
+
+        // 重命名所有slot
+        let nameCount = 0;
+        for (const item of this.inputs) {
+          nameCount += 1;
+          const name = `param_${nameCount}`;
+          item.name = name;
+          if (item.label?.startsWith('param_')) {
+            item.label = name;
+          }
         }
       };
     },
