@@ -54,8 +54,6 @@ function syncHubSlotsFromInputs(node: any): void {
     }
   }
 
-  console.log('[ParamHub] Syncing slots from inputs', labelMap);
-
   // 从 this.inputs 扫描，批量构建当前 slots
   const slots: Slot[] = [];
   for (const input of node.inputs) {
@@ -87,7 +85,9 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   const nodeId = node.id as NodeId;
 
   // 首次加载：从 properties 恢复 slots
+  console.log(`[ParamHub] nodeId: ${nodeId}`, store.isNodeLoaded(nodeId));
   if (!store.isNodeLoaded(nodeId)) {
+    bindReactUI(node);
     loadSlotsFromProperties(node);
     store.markNodeLoaded(nodeId);
   }
@@ -103,7 +103,7 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   // 重置名称和类型
   // 从 store 获取当前 slots
   const slots = store.getHubSlots(nodeId);
-  console.log('[ParamHub] Updating single slots', slots);
+  console.log(`[ParamHub] nodeId: ${nodeId} slots: ${slots} `);
 
   // 重置名称和类型
   const existingSlot = slots.find(s => s.name === input.name);
@@ -114,7 +114,6 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
 
     newSlot.label = existingSlot.label;
     newSlot.type = existingSlot.type;
-    console.log('[ParamHub] Updating single existingSlot2', newSlot);
   } else {
     // 如果 store 中不存在，使用 link_info 创建新的
     node.inputs[index].label = String(link_info.type);
@@ -122,8 +121,6 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
 
     newSlot.label = String(link_info.type);
     newSlot.type = link_info.type;
-
-    console.log('[ParamHub] Updating single existingSlot3', newSlot);
   }
 
   const slotIndex = slots.findIndex(s => s.name === input.name);
@@ -146,20 +143,25 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
 /**
  * 将 React UI 挂载到指定节点
  * - 首次调用时创建 UI 并保存 handle
- * - 后续调用时（如 loadedGraphNode）使用 rerender 更新 props
+ * - 后续调用时（如 loadedGraphNode 或 nodeCreated 再次触发）使用 rerender 更新 props
  */
 function bindReactUI(node: any): void {
   const nodeAny = node as any;
 
+  const nodeId = node.id as NodeId;
+
+  console.log(`[ParamHub] nodeId: ${nodeId} bindReactUI`);
+
   // 如果已经创建过 widget，使用 rerender 更新
   if (nodeAny.__sr_widget_handle) {
+    console.log(`[ParamHub] nodeId: ${nodeId} rerender`);
     // 使用 rerender 传入正确的 nodeId
-    nodeAny.__sr_widget_handle.rerender(<HubPanel nodeId={node.id} />);
+    nodeAny.__sr_widget_handle.rerender(<HubPanel nodeId={nodeId} />);
     return;
   }
 
   // 首次创建 UI
-  const handle = mountReactWidget(node, HUB_PANEL_NAME, <HubPanel nodeId={node.id} />, {
+  const handle = mountReactWidget(node, HUB_PANEL_NAME, <HubPanel nodeId={nodeId} />, {
     minHeight: 30,
   });
 
@@ -193,6 +195,7 @@ const ParamHub = (): ComfyExtension => {
     // 允许扩展在节点构造函数之后运行代码
     nodeCreated: (node, _app) => {
       if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
+      console.log(`[ParamHub] nodeId: ${node.id} nodeCreated`);
       bindReactUI(node);
     },
 
@@ -200,7 +203,9 @@ const ParamHub = (): ComfyExtension => {
     // 如果你破坏了后端的某些东西，并想修补前端的工作流
     loadedGraphNode: (node, _app) => {
       if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
-      bindReactUI(node);
+      console.log(`[ParamHub] nodeId: ${node.id} loadedGraphNode`);
+      // 使用 bindReactUI2 进行测试
+      // bindReactUI2(node);
     },
 
     // 允许扩展在向 LGraph 注册节点之前向其添加额外的处理

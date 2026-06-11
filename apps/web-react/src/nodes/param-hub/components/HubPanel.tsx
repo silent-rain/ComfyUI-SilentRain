@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EditSlotModal } from './EditSlotModal';
 import styles from './HubPanel.module.scss';
+import type { NodeId } from '@/types/comfy';
 
 interface HubPanelProps {
-  nodeId: number;
+  nodeId: NodeId;
 }
 
 /**
@@ -40,8 +41,8 @@ export const HubPanel: React.FC<HubPanelProps> = ({ nodeId }) => {
 
       // 尝试直接调用 LiteGraph 的节点大小调整
       // 通过全局 ComfyUI API
-      if ((window as any).app?.graph) {
-        (window as any).app.graph.setDirtyCanvas(true, true);
+      if (window.app?.rootGraph) {
+        window.app.rootGraph.setDirtyCanvas(true, true);
       }
     }, 50);
 

@@ -1,11 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Slot } from '../../../types/comfy';
+import type { NodeId, Slot } from '../../../types/comfy';
 import { useParamHubStore } from '../../../store';
 import styles from './EditSlotModal.module.scss';
 import { updateProperties } from '@/hook/comfy';
 
 interface EditSlotModalProps {
-  nodeId: number;
+  nodeId: NodeId;
   onClose: () => void;
 }
 
