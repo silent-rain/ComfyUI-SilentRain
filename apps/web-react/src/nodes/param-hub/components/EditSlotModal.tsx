@@ -18,6 +18,7 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
 
   // 直接订阅 store 的 hubs Map，hubs 引用变化时触发重渲染
   const hubs = useParamHubStore();
+  console.log(`[EditSlotModal] Hubs nodeId: ${nodeId}, `, hubs.getHubSlots(nodeId));
 
   // 当 hubs 或 nodeId 变化时，同步 slotData
   useEffect(() => {

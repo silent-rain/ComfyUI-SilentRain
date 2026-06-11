@@ -13,26 +13,13 @@ import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
 import { ISlotType } from '../../enums/comfy';
 import { mountReactWidget } from '../../core';
 import { getParamHubStoreState } from '../../store';
-import type { Slot } from '../../types/comfy';
+import type { NodeId, Slot } from '../../types/comfy';
 import { HubPanel } from './components/HubPanel';
 
 const NODE_NAME = 'ParamHub';
 
-const HUB_SLOTS_PROPERTY = 'sr_hub_slots';
+export const HUB_SLOTS_PROPERTY = 'sr_hub_slots';
 const HUB_PANEL_NAME = 'hub_panel';
-
-// ── Properties 持久化辅助函数 ──────────────────────────────
-
-/** 将当前节点的 slots 从 store 序列化到 node.properties[HUB_SLOTS_PROPERTY] */
-function saveSlotsToProperties(node: any): void {
-  if (!node) return;
-  const store = getParamHubStoreState();
-  const slots = store.getHubSlots(node.id);
-
-  // 直接存储 Slot[] 数组
-  node.properties = node.properties ?? {};
-  node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
-}
 
 /** 从 node.properties[HUB_SLOTS_PROPERTY] 恢复 slots 到 store 和 input labels */
 function loadSlotsFromProperties(node: any): void {
@@ -60,6 +47,112 @@ function loadSlotsFromProperties(node: any): void {
   } catch (e) {
     console.error('[ParamHub] Failed to load slots from properties:', e);
   }
+}
+
+// ── 批量同步 slots（以 this.inputs 为唯一事实来源） ─────────
+
+/**
+ * 从节点的 this.inputs 批量重建 slots 并写入 store，同时合并 store 中已有的自定义 label。
+ * 这是保证 store 数据和 LiteGraph inputs 完全一致的唯一可靠方式。
+ */
+function syncHubSlotsFromInputs(node: any): void {
+  const store = getParamHubStoreState();
+  const nodeId = node.id as NodeId;
+
+  // 获取已保存在 store 中的 label 映射（linkId -> label），用于保留用户自定义 label
+  const existingSlots = store.getHubSlots(nodeId);
+  const labelMap = new Map<number, Slot>();
+  for (const slot of existingSlots) {
+    if (slot.label) {
+      labelMap.set(slot.linkId, slot);
+    }
+  }
+
+  console.log('[ParamHub] Syncing slots from inputs', labelMap);
+
+  // 从 this.inputs 扫描，批量构建当前 slots
+  const slots: Slot[] = [];
+  for (const input of node.inputs) {
+    // 只保留已连接的 input（link 存在）
+    if (input.link != null) {
+      const linkId = input.link as number;
+      const customSlot = labelMap.get(linkId);
+      slots.push({
+        linkId,
+        name: input.name,
+        label: customSlot?.label ?? input.type,
+        type: customSlot?.label ?? input.type,
+      });
+    }
+  }
+
+  // 一次性写入 store（替换整个数组，保证顺序和最新数据）
+  store.setHub(nodeId, slots);
+
+  // 同步回 properties 持久化（代替 saveSlotsToProperties 的独立调用）
+  node.properties = node.properties ?? {};
+  node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
+}
+
+/**
+ * 更新（新增 / 覆盖）单个 slot 到 store 与 Properties 持久化。
+ * 用于连接建立时把当前 link 对应的 slot 写入 store 并同步 properties。
+ */
+function updateSingleSlot(node: any, index: number, link_info: any): void {
+  const store = getParamHubStoreState();
+  const nodeId = node.id as NodeId;
+
+  // 首次加载：从 properties 恢复 slots
+  if (!store.isNodeLoaded(nodeId)) {
+    loadSlotsFromProperties(node);
+    store.markNodeLoaded(nodeId);
+  }
+
+  const input = node.inputs[index];
+
+  let newSlot: Slot = {
+    linkId: link_info.id,
+    name: input.name,
+    label: input.label,
+    type: input.type,
+  };
+  console.log('[ParamHub] Syncing slots from input', newSlot);
+
+  // 重置名称和类型
+  // 从 store 获取当前 slots
+  const slots = store.getHubSlots(nodeId);
+
+  // 重置名称和类型
+  const existingSlot = slots.find(s => s.name === input.name);
+  console.log('[ParamHub] Syncing slots from existingSlot', existingSlot);
+  if (existingSlot) {
+    // 如果 store 中存在，使用 store 中的 label（保留用户自定义的）
+    node.inputs[index].label = existingSlot.label || String(link_info.type);
+    node.inputs[index].type = existingSlot.type;
+  } else {
+    // 如果 store 中不存在，使用 link_info 创建新的
+    node.inputs[index].label = String(link_info.type);
+    node.inputs[index].type = link_info.type;
+
+    newSlot.label = String(link_info.type);
+    newSlot.type = link_info.type;
+
+    console.log('[ParamHub] Syncing slots from existingSlot2', newSlot);
+  }
+  console.log('[ParamHub] Syncing slots from newSlot3', newSlot);
+
+  if (index >= 0) {
+    slots[index] = newSlot;
+  } else {
+    slots.push(newSlot);
+  }
+
+  // 一次性写入 store
+  store.setHub(nodeId, slots);
+
+  // 同步回 properties 持久化
+  node.properties = node.properties ?? {};
+  node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
 }
 
 // ── React UI 绑定 ──────────────────────────────────────────
@@ -121,8 +214,6 @@ const ParamHub = (): ComfyExtension => {
     // 如果你破坏了后端的某些东西，并想修补前端的工作流
     loadedGraphNode: (node, _app) => {
       if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
-      // 从 properties 恢复 slots
-      loadSlotsFromProperties(node);
       bindReactUI(node);
     },
 
@@ -146,6 +237,14 @@ const ParamHub = (): ComfyExtension => {
         const nodeId = this.id;
 
         if (isConnected) {
+          console.log(
+            '[ParamHub] onConnectionsChange called',
+            type,
+            index,
+            isConnected,
+            link_info,
+            _inputOrOutput,
+          );
           // 先尝试从 store 中获取已保存的 slot 数据（避免刷新页面后数据重置）
           const slots = store.getHubSlots(nodeId);
           const existingSlot = slots.find(s => s.linkId === link_info.id);
@@ -163,63 +262,47 @@ const ParamHub = (): ComfyExtension => {
             }
           }
 
-          // 同步到 store：添加/更新 slot
-          const slot: Slot = {
-            linkId: link_info.id as number,
-            name: this.inputs[index]?.name ?? '',
-            label: this.inputs[index]?.label ?? '',
-            type: this.inputs[index]?.type ?? '*',
-          };
-          store.setHubSlot(nodeId, slot);
+          // 同时更新单个 slot 到 store 与 Properties
+          updateSingleSlot(this, index, link_info);
 
-          // 同步到 properties
-          saveSlotsToProperties(this);
-
-          // 添加一个空闲 slot
+          // 添加一个空闲 slot（如果没有空位了）
           const inputTotal = this.inputs.length;
           const linkCount = this.inputs.filter(slot => !slot.link).length;
           if (linkCount === 0) {
-            const firstInput = this.inputs[0];
-            if (!firstInput) return;
-
             const newIndex = inputTotal + 1;
             this.addInput(`param_${newIndex}`, '*');
           }
         } else {
-          // 在断开时立即获取 linkId，delayed 后 inputs[index].link 已被清除
-          const disconnectedLinkId = link_info.id as number;
-          const nodeId = this.id;
-
           setTimeout(() => {
             // 如果slot已重新连接，则不删除
-            if (this.inputs[index]?.link) return;
-
-            // 从 store 移除 slot（使用断开时就保存的 linkId）
-            store.removeHubSlot(nodeId, disconnectedLinkId);
-
-            // 如果只有一个 string slot，则不删除
-            if (this.inputs.length === 1) {
-              // 保存 properties
-              saveSlotsToProperties(this);
+            if (this.inputs[index]?.link) {
+              syncHubSlotsFromInputs(this);
               return;
             }
+            // 断开连接：如果只有一个 slot，则不删除 input，只清空
+            if (this.inputs.length === 1) {
+              // 保持至少一个空位
+            } else {
+              // 延迟删除 input，避免与重新连接冲突
+              // 但同步逻辑交给 syncHubSlotsFromInputs，无需 setTimeout
+              this.removeInput(index);
+            }
 
-            this.removeInput(index);
+            // 重命名所有 slot 的 name，保证 name 顺序正确
+            let nameCount = 0;
+            for (const item of this.inputs) {
+              nameCount += 1;
+              const name = `param_${nameCount}`;
+              item.name = name;
+              // 如果 label 是自动生成的（以 param_ 开头），同步更新
+              if (item.label?.startsWith('param_')) {
+                item.label = name;
+              }
+            }
 
-            // 保存 properties
-            saveSlotsToProperties(this);
-          }, 500);
-        }
-
-        // 重命名所有slot
-        let nameCount = 0;
-        for (const item of this.inputs) {
-          nameCount += 1;
-          const name = `param_${nameCount}`;
-          item.name = name;
-          if (item.label?.startsWith('param_')) {
-            item.label = name;
-          }
+            // 从 this.inputs 批量重建 slots 并写入 store（核心：以 inputs 为唯一事实来源）
+            syncHubSlotsFromInputs(this);
+          }, 200);
         }
       };
     },

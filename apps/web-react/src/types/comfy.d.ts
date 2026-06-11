@@ -1,9 +1,9 @@
 export declare interface Slot {
   linkId: number;
   /** 后端 input 名 (param_1 ... param_N)，与 Rust INPUT_TYPES 中的 key 一致 */
-  name?: string;
+  name: string;
   /** 显示的标签名称，在 EditSlot 窗口中编辑 */
-  label?: string;
+  label: string;
   type: SlotType; // 输入的类型
 }
 
