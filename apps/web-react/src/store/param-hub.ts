@@ -33,8 +33,8 @@ interface ParamHubStore {
    */
   getAllHubSlots: () => HubSlot[];
 
-  /** 更新指定 slot 的标签（根据 linkId） */
-  updateSlotLabel: (nodeId: NodeId, linkId: number, label: string) => void;
+  /** 更新指定 slot 的标签（根据 name） */
+  updateSlotLabel: (nodeId: NodeId, name: string, label: string) => void;
 
   /** 检查节点是否已加载过 */
   isNodeLoaded: (nodeId: NodeId) => boolean;
@@ -92,13 +92,13 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
     });
   },
 
-  /** 更新指定 slot 的 label（根据 linkId） */
-  updateSlotLabel: (nodeId, linkId, label) => {
+  /** 更新指定 slot 的 label（根据 name） */
+  updateSlotLabel: (nodeId, name, label) => {
     set(state => {
       const slots = state.hubs.get(nodeId);
       if (!slots) return state;
 
-      const slotIndex = slots.findIndex(s => s.linkId === linkId);
+      const slotIndex = slots.findIndex(s => s.name === name);
       if (slotIndex < 0) return state;
 
       const next = new Map(state.hubs);
@@ -108,19 +108,19 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
 
       // 同步更新 LiteGraph 节点的 input label
       try {
-        const app = (window as any).app;
-        if (app?.graph) {
-          const node = app.graph.getNodeById(nodeId);
+        const app = window.app!;
+        if (app?.rootGraph) {
+          const node = app.rootGraph.getNodeById(nodeId);
           if (node?.inputs) {
-            const input = node.inputs.find((inp: any) => inp.link === linkId);
+            const input = node.inputs.find((inp: any) => inp.name === name);
             if (input) {
               input.label = label;
             }
-          }
 
-          // 直接存储 Slot[] 数组
-          node.properties = node.properties ?? {};
-          node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
+            // 直接存储 Slot[] 数组
+            node.properties = node.properties ?? {};
+            node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
+          }
         }
       } catch (error) {
         console.error('Failed to update input label:', error);

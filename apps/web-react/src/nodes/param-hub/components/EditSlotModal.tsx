@@ -29,7 +29,7 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
   // 检查 label 是否重复
   const labelErrors = useMemo(() => {
     const labelCounts: { [key: string]: number } = {};
-    const errors: { [key: number]: boolean } = {};
+    const errors: { [key: string]: boolean } = {};
 
     // 统计每个 label 出现的次数
     slotData.forEach(slot => {
@@ -43,9 +43,9 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
     slotData.forEach(slot => {
       const label = (slot.label ?? '').trim();
       if (label && (labelCounts[label] || 0) > 1) {
-        errors[slot.linkId] = true;
+        errors[slot.name] = true;
       } else {
-        errors[slot.linkId] = false;
+        errors[slot.name] = false;
       }
     });
 
@@ -54,12 +54,15 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
 
   const hasErrors = useMemo(() => Object.values(labelErrors).some(error => error), [labelErrors]);
 
-  const handleLabelChange = (linkId: number, value: string) => {
-    // 直接更新 store，组件会自动重渲染
-    hubs.updateSlotLabel(nodeId, linkId, value);
+  const handleLabelChange = (name: string, value: string) => {
+    setSlotData(prev => prev.map(slot => (slot.name === name ? { ...slot, label: value } : slot)));
   };
 
   const handleSave = () => {
+    for (const slot of slotData) {
+      hubs.updateSlotLabel(nodeId, slot.name, slot.label);
+    }
+    console.log(`[EditSlotModal] Hubs nodeId: ${nodeId}  save, `, hubs.getHubSlots(nodeId));
     onClose();
   };
 
@@ -76,21 +79,20 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
         <div className={styles.body}>
           <div className={styles.slotList}>
             {slotData.map(slot => (
-              <div key={slot.linkId} className={styles.slotItem}>
+              <div key={slot.name} className={styles.slotItem}>
                 <div className={styles.slotInfo}>
-                  <span className={styles.slotId}>Link {slot.linkId}</span>
-                  <span className={styles.name}>{slot.name}</span>
+                  <span className={styles.slotId}>{slot.name}</span>
                   <span className={styles.slotType}>{slot.type}</span>
                 </div>
                 <div className={styles.field}>
                   <input
-                    className={`${styles.input} ${labelErrors[slot.linkId] ? styles.inputError : ''}`}
+                    className={`${styles.input} ${labelErrors[slot.name] ? styles.inputError : ''}`}
                     type='text'
                     value={slot.label}
-                    onChange={e => handleLabelChange(slot.linkId, e.target.value)}
+                    onChange={e => handleLabelChange(slot.name, e.target.value)}
                     placeholder='Enter slot label...'
                   />
-                  {labelErrors[slot.linkId] && (
+                  {labelErrors[slot.name] && (
                     <div className={styles.errorMsg}>
                       ⚠ Label already exists! Please use a unique label.
                     </div>

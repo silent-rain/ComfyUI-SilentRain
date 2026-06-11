@@ -30,20 +30,6 @@ function loadSlotsFromProperties(node: any): void {
     // 恢复到 store
     const store = getParamHubStoreState();
     store.setHub(node.id, slots);
-
-    // 恢复 input label（匹配 linkId）
-    // if (node.inputs) {
-    //   for (const input of node.inputs) {
-    //     if (input.link != null) {
-    //       const savedSlot = slots.find(s => s.linkId === input.link);
-    //       if (savedSlot) {
-    //         if (savedSlot.label) {
-    //           input.label = savedSlot.label;
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
   } catch (e) {
     console.error('[ParamHub] Failed to load slots from properties:', e);
   }
@@ -59,12 +45,12 @@ function syncHubSlotsFromInputs(node: any): void {
   const store = getParamHubStoreState();
   const nodeId = node.id as NodeId;
 
-  // 获取已保存在 store 中的 label 映射（linkId -> label），用于保留用户自定义 label
+  // 获取已保存在 store 中的 label 映射（name -> slot），用于保留用户自定义 label
   const existingSlots = store.getHubSlots(nodeId);
-  const labelMap = new Map<number, Slot>();
+  const labelMap = new Map<string, Slot>();
   for (const slot of existingSlots) {
     if (slot.label) {
-      labelMap.set(slot.linkId, slot);
+      labelMap.set(slot.name, slot);
     }
   }
 
@@ -75,10 +61,8 @@ function syncHubSlotsFromInputs(node: any): void {
   for (const input of node.inputs) {
     // 只保留已连接的 input（link 存在）
     if (input.link != null) {
-      const linkId = input.link as number;
-      const customSlot = labelMap.get(linkId);
+      const customSlot = labelMap.get(input.name);
       slots.push({
-        linkId,
         name: input.name,
         label: customSlot?.label ?? input.type,
         type: customSlot?.label ?? input.type,
@@ -111,24 +95,26 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   const input = node.inputs[index];
 
   let newSlot: Slot = {
-    linkId: link_info.id,
     name: input.name,
     label: input.label,
     type: input.type,
   };
-  console.log('[ParamHub] Syncing slots from input', newSlot);
 
   // 重置名称和类型
   // 从 store 获取当前 slots
   const slots = store.getHubSlots(nodeId);
+  console.log('[ParamHub] Updating single slots', slots);
 
   // 重置名称和类型
   const existingSlot = slots.find(s => s.name === input.name);
-  console.log('[ParamHub] Syncing slots from existingSlot', existingSlot);
   if (existingSlot) {
     // 如果 store 中存在，使用 store 中的 label（保留用户自定义的）
-    node.inputs[index].label = existingSlot.label || String(link_info.type);
+    node.inputs[index].label = existingSlot.label;
     node.inputs[index].type = existingSlot.type;
+
+    newSlot.label = existingSlot.label;
+    newSlot.type = existingSlot.type;
+    console.log('[ParamHub] Updating single existingSlot2', newSlot);
   } else {
     // 如果 store 中不存在，使用 link_info 创建新的
     node.inputs[index].label = String(link_info.type);
@@ -137,12 +123,12 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
     newSlot.label = String(link_info.type);
     newSlot.type = link_info.type;
 
-    console.log('[ParamHub] Syncing slots from existingSlot2', newSlot);
+    console.log('[ParamHub] Updating single existingSlot3', newSlot);
   }
-  console.log('[ParamHub] Syncing slots from newSlot3', newSlot);
 
-  if (index >= 0) {
-    slots[index] = newSlot;
+  const slotIndex = slots.findIndex(s => s.name === input.name);
+  if (slotIndex >= 0) {
+    slots[slotIndex] = newSlot;
   } else {
     slots.push(newSlot);
   }
@@ -233,35 +219,7 @@ const ParamHub = (): ComfyExtension => {
 
         if (type !== ISlotType.Input) return;
 
-        const store = getParamHubStoreState();
-        const nodeId = this.id;
-
         if (isConnected) {
-          console.log(
-            '[ParamHub] onConnectionsChange called',
-            type,
-            index,
-            isConnected,
-            link_info,
-            _inputOrOutput,
-          );
-          // 先尝试从 store 中获取已保存的 slot 数据（避免刷新页面后数据重置）
-          const slots = store.getHubSlots(nodeId);
-          const existingSlot = slots.find(s => s.linkId === link_info.id);
-
-          // 重置名称和类型
-          if (this.inputs[index]) {
-            if (existingSlot) {
-              // 如果 store 中存在，使用 store 中的 label（保留用户自定义的）
-              this.inputs[index].label = existingSlot.label || String(link_info.type);
-              this.inputs[index].type = existingSlot.type;
-            } else {
-              // 如果 store 中不存在，使用 link_info 创建新的
-              this.inputs[index].label = String(link_info.type);
-              this.inputs[index].type = link_info.type;
-            }
-          }
-
           // 同时更新单个 slot 到 store 与 Properties
           updateSingleSlot(this, index, link_info);
 
