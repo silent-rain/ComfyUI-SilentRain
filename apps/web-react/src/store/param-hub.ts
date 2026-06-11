@@ -1,12 +1,6 @@
 import { create } from 'zustand';
 import type { NodeId, Slot } from '../types/comfy';
 
-/** 扩展 Slot，增加来源 hub 节点 ID */
-export interface HubSlot extends Slot {
-  /** 来源 ParamHub 节点 ID */
-  hubNodeId: NodeId;
-}
-
 interface ParamHubStore {
   /**
    * 所有 ParamHub 节点的 slot 映射
@@ -26,11 +20,6 @@ interface ParamHubStore {
 
   /** 获取一个 hub 的所有 slots（不存在时返回空数组） */
   getHubSlots: (nodeId: NodeId) => Slot[];
-
-  /**
-   * 获取所有 hub 的 slots，供 ParamPort 使用
-   */
-  getAllHubSlots: () => HubSlot[];
 
   /** 更新指定 slot 的标签（根据 name） */
   updateSlotLabel: (nodeId: NodeId, name: string, label: string) => void;
@@ -66,17 +55,6 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
 
   getHubSlots: nodeId => {
     return get().hubs.get(nodeId) ?? [];
-  },
-
-  getAllHubSlots: () => {
-    const { hubs } = get();
-    const allSlots: HubSlot[] = [];
-    for (const [nodeId, slots] of hubs.entries()) {
-      for (const slot of slots) {
-        allSlots.push({ ...slot, hubNodeId: nodeId });
-      }
-    }
-    return allSlots;
   },
 
   isNodeLoaded: nodeId => {

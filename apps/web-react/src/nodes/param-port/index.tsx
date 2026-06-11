@@ -1,71 +1,116 @@
 /**
  * ParamPort 节点扩展
  *
- * 保留原始 ComfyExtension 的所有回调结构，便于参考与扩展。
- * 暂无 React UI 挂载需求，如需挂载可在 loadedGraphNode / nodeCreated 中调用 mountReactWidget。
+ * ParamPort 是 ParamHub 的成对节点，用于转发输出端点。
+ * 从 ParamHub store 读取数据，动态构建输出端点。
+ *
+ * 核心机制：
+ * - ParamHub 的 slots 数据存储在 Zustand store 中
+ * - ParamPort 通过 store 订阅实时感知 ParamHub slots 的变化
+ * - 连接建立时从 store 获取 slots 并动态构建 this.outputs
+ * - 利用 Zustand subscribe 在非 React 上下文中监听 store 变化
+ * - 当 ParamHub 的 slots 发生变化时自动重建 outputs
  */
 import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
 import { ISlotType } from '../../enums/comfy';
+import { getParamHubStoreState, useParamHubStore } from '@/store';
+import type { NodeId, Slot } from '../../types/comfy';
 
 const NODE_NAME = 'ParamPort';
 
+// ── 重建 outputs（核心函数）──────────────────────────────────
+
+/**
+ * 根据给定的 slots 数据重建节点的 this.outputs。
+ * 保留现有 outputs 的连接信息，避免断开已有连线。
+ */
+function rebuildOutputs(node: any, slots: Slot[]): void {
+  const oldOutputs = [...(node.outputs || [])];
+
+  // 清空并重建 outputs
+  node.outputs = [];
+  for (const slot of slots) {
+    node.addOutput(slot.label || slot.name, slot.type);
+  }
+
+  // 尝试恢复旧 outputs 中的连接
+  for (let i = 0; i < node.outputs.length; i++) {
+    if (i < oldOutputs.length && oldOutputs[i].links) {
+      node.outputs[i].links = oldOutputs[i].links;
+    }
+  }
+
+  // 触发节点重绘
+  if (node.graph) {
+    node.graph.setDirtyCanvas(true, true);
+  }
+}
+
+// ── Zustand Store 订阅 ──────────────────────────────────────────
+
+/**
+ * 初始化 Store 订阅。
+ * 仅在 onConnectionsChange 首次连接时调用（此时已有 originNodeId）。
+ * 用 __sr_store_subscribed 状态标记避免重复初始化。
+ */
+function initStoreSubscription(node: any, originNodeId: NodeId): void {
+  const nodeAny = node as any;
+  if (nodeAny.__sr_store_subscribed) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let prevSlots: Slot[] | undefined;
+
+  const unsubscribe = useParamHubStore.subscribe(state => {
+    const slots = state.hubs.get(originNodeId);
+    // 仅在 slots 引用变化时重建 outputs
+    if (slots !== prevSlots) {
+      prevSlots = slots;
+      rebuildOutputs(node, slots ?? []);
+    }
+  });
+
+  // 标记已订阅，并保存 unsubscribe 引用
+  nodeAny.__sr_store_subscribed = true;
+  nodeAny.__sr_store_unsubscribe = unsubscribe;
+}
+
+// ── 清理函数 ──────────────────────────────────────────────
+
+/** 取消 ParamPort 节点上的 store 订阅 */
+function cleanupStoreSubscription(node: any): void {
+  const nodeAny = node as any;
+
+  // 取消 Zustand store 订阅
+  if (nodeAny.__sr_store_unsubscribe) {
+    nodeAny.__sr_store_unsubscribe();
+    nodeAny.__sr_store_unsubscribe = null;
+  }
+}
+
+// ── ParamPort factory ─────────────────────────────────────
+
 const ParamPort = (): ComfyExtension => {
   return {
-    // 扩展名的名称
     name: `SilentRain.${NODE_NAME}`,
 
-    // 允许任何初始化，例如加载资源。在画布创建后但在添加节点之前调用
-    init: async _app => {
-      // Node initialization
-    },
+    init: async _app => {},
 
-    // 允许在应用程序完全设置并运行后调用任何其他设置
-    setup: async _app => {
-      // Node setup
-    },
+    setup: async _app => {},
 
-    // 允许扩展修改已重新加载到图形上的节点。
-    // 如果你破坏了后端的某些东西，并想修补前端的工作流
     loadedGraphNode: (node, _app) => {
       if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
-
-      // Graph node loaded callback
-      console.log('loaded Graph Node:', node);
-      console.log('loaded Graph Node widgets_values:', (node as any).widgets_values);
-
-      // for (let i = 10; i < node.outputs.length - 1; i++) {
-      //     const output = node.outputs[i];
-      //     console.log("output:", output);
-      //     node.removeOutput(i);
-      //     // node.addOutput("output", ISlotType.Output)
-      // }
-
-      // 自动计算并调整节点大小
-      const newSize = node.computeSize();
-      // 可以给一个最小宽度，防止节点太窄
-      newSize[0] = Math.max(newSize[0], 150);
-      node.setSize(newSize);
-
-      // 强制刷新画布
-      // node.setDirtyCanvas(true, true);
-
-      node.addOutput('output1', ISlotType.Output);
-      node.addOutput('output2', ISlotType.Output);
     },
 
-    // 允许扩展在节点构造函数之后运行代码
-    nodeCreated: (_node, _app) => {
-      // Node created callback
+    nodeCreated: (node, _app) => {
+      if (node.comfyClass !== NODE_NAME && node.type !== NODE_NAME) return;
+      console.log(`[ParamPort] nodeId: ${node.id} nodeCreated`);
     },
 
-    // 允许扩展将上下文菜单项添加到画布右键菜单
     getCanvasMenuItems: _canvas => {
       return [];
     },
 
-    // 允许扩展在向 LGraph 注册节点之前向其添加额外的处理
     beforeRegisterNodeDef: async (nodeType, nodeData, _app) => {
-      // Only handle specific node
       if (nodeData.name !== NODE_NAME) return;
 
       nodeType.prototype.onConnectionsChange = function (
@@ -73,29 +118,30 @@ const ParamPort = (): ComfyExtension => {
         _index,
         isConnected,
         link_info,
-        inputOrOutput,
+        _inputOrOutput,
       ) {
         if (!link_info) return;
 
         if (type !== ISlotType.Input) return;
 
-        console.log('onConnectionsChange called', inputOrOutput);
-        console.log(type, _index, isConnected, link_info);
-
-        // out_labels_json
-        const outLabelsJsons = this.inputs.filter(slot => slot.name === 'out_labels_json');
-        if (outLabelsJsons.length === 0) return;
-
-        const outLabelsJson = outLabelsJsons[0];
-        console.log('===========:', outLabelsJson);
-
         if (isConnected) {
-          // TODO: 连接建立时的业务逻辑
-        } else {
-          // TODO: 断开连接时的业务逻辑
-        }
+          // 首次连接时初始化 Store 订阅（此时已有 originNodeId）
+          const originNodeId = link_info.origin_id;
+          initStoreSubscription(this, originNodeId);
 
-        return;
+          // 直接用 ParamHub 的 slots 覆盖 outputs
+          const store = getParamHubStoreState();
+          const slots = store.getHubSlots(originNodeId);
+          rebuildOutputs(this, slots);
+        } else {
+          // 连接断开：直接清空所有 outputs
+          rebuildOutputs(this, []);
+        }
+      };
+
+      // 节点移除时的清理
+      nodeType.prototype.onRemoved = function () {
+        cleanupStoreSubscription(this);
       };
     },
   };

@@ -63,7 +63,7 @@ function syncHubSlotsFromInputs(node: any): void {
       slots.push({
         name: input.name,
         label: customSlot?.label ?? input.type,
-        type: customSlot?.label ?? input.type,
+        type: customSlot?.type ?? input.type,
       });
     }
   }
@@ -94,7 +94,7 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
 
   const input = node.inputs[index];
 
-  let newSlot: Slot = {
+  const newSlot: Slot = {
     name: input.name,
     label: input.label,
     type: input.type,
