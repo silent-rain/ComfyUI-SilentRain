@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { NodeId, Slot } from '../types/comfy';
-import { HUB_SLOTS_PROPERTY } from '@/nodes/param-hub';
 
 /** 扩展 Slot，增加来源 hub 节点 ID */
 export interface HubSlot extends Slot {
@@ -116,10 +115,6 @@ export const useParamHubStore = create<ParamHubStore>((set, get) => ({
             if (input) {
               input.label = label;
             }
-
-            // 直接存储 Slot[] 数组
-            node.properties = node.properties ?? {};
-            node.properties[HUB_SLOTS_PROPERTY] = JSON.stringify(slots);
           }
         }
       } catch (error) {

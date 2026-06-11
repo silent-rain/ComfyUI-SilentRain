@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { Slot } from '../../../types/comfy';
 import { useParamHubStore } from '../../../store';
 import styles from './EditSlotModal.module.scss';
+import { updateProperties } from '@/hook/comfy';
 
 interface EditSlotModalProps {
   nodeId: number;
@@ -62,6 +63,9 @@ export const EditSlotModal: React.FC<EditSlotModalProps> = ({ nodeId, onClose })
     for (const slot of slotData) {
       hubs.updateSlotLabel(nodeId, slot.name, slot.label);
     }
+
+    // 直接存储 Slot[] 数组
+    updateProperties(nodeId);
     console.log(`[EditSlotModal] Hubs nodeId: ${nodeId}  save, `, hubs.getHubSlots(nodeId));
     onClose();
   };

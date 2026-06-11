@@ -15,10 +15,10 @@ import { mountReactWidget } from '../../core';
 import { getParamHubStoreState } from '../../store';
 import type { NodeId, Slot } from '../../types/comfy';
 import { HubPanel } from './components/HubPanel';
+import { HUB_SLOTS_PROPERTY } from '@/constant/param-hub';
 
 const NODE_NAME = 'ParamHub';
 
-export const HUB_SLOTS_PROPERTY = 'sr_hub_slots';
 const HUB_PANEL_NAME = 'hub_panel';
 
 /** 从 node.properties[HUB_SLOTS_PROPERTY] 恢复 slots 到 store 和 input labels */
