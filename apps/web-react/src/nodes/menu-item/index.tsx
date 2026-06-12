@@ -1,4 +1,9 @@
-/* menu-item Node - Workflow Image Export/Import Menu Integration */
+/* menu-item Node - Workflow Image Export/Import Menu Integration
+ *
+ * 参考实现:
+ * https://github.com/pythongosssss/ComfyUI-Custom-Scripts/blob/main/web/js/workflowImage.js
+ * https://github.com/BobRandomNumber/ComfyUI-QoL-Pack/blob/main/web/js/QoL_WorkflowImage.js
+ */
 
 import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
 
