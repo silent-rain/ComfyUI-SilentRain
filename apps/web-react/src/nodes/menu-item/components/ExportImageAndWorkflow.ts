@@ -4,79 +4,14 @@
  * Simultaneously export a PNG image (with embedded workflow) and a JSON workflow file.
  * Shows a prompt dialog for the user to name the files.
  */
-
 import {
-  type CanvasState,
-  getBounds,
-  saveCanvasState,
-  restoreCanvasState,
-  updateView,
-  drawCanvas,
-  drawWidgetTextOnCanvas,
-  waitForDomWidgetsReady,
+  captureWorkflowCanvas,
   getWorkflowJson,
   downloadBlob,
+  handleExportError,
   canvasToPngBlob,
 } from './workflow-image-core';
-
-/** CRC32 lookup table (lazy initialized) */
-let crcTable: Uint32Array | null = null;
-
-function getCrcTable(): Uint32Array {
-  if (crcTable) return crcTable;
-
-  crcTable = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    }
-    crcTable[n] = c;
-  }
-  return crcTable;
-}
-
-function crc32(data: Uint8Array): number {
-  const table = getCrcTable();
-  let crc = 0 ^ -1;
-  for (let i = 0; i < data.byteLength; i++) {
-    crc = (crc >>> 8) ^ table[(crc ^ data[i]!) & 0xff]!;
-  }
-  return (crc ^ -1) >>> 0;
-}
-
-function n2b(n: number): Uint8Array {
-  return new Uint8Array([(n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]);
-}
-
-function concat(...bufs: Uint8Array[]): Uint8Array {
-  const totalSize = bufs.reduce((total, buf) => total + buf.byteLength, 0);
-  const result = new Uint8Array(totalSize);
-  let offset = 0;
-  for (const buf of bufs) {
-    result.set(buf, offset);
-    offset += buf.byteLength;
-  }
-  return result;
-}
-
-async function embedWorkflowInPng(pngBlob: Blob, workflow: string): Promise<Blob> {
-  const buffer = await pngBlob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  const view = new DataView(buffer);
-
-  const chunkData = new TextEncoder().encode(`tEXtworkflow\0${workflow}`);
-  const chunkDataLen = chunkData.byteLength - 4;
-  const chunkCrc = crc32(chunkData);
-  const chunk = concat(n2b(chunkDataLen), chunkData, n2b(chunkCrc));
-
-  const ihdrDataLen = view.getUint32(8);
-  const insertPos = 8 + 4 + 4 + ihdrDataLen + 4;
-
-  const result = concat(bytes.subarray(0, insertPos), chunk, bytes.subarray(insertPos));
-
-  return new Blob([result.buffer as ArrayBuffer], { type: 'image/png' });
-}
+import { embedWorkflowInPng } from './png-utils';
 
 /**
  * Show a custom prompt dialog for entering the filename.
@@ -161,13 +96,7 @@ function showFilenamePrompt(): Promise<string | null> {
       margin-bottom: 16px;
     `;
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        confirmBtn.click();
-      }
-      if (e.key === 'Escape') {
-        cleanup();
-        resolve(null);
-      }
+      if (e.key === 'Enter') confirmBtn.click();
     });
 
     // Confirm button
@@ -232,57 +161,23 @@ export async function exportImageAndWorkflow(): Promise<void> {
   const filename = await showFilenamePrompt();
   if (!filename) return;
 
-  let savedState: CanvasState | undefined;
+  const { canvasEl, restore } = await captureWorkflowCanvas();
 
   try {
-    // Save current canvas state
-    savedState = saveCanvasState();
+    const blob = await canvasToPngBlob(canvasEl);
 
-    // Update view to fit all nodes and redraw
-    const bounds = getBounds();
-    updateView(bounds);
-    drawCanvas(true, true);
-
-    // Wait for rendering to complete:
-    // 1. Double rAF ensures the browser has painted at least one frame
-    // 2. Additional 1000ms delay ensures remote/complex nodes finish rendering
-    //    (increased from single rAF because complex nodes need more time)
-    // 3. Poll DOM widgets to ensure they are visible and positioned
-    await new Promise<void>(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setTimeout(resolve, 1000);
-        });
-      });
-    });
-
-    // Additional wait: poll until all DOM widgets are rendered or timeout
-    await waitForDomWidgetsReady(3000);
-
-    // Draw widget text content directly on canvas.
-    // This is the key fix for empty text in exported images:
-    // In the new ComfyUI frontend, text widgets (textarea) use DOM elements
-    // overlaid on the canvas, which are invisible when we modify the transform.
-    drawWidgetTextOnCanvas(bounds);
-
-    // Get PNG blob from canvas
-    let pngBlob = await canvasToPngBlob();
-
-    // Embed workflow data into PNG
+    const arrayBuffer = await blob.arrayBuffer();
     const workflow = getWorkflowJson();
-    pngBlob = await embedWorkflowInPng(pngBlob, workflow);
+    const pngWithWorkflow = embedWorkflowInPng(new Uint8Array(arrayBuffer), workflow);
 
-    // Download PNG
-    downloadBlob(pngBlob, `${filename}.png`);
-
-    // Download JSON workflow
-    const jsonBlob = new Blob([workflow], { type: 'application/json' });
-    downloadBlob(jsonBlob, `${filename}.json`);
+    downloadBlob(
+      new Blob([pngWithWorkflow.buffer as ArrayBuffer], { type: 'image/png' }),
+      `${filename}.png`,
+    );
+    downloadBlob(new Blob([workflow], { type: 'application/json' }), `${filename}.json`);
+  } catch (err) {
+    handleExportError(err, 'Image+Workflow export');
   } finally {
-    // Always restore canvas state
-    if (savedState) {
-      restoreCanvasState(savedState);
-      drawCanvas(true, true);
-    }
+    restore();
   }
 }

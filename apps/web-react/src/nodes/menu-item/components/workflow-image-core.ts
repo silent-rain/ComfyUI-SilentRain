@@ -223,29 +223,56 @@ export function drawWidgetTextOnCanvas(bounds: [number, number, number, number])
 }
 
 /**
+ * Capture workflow canvas after setting up export view and drawing widgets.
+ * Returns a cleanup function that restores the original canvas state.
+ */
+export async function captureWorkflowCanvas(): Promise<{
+  canvasEl: HTMLCanvasElement;
+  restore: () => void;
+}> {
+  const savedState = saveCanvasState();
+  const bounds = getBounds();
+  updateView(bounds);
+  drawCanvas(true, true);
+
+  await new Promise<void>(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTimeout(resolve, 1000));
+    });
+  });
+  await waitForDomWidgetsReady(3000);
+  drawWidgetTextOnCanvas(bounds);
+
+  return {
+    canvasEl: getApp().canvasEl,
+    restore: () => {
+      restoreCanvasState(savedState);
+      drawCanvas(true, true);
+    },
+  };
+}
+
+/**
+ * Unified error handler for export operations.
+ */
+export function handleExportError(error: unknown, context: string): void {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error(`[WorkflowImage] ${context} failed:`, error);
+  alert(`Export failed: ${context}\n${msg}`);
+}
+
+/**
  * Draw text for a single widget onto the canvas.
- * Handles both DOM widgets (textarea/customtext) and standard canvas widgets.
  */
 function drawSingleWidgetText(
   ctx: CanvasRenderingContext2D,
   widget: any,
-  node: any,
-  bounds: [number, number, number, number],
+  _node: any,
+  _bounds: [number, number, number, number],
 ): void {
   const domEl = widget.element ?? widget.inputEl;
-
-  // DOM widget (textarea/customtext) - these are the primary source of empty text
-  if (domEl && (widget.type === 'textarea' || widget.type === 'customtext')) {
-    drawDomWidgetText(ctx, domEl as HTMLElement, widget, node, bounds);
-    return;
-  }
-
-  // Standard text-value widgets (combo, string, text) that are drawn on canvas
-  // but may need their value text re-rendered if the draw method doesn't show value
-  if (widget.type === 'combo' || widget.type === 'string' || widget.type === 'text') {
-    drawCanvasWidgetValue(ctx, widget, node, bounds);
-    return;
-  }
+  if (!domEl) return;
+  drawDomWidgetText(ctx, domEl as HTMLElement, widget);
 }
 
 /**
@@ -258,69 +285,32 @@ function drawSingleWidgetText(
  * Position calculation follows the reference implementations:
  * - pythongosssss/SvgWorkflowImage: parseInt(domWrapper.style.left/top), resetTransform=true
  * - pythongosssss/PngWorkflowImage: x=10, y=widget.last_y+10, resetTransform=false
- *
- * We use a two-strategy approach:
- * 1. If domWrapper.style.left/top are available → use them with resetTransform=true
- *    (these are in canvas pixel coordinates, identity transform)
- * 2. Otherwise, fall back to widget.last_y with resetTransform=false
- *    (these are in logical coordinates, drawn under the scale transform)
  */
-/**
- * Draw text content of a DOM widget (textarea/customtext) onto the canvas.
- *
- * These widgets use HTML elements overlaid on the canvas for editing.
- * During export, the DOM element position doesn't match the canvas rendering,
- * so we need to draw the text content directly on the canvas.
- *
- * Position calculation follows the reference implementations:
- * - pythongosssss/SvgWorkflowImage: parseInt(domWrapper.style.left/top), resetTransform=true
- * - pythongosssss/PngWorkflowImage: x=10, y=widget.last_y+10, resetTransform=false
- */
-function drawDomWidgetText(
-  ctx: CanvasRenderingContext2D,
-  domEl: HTMLElement,
-  widget: any,
-  _node: any,
-  _bounds: [number, number, number, number],
-): void {
+function drawDomWidgetText(ctx: CanvasRenderingContext2D, domEl: HTMLElement, widget: any): void {
   const value = widget.value ?? (domEl as HTMLInputElement & HTMLElement).value;
-  if (value === undefined || value === null) return;
+  if (value === undefined || value === null || value === '') return;
 
   const text = String(value);
-  if (!text) return;
 
   // Get the dom-widget wrapper
   const domWrapper = (domEl.closest('.dom-widget') ?? domEl) as HTMLElement;
 
-  // Use getBoundingClientRect on both the wrapper and the canvas to convert
-  // viewport-relative CSS pixel coordinates into canvas-relative logical
-  // coordinates. This avoids issues with CSS transforms, iframes, or scroll.
+  // Convert viewport-relative CSS pixel coordinates into canvas-relative logical coordinates
   const wrapperRect = domWrapper.getBoundingClientRect();
   const canvasEl = (window as any).app?.canvasEl;
   const canvasRect = canvasEl?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
 
-  // canvasX = wrapper CSS-X minus canvas CSS-X
-  let x = wrapperRect.left - canvasRect.left;
+  const x = wrapperRect.left - canvasRect.left;
   let y = wrapperRect.top - canvasRect.top;
-
-  // Get widget dimensions from DOM style
   const domWidth = wrapperRect.width;
 
-  // Get the current canvas transform to determine the scale factor t.d
-  const t = (window as any).app?.canvasEl?.getContext('2d')?.getTransform();
-  const scale = t?.d || 1;
-
-  // Line height follows pythongosssss' formula: line = t.d * 12
-  // This accounts for the canvas transform scale factor
+  // Use cached scale from canvas transform
+  const scale = ctx.getTransform().d || 1;
   const line = scale * 12;
 
-  // Calculate domHeight based on actual text lines to ensure the background
-  // rectangle covers all text content. The DOM element's style.height is
-  // preferred, but if unavailable, we estimate from the number of text lines.
   const textLines = text.split('\n');
   const domHeight = wrapperRect.height || Math.max(textLines.length * line + 10, 20);
 
-  // Get computed styles from the actual DOM element for proper text rendering
   let bgColor = '#222';
   let textColor = '#ffffff';
   let font = '12px sans-serif';
@@ -331,165 +321,21 @@ function drawDomWidgetText(
     textColor = style.getPropertyValue('color') || '#ffffff';
     font = style.getPropertyValue('font') || '12px sans-serif';
   } catch {
-    // Use defaults if getComputedStyle fails
+    // Use defaults
   }
 
-  // Draw background (covers the empty area left by the hidden DOM element)
+  ctx.save();
   ctx.fillStyle = bgColor;
   ctx.fillRect(x, y, domWidth, domHeight);
-
-  // Draw text content
   ctx.fillStyle = textColor;
   ctx.font = font;
 
   const maxWidth = domWidth - 8;
-  const split = text.split('\n');
-  let start = y;
-  for (const l of split) {
-    start += line;
-    wrapText(ctx, l, x + 4, start, maxWidth, line);
+  for (let i = 0; i < textLines.length; i++) {
+    y += line;
+    wrapText(ctx, textLines[i]!, x + 4, y, maxWidth, line);
   }
-}
-/**
- * Draw the value of a standard canvas widget (combo/string/text) onto the canvas.
- *
- * These widgets are normally drawn by the canvas renderer, but in some cases
- * the value text may not be rendered correctly after the canvas transform is reset.
- * This function ensures the value text is visible in the exported image.
- */
-function drawCanvasWidgetValue(
-  ctx: CanvasRenderingContext2D,
-  widget: any,
-  node: any,
-  _bounds: [number, number, number, number],
-): void {
-  const value = widget.value;
-  if (value === undefined || value === null || value === '') return;
-
-  const text = String(value);
-  if (!text) return;
-
-  // Position calculation: we're drawing after drawCanvas(), so the canvas
-  // transform is setTransform(dpr, 0, 0, dpr, 0, 0) — there's no per-node
-  // translation applied. We must convert node-relative coordinates to canvas
-  // logical coordinates using the LiteGraph coordinate conversion method:
-  //   node.last_mouse_x = node.pos[0] + (x * ds.scale) + ds.offset[0]
-  //   node.last_mouse_y = node.pos[1] + (y * ds.scale) + ds.offset[1]
-  // After updateView(): ds.scale=1, ds.offset = [-bounds[0], -bounds[1]],
-  // so: canvasLogicalX = nodePos.x + x - bounds[0]
-  //     canvasLogicalY = nodePos.y + y - bounds[1]
-  //
-  // For widgets, the LiteGraph reordering formula is:
-  //   last_y = y + w.last_y - w.last_y + height
-  //   y = last_y - w.last_y + w.last_y - height ???
-  //   Actually: last_y = y + widget.last_y - widget.last_y + height
-  //   so: y = last_y ??
-  //   Better: use the formula from pythongosssss PngWorkflowImage:
-  //   x=10, y=(widget.last_y ?? widget.y ?? 0) + LiteGraph.NODE_TITLE_HEIGHT + 20
-  const ds = (window as any).app?.canvas?.ds;
-  const offsetX = ds?.offset?.[0] ?? 0;
-  const offsetY = ds?.offset?.[1] ?? 0;
-  const nodePosX = node.pos?.[0] ?? 0;
-  const nodePosY = node.pos?.[1] ?? 0;
-
-  const x = 10 + nodePosX + offsetX;
-  // Note: widget.last_y is relative to the NODE CONTENT AREA (below title bar).
-  // We add 20 for padding, similar to pythongosssss approach.
-  const y = (widget.last_y ?? widget.y ?? 0) + 20 + nodePosY + offsetY;
-
-  // Get widget dimensions
-  const widgetWidth = (node.size?.[0] ?? 240) - 20;
-
-  // Use scale-aware line height: line = t.d * 12
-  const t = (window as any).app?.canvasEl?.getContext('2d')?.getTransform();
-  const scale = t?.d || 1;
-  const line = scale * 12;
-
-  // Calculate widgetHeight based on actual text lines
-  const textLines = text.split('\n');
-  const widgetHeight = Math.max(textLines.length * line + 10, 20);
-
-  // Save current state
-  ctx.save();
-
-  // Draw value text for combo/string/text widgets
-  if (widget.type === 'combo') {
-    // Combo widgets: draw background and value
-    ctx.fillStyle = '#222';
-    ctx.fillRect(x, y, widgetWidth, widgetHeight);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '12px sans-serif';
-    const fontSize = 12;
-    const baselineY = y + (widgetHeight + fontSize) / 2;
-    ctx.fillText(text, x + 4, baselineY);
-  } else if (widget.type === 'string' || widget.type === 'text') {
-    // String/text widgets: draw value text directly
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '12px sans-serif';
-    const split = text.split('\n');
-    let start = y;
-    for (const l of split) {
-      start += line;
-      wrapText(ctx, l, x + 4, start, widgetWidth - 8, line);
-    }
-  }
-
   ctx.restore();
-}
-
-/**
- * Initialize ComfyWidgets.STRING override for canvas text rendering.
- *
- * This is kept for backward compatibility with old ComfyUI frontend versions
- * that still use customtext widget type with widget.draw().
- *
- * In the new React-based frontend, this override may not find ComfyWidgets.STRING
- * or the widget type may be 'textarea' instead of 'customtext'. In that case,
- * the drawWidgetTextOnCanvas() approach handles text rendering.
- */
-export function initComfyWidgetsForExport(): void {
-  const ComfyWidgets = (window as any).ComfyWidgets;
-  if (!ComfyWidgets?.STRING) {
-    // New frontend may not expose ComfyWidgets.STRING - that's OK,
-    // we use drawWidgetTextOnCanvas() instead
-    return;
-  }
-
-  const stringWidget = ComfyWidgets.STRING;
-
-  ComfyWidgets.STRING = function (this: any, ...args: any[]): any {
-    const w = stringWidget.apply(this, args);
-
-    // Override draw for both 'customtext' (old) and 'textarea' (new) types
-    // This is a legacy path for old ComfyUI frontends that use widget.draw()
-    // to render customtext widgets. In the new React-based frontend, text
-    // widgets use DOM elements (textarea) overlaid on the canvas, and the
-    // primary text rendering mechanism is drawWidgetTextOnCanvas().
-    if (w?.widget) {
-      const wt = w.widget;
-      if (wt.type === 'customtext') {
-        // Only override for 'customtext' type (old frontend)
-        // Do NOT override for 'textarea' type (new frontend) because:
-        // 1. In the new frontend, textarea widgets are DOM elements that
-        //    are not drawn via widget.draw() at all
-        // 2. Overriding draw() for textarea would interfere with the DOM
-        //    widget lifecycle and cause rendering artifacts
-        // 3. drawWidgetTextOnCanvas() handles textarea text rendering
-        //    after drawCanvas(), which is the correct approach
-        const originalDraw = wt.draw?.bind(wt);
-        wt.draw = function (ctx: CanvasRenderingContext2D, ...drawArgs: any[]) {
-          // Call original draw first
-          if (originalDraw) {
-            originalDraw(ctx, ...drawArgs);
-          }
-          // For 'customtext' in old frontend, the widget.draw() method
-          // is the sole renderer, so no additional action is needed here.
-          // Text rendering during export is handled by drawWidgetTextOnCanvas().
-        };
-      }
-    }
-    return w;
-  };
 }
 
 /**
@@ -625,12 +471,11 @@ export function downloadBlob(blob: Blob, filename: string): void {
 /**
  * Convert a canvas to a PNG Blob
  */
-export async function canvasToPngBlob(): Promise<Blob> {
-  const app = getApp();
-  return new Promise(resolve => {
-    app.canvasEl.toBlob(blob => {
-      if (!blob) throw new Error('Failed to create PNG blob');
-      resolve(blob);
-    }, 'image/png');
+export async function canvasToPngBlob(canvasEl: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvasEl.toBlob(
+      blob => (blob ? resolve(blob) : reject(new Error('Failed to create PNG blob'))),
+      'image/png',
+    );
   });
 }

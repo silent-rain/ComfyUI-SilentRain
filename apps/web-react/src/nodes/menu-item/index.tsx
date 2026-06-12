@@ -12,7 +12,6 @@ import { exportSvg } from './components/ExportSvg';
 import { exportJson } from './components/ExportJson';
 import { exportImageAndWorkflow } from './components/ExportImageAndWorkflow';
 import { importWorkflow } from './components/ImportWorkflow';
-import { initComfyWidgetsForExport } from './components/workflow-image-core';
 
 const NODE_NAME = 'MenuItems';
 
@@ -150,8 +149,7 @@ export const MenuItems = (): ComfyExtension => {
     name: `SilentRain.${NODE_NAME}`,
 
     init: async _app => {
-      // Initialize ComfyWidgets override for proper text rendering during export
-      initComfyWidgetsForExport();
+      // No initialization needed - widgets are handled by DOM overlay system
     },
 
     setup: async _app => {
