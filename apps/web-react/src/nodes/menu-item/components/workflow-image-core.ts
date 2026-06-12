@@ -265,11 +265,22 @@ function drawSingleWidgetText(
  * 2. Otherwise, fall back to widget.last_y with resetTransform=false
  *    (these are in logical coordinates, drawn under the scale transform)
  */
+/**
+ * Draw text content of a DOM widget (textarea/customtext) onto the canvas.
+ *
+ * These widgets use HTML elements overlaid on the canvas for editing.
+ * During export, the DOM element position doesn't match the canvas rendering,
+ * so we need to draw the text content directly on the canvas.
+ *
+ * Position calculation follows the reference implementations:
+ * - pythongosssss/SvgWorkflowImage: parseInt(domWrapper.style.left/top), resetTransform=true
+ * - pythongosssss/PngWorkflowImage: x=10, y=widget.last_y+10, resetTransform=false
+ */
 function drawDomWidgetText(
   ctx: CanvasRenderingContext2D,
   domEl: HTMLElement,
   widget: any,
-  node: any,
+  _node: any,
   _bounds: [number, number, number, number],
 ): void {
   const value = widget.value ?? (domEl as HTMLInputElement & HTMLElement).value;
@@ -281,92 +292,43 @@ function drawDomWidgetText(
   // Get the dom-widget wrapper
   const domWrapper = (domEl.closest('.dom-widget') ?? domEl) as HTMLElement;
 
-  // After updateView(), ds.scale=1, ds.offset=[-bounds[0], -bounds[1]].
-  // DOM widgets use position:fixed with style.left/top set by the frontend:
-  //   style.left = (nodePos.x + ds.offset[0]) * ds.scale + canvasElRect.left
-  //   style.top  = (nodePos.y + ds.offset[1]) * ds.scale + canvasElRect.top
-  //
-  // Since ds.scale=1 after updateView():
-  //   style.left = nodePos.x - bounds[0] + canvasElRect.left
-  //   style.top  = nodePos.y - bounds[1] + canvasElRect.top
-  //
-  // These are viewport-relative CSS pixel coordinates.
-  // But we need canvas-relative logical coordinates for drawing.
-  // The canvas transform (setTransform(dpr,0,0,dpr,0,0)) maps logical coords
-  // to device pixels via scaling, so we draw in logical coordinates.
-  //
-  // To convert from viewport coords to canvas logical coords, subtract the
-  // canvas element's viewport offset:
-  //   canvasLogicalX = style.left - canvasElRect.left = nodePos.x - bounds[0]
-  //   canvasLogicalY = style.top  - canvasElRect.top  = nodePos.y - bounds[1]
-  const styleLeft = parseInt(domWrapper.style.left);
-  const styleTop = parseInt(domWrapper.style.top);
+  // Use getBoundingClientRect on both the wrapper and the canvas to convert
+  // viewport-relative CSS pixel coordinates into canvas-relative logical
+  // coordinates. This avoids issues with CSS transforms, iframes, or scroll.
+  const wrapperRect = domWrapper.getBoundingClientRect();
+  const canvasEl = (window as any).app?.canvasEl;
+  const canvasRect = canvasEl?.getBoundingClientRect?.() ?? { left: 0, top: 0 };
 
-  let x: number;
-  let y: number;
-
-  if (!isNaN(styleLeft) && !isNaN(styleTop)) {
-    // Convert viewport-relative CSS coordinates to canvas-relative logical coordinates
-    const canvasElRect = (window as any).app?.canvasEl?.getBoundingClientRect();
-    if (canvasElRect) {
-      x = styleLeft - canvasElRect.left;
-      y = styleTop - canvasElRect.top;
-    } else {
-      // Fallback when canvasElRect is unavailable:
-      // Derive canvas logical coords from node position and ds.offset.
-      // Formula: canvasLogicalX = nodePos.x + ds.offset[0]
-      // Since style.left = (nodePos.x + ds.offset[0]) * ds.scale + viewportOffset_left
-      // and ds.scale = 1 after updateView(), we have:
-      //   nodePos.x + ds.offset[0] = style.left - viewportOffset_left
-      // We don't know viewportOffset, but we know canvasLogicalX = nodePos.x + ds.offset[0]
-      // which equals nodePos.x - bounds[0] after updateView().
-      // So use node position + ds.offset as the best estimate.
-      const ds = (window as any).app?.canvas?.ds;
-      const dOffsetX = ds?.offset?.[0] ?? 0;
-      const dOffsetY = ds?.offset?.[1] ?? 0;
-      const nodePosX = node.pos?.[0] ?? 0;
-      const nodePosY = node.pos?.[1] ?? 0;
-      x = nodePosX + dOffsetX;
-      y = nodePosY + dOffsetY;
-    }
-  } else {
-    // Fallback: estimate position from widget's last_y (node-relative coordinate).
-    // To convert to canvas logical coordinates, add the node position offset:
-    //   canvasLogicalX = x + node.pos[0] + ds.offset[0]
-    //   canvasLogicalY = y + node.pos[1] + ds.offset[1]
-    // After updateView(), ds.offset = [-bounds[0], -bounds[1]], so:
-    //   canvasLogicalX = 10 + node.pos[0] - bounds[0]
-    //   canvasLogicalY = (widget.last_y + 10) + node.pos[1] - bounds[1]
-    const ds = (window as any).app?.canvas?.ds;
-    const offsetX = ds?.offset?.[0] ?? 0;
-    const offsetY = ds?.offset?.[1] ?? 0;
-    const nodePosX = node.pos?.[0] ?? 0;
-    const nodePosY = node.pos?.[1] ?? 0;
-    x = 10 + nodePosX + offsetX;
-    y = (widget.last_y ?? widget.y ?? 0) + 10 + nodePosY + offsetY;
-  }
+  // canvasX = wrapper CSS-X minus canvas CSS-X
+  let x = wrapperRect.left - canvasRect.left;
+  let y = wrapperRect.top - canvasRect.top;
 
   // Get widget dimensions from DOM style
-  const domWidth = parseInt(domWrapper.style.width) || (node.size?.[0] ?? 200) - 20;
+  const domWidth = wrapperRect.width;
 
-  // Line height: 12 logical pixels (the canvas transform scales to device pixels)
-  const line = 12;
+  // Get the current canvas transform to determine the scale factor t.d
+  const t = (window as any).app?.canvasEl?.getContext('2d')?.getTransform();
+  const scale = t?.d || 1;
+
+  // Line height follows pythongosssss' formula: line = t.d * 12
+  // This accounts for the canvas transform scale factor
+  const line = scale * 12;
 
   // Calculate domHeight based on actual text lines to ensure the background
   // rectangle covers all text content. The DOM element's style.height is
   // preferred, but if unavailable, we estimate from the number of text lines.
   const textLines = text.split('\n');
-  const domHeight = parseInt(domWrapper.style.height) || Math.max(textLines.length * line + 10, 20);
+  const domHeight = wrapperRect.height || Math.max(textLines.length * line + 10, 20);
 
   // Get computed styles from the actual DOM element for proper text rendering
   let bgColor = '#222';
-  let textColor = '#fff';
+  let textColor = '#ffffff';
   let font = '12px sans-serif';
 
   try {
     const style = window.getComputedStyle(domEl, null);
     bgColor = style.getPropertyValue('background-color') || '#222';
-    textColor = style.getPropertyValue('color') || '#fff';
+    textColor = style.getPropertyValue('color') || '#ffffff';
     font = style.getPropertyValue('font') || '12px sans-serif';
   } catch {
     // Use defaults if getComputedStyle fails
@@ -387,10 +349,7 @@ function drawDomWidgetText(
     start += line;
     wrapText(ctx, l, x + 4, start, maxWidth, line);
   }
-
-  ctx.restore();
 }
-
 /**
  * Draw the value of a standard canvas widget (combo/string/text) onto the canvas.
  *
@@ -412,15 +371,21 @@ function drawCanvasWidgetValue(
 
   // Position calculation: we're drawing after drawCanvas(), so the canvas
   // transform is setTransform(dpr, 0, 0, dpr, 0, 0) — there's no per-node
-  // translation applied. Therefore we must convert node-relative coordinates
-  // to canvas logical coordinates by adding the node position and ds.offset.
+  // translation applied. We must convert node-relative coordinates to canvas
+  // logical coordinates using the LiteGraph coordinate conversion method:
+  //   node.last_mouse_x = node.pos[0] + (x * ds.scale) + ds.offset[0]
+  //   node.last_mouse_y = node.pos[1] + (y * ds.scale) + ds.offset[1]
+  // After updateView(): ds.scale=1, ds.offset = [-bounds[0], -bounds[1]],
+  // so: canvasLogicalX = nodePos.x + x - bounds[0]
+  //     canvasLogicalY = nodePos.y + y - bounds[1]
   //
-  // canvasLogicalX = nodeLocalX + node.pos[0] + ds.offset[0]
-  // canvasLogicalY = nodeLocalY + node.pos[1] + ds.offset[1]
-  //
-  // After updateView(), ds.offset = [-bounds[0], -bounds[1]], so:
-  //   canvasLogicalX = 10 + node.pos[0] - bounds[0]
-  //   canvasLogicalY = (widget.last_y + 10) + node.pos[1] - bounds[1]
+  // For widgets, the LiteGraph reordering formula is:
+  //   last_y = y + w.last_y - w.last_y + height
+  //   y = last_y - w.last_y + w.last_y - height ???
+  //   Actually: last_y = y + widget.last_y - widget.last_y + height
+  //   so: y = last_y ??
+  //   Better: use the formula from pythongosssss PngWorkflowImage:
+  //   x=10, y=(widget.last_y ?? widget.y ?? 0) + LiteGraph.NODE_TITLE_HEIGHT + 20
   const ds = (window as any).app?.canvas?.ds;
   const offsetX = ds?.offset?.[0] ?? 0;
   const offsetY = ds?.offset?.[1] ?? 0;
@@ -428,50 +393,38 @@ function drawCanvasWidgetValue(
   const nodePosY = node.pos?.[1] ?? 0;
 
   const x = 10 + nodePosX + offsetX;
-  const y = (widget.last_y ?? widget.y ?? 0) + 10 + nodePosY + offsetY;
+  // Note: widget.last_y is relative to the NODE CONTENT AREA (below title bar).
+  // We add 20 for padding, similar to pythongosssss approach.
+  const y = (widget.last_y ?? widget.y ?? 0) + 20 + nodePosY + offsetY;
 
   // Get widget dimensions
-  const widgetWidth =
-    parseInt(widget.element?.closest('.dom-widget')?.style?.width) || (node.size?.[0] ?? 200) - 20;
+  const widgetWidth = (node.size?.[0] ?? 240) - 20;
 
-  // Line height: always use 12 logical pixels since we draw under the
-  // existing scale transform (setTransform(scale,0,0,scale,0,0) from
-  // updateView), which automatically scales logical pixels to device pixels.
-  // Previously using (t.d || 1) * 12 caused double-scaling on high-DPI:
-  // when resetTransform=false, t.d is the scale factor from setTransform,
-  // so (t.d || 1) * 12 would give 24px on a 2x display, but the scale
-  // transform already handles the scaling, resulting in 48px effective spacing.
-  const line = 12;
+  // Use scale-aware line height: line = t.d * 12
+  const t = (window as any).app?.canvasEl?.getContext('2d')?.getTransform();
+  const scale = t?.d || 1;
+  const line = scale * 12;
 
-  // Calculate widgetHeight based on actual text lines to ensure the background
-  // rectangle covers all text content, same as in drawDomWidgetText.
+  // Calculate widgetHeight based on actual text lines
   const textLines = text.split('\n');
-  const widgetHeight =
-    parseInt(widget.element?.closest('.dom-widget')?.style?.height) ||
-    Math.max(textLines.length * line + 10, 20);
+  const widgetHeight = Math.max(textLines.length * line + 10, 20);
 
-  // Save current transform
+  // Save current state
   ctx.save();
-  // Do NOT resetTransform - draw under the existing scale transform,
-  // so logical coordinates are automatically scaled to canvas pixels.
-  // This matches pythongosssss PngWorkflowImage's resetTransform=false.
 
   // Draw value text for combo/string/text widgets
   if (widget.type === 'combo') {
     // Combo widgets: draw background and value
     ctx.fillStyle = '#222';
     ctx.fillRect(x, y, widgetWidth, widgetHeight);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#ffffff';
     ctx.font = '12px sans-serif';
-    // Draw the combo value text vertically centered within the background:
-    // baseline = y + (widgetHeight + fontSize) / 2, where fontSize ≈ 12
-    // This centers the text regardless of the actual widget height.
     const fontSize = 12;
     const baselineY = y + (widgetHeight + fontSize) / 2;
     ctx.fillText(text, x + 4, baselineY);
   } else if (widget.type === 'string' || widget.type === 'text') {
     // String/text widgets: draw value text directly
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#ffffff';
     ctx.font = '12px sans-serif';
     const split = text.split('\n');
     let start = y;
