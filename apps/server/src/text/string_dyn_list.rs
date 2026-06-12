@@ -1,4 +1,5 @@
 //! 字符串动态列表
+//! 该节点待下线， 推荐使用 StringDynList2
 
 use log::error;
 use pyo3::{
@@ -69,6 +70,13 @@ impl StringDynList {
     #[classattr]
     #[pyo3(name = "EXPERIMENTAL")]
     fn experimental() -> bool {
+        false
+    }
+
+    // 过时标记, 可选
+    #[classattr]
+    #[pyo3(name = "DEPRECATED")]
+    fn deprecated() -> bool {
         true
     }
 

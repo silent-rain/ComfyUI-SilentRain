@@ -1,11 +1,11 @@
-/* StringDynList2 Node */
+/* AnyDynList Node */
 
 import { ISlotType } from '../../enums/comfy';
 import type { ComfyExtension } from '@comfyorg/comfyui-frontend-types';
 
-const NODE_NAME = 'StringDynList2';
+const NODE_NAME = 'AnyDynList';
 
-export const StringDynList2 = (): ComfyExtension => {
+export const AnyDynList = (): ComfyExtension => {
   return {
     name: `SilentRain.${NODE_NAME}`,
     init: async _app => {
@@ -33,33 +33,33 @@ export const StringDynList2 = (): ComfyExtension => {
         if (type !== ISlotType.Input) return;
 
         if (isConnected) {
-          // 添加一个空闲 slot
-          const strInputTotal = this.inputs.filter(slot => slot.name !== 'delimiter').length;
-          const strLinkCount = this.inputs
-            .filter(slot => slot.name !== 'delimiter')
-            .filter(slot => !slot.link).length;
-          if (strLinkCount === 0) {
-            const firstInput = this.inputs[0];
-            if (!firstInput) return;
+          // Check if there is an empty "any_" slot
+          const anyInputs = this.inputs.filter(slot => slot.name.startsWith('any_'));
+          const hasEmptySlot = anyInputs.some(slot => !slot.link);
 
-            const newIndex = strInputTotal + 1;
-            this.addInput(`string_${newIndex}`, firstInput.type);
+          if (this.inputs.length >= 2 && !hasEmptySlot) {
+            // Add a new empty slot
+            const firstAnyInput = this.inputs[1];
+            if (!firstAnyInput) return;
+
+            const newIndex = this.inputs.length + 1;
+            this.addInput(`any_${newIndex}`, firstAnyInput.type);
           }
         } else {
           setTimeout(() => {
-            // 如果slot有连接，则不删除
+            // If the slot still has a connection, don't remove it
             if (this.inputs[index]?.link) return;
 
-            // 如果只有一个 string slot，则不删除
-            if (this.inputs.filter(slot => slot.name !== 'delimiter').length === 1) return;
+            // If there are only 2 or fewer inputs, don't remove
+            if (this.inputs.length <= 2) return;
 
             this.removeInput(index);
 
-            // 重命名所有slot
+            // Rename all "any_" slots
             let nameCount = 0;
-            for (const item of this.inputs.filter(slot => slot.name !== 'delimiter')) {
+            for (const item of this.inputs.filter(slot => slot.name.startsWith('any_'))) {
               nameCount += 1;
-              const label = `string_${nameCount}`;
+              const label = `any_${nameCount}`;
               item.name = label;
               item.label = label;
             }
@@ -70,4 +70,4 @@ export const StringDynList2 = (): ComfyExtension => {
   };
 };
 
-export default StringDynList2;
+export default AnyDynList;

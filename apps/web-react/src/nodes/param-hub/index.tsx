@@ -47,20 +47,15 @@ function syncHubSlotsFromInputs(node: any): void {
 
   // 获取已保存在 store 中的 label 映射（name -> slot），用于保留用户自定义 label
   const existingSlots = store.getHubSlots(nodeId);
-  const labelMap = new Map<string, Slot>();
-  for (const slot of existingSlots) {
-    if (slot.label) {
-      labelMap.set(slot.name, slot);
-    }
-  }
 
   // 从 this.inputs 扫描，批量构建当前 slots
   const slots: Slot[] = [];
   for (const input of node.inputs) {
     // 只保留已连接的 input（link 存在）
-    if (input.link != null) {
-      const customSlot = labelMap.get(input.name);
+    if (input.link != undefined) {
+      const customSlot = existingSlots.find(s => s.linkId == input.link);
       slots.push({
+        linkId: input.link,
         name: input.name,
         label: customSlot?.label ?? input.type,
         type: customSlot?.type ?? input.type,
@@ -85,8 +80,8 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   const nodeId = node.id as NodeId;
 
   // 首次加载：从 properties 恢复 slots
-  console.log(`[ParamHub] nodeId: ${nodeId}`, store.isNodeLoaded(nodeId));
   if (!store.isNodeLoaded(nodeId)) {
+    console.log(`[ParamHub] nodeId: ${nodeId}`, store.isNodeLoaded(nodeId));
     bindReactUI(node);
     loadSlotsFromProperties(node);
     store.markNodeLoaded(nodeId);
@@ -95,6 +90,7 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   const input = node.inputs[index];
 
   const newSlot: Slot = {
+    linkId: link_info.id,
     name: input.name,
     label: input.label,
     type: input.type,
@@ -103,7 +99,6 @@ function updateSingleSlot(node: any, index: number, link_info: any): void {
   // 重置名称和类型
   // 从 store 获取当前 slots
   const slots = store.getHubSlots(nodeId);
-  console.log(`[ParamHub] nodeId: ${nodeId} slots: ${slots} `);
 
   // 重置名称和类型
   const existingSlot = slots.find(s => s.name === input.name);
@@ -242,6 +237,12 @@ const ParamHub = (): ComfyExtension => {
               syncHubSlotsFromInputs(this);
               return;
             }
+
+            // 断开链接后重置类型
+            if (this.inputs[index]) {
+              this.inputs[index]!.type = '';
+            }
+
             // 断开连接：如果只有一个 slot，则不删除 input，只清空
             if (this.inputs.length === 1) {
               // 保持至少一个空位

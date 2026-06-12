@@ -105,7 +105,8 @@ export async function waitForDomWidgetsReady(timeout: number = 3000): Promise<vo
       for (const widget of node.widgets as any[]) {
         if (widget.hidden) continue;
 
-        const domEl = widget.element ?? widget.inputEl;
+        const w = widget as any;
+        const domEl = w.element ?? w.inputEl;
         if (!domEl) continue;
 
         // Only check DOM widgets (textarea/customtext)
@@ -119,6 +120,18 @@ export async function waitForDomWidgetsReady(timeout: number = 3000): Promise<vo
           allReady = false;
           break;
         }
+
+        // Check if any images within the element have finished loading
+        // This ensures model preview images and other remote resources
+        // are fully loaded before we capture the screenshot.
+        const images = el.querySelectorAll('img');
+        for (const img of images) {
+          if (!img.complete || (img.naturalWidth === 0 && img.src)) {
+            allReady = false;
+            break;
+          }
+        }
+        if (!allReady) break;
 
         // Check if the element is inside the canvas viewport
         // The dom-widget wrapper should be positioned within the canvas
@@ -170,15 +183,42 @@ export function drawWidgetTextOnCanvas(bounds: [number, number, number, number])
   const nodes = app.graph._nodes;
   if (!nodes) return;
 
+  // Hide all DOM widget elements before drawing text on canvas.
+  // This prevents double-rendering: once by DOM elements overlaid on the canvas,
+  // and once by our manual canvas drawing below.
+  // After the canvas is captured (toBlob/toDataURL), DOM elements are not
+  // included in the output, so hiding them doesn't affect the final image.
+  // However, during the capture process, visible DOM elements cause visual
+  // artifacts (double text) and may interfere with the canvas rendering.
+  const hiddenDomElements: { el: HTMLElement; origVisibility: string }[] = [];
+
   for (const node of nodes) {
     if (!node.widgets) continue;
 
     for (const widget of node.widgets) {
-      // Skip hidden widgets
       if (widget.hidden) continue;
+
+      const domEl = (widget as any).element ?? (widget as any).inputEl;
+      if (!domEl) continue;
+
+      // Only process DOM widgets (textarea/customtext)
+      if (widget.type !== 'textarea' && widget.type !== 'customtext') continue;
+
+      // Get the dom-widget wrapper element
+      const wrapper = (domEl.closest('.dom-widget') ?? domEl) as HTMLElement;
+
+      // Save original visibility and hide the wrapper
+      const origVisibility = wrapper.style.visibility;
+      hiddenDomElements.push({ el: wrapper, origVisibility });
+      wrapper.style.visibility = 'hidden';
 
       drawSingleWidgetText(ctx, widget, node, bounds);
     }
+  }
+
+  // Restore DOM widget element visibility after drawing
+  for (const { el, origVisibility } of hiddenDomElements) {
+    el.style.visibility = origVisibility;
   }
 }
 
@@ -214,6 +254,16 @@ function drawSingleWidgetText(
  * These widgets use HTML elements overlaid on the canvas for editing.
  * During export, the DOM element position doesn't match the canvas rendering,
  * so we need to draw the text content directly on the canvas.
+ *
+ * Position calculation follows the reference implementations:
+ * - pythongosssss/SvgWorkflowImage: parseInt(domWrapper.style.left/top), resetTransform=true
+ * - pythongosssss/PngWorkflowImage: x=10, y=widget.last_y+10, resetTransform=false
+ *
+ * We use a two-strategy approach:
+ * 1. If domWrapper.style.left/top are available → use them with resetTransform=true
+ *    (these are in canvas pixel coordinates, identity transform)
+ * 2. Otherwise, fall back to widget.last_y with resetTransform=false
+ *    (these are in logical coordinates, drawn under the scale transform)
  */
 function drawDomWidgetText(
   ctx: CanvasRenderingContext2D,
@@ -228,106 +278,96 @@ function drawDomWidgetText(
   const text = String(value);
   if (!text) return;
 
-  // Calculate widget position from the DOM element style
-  // In the new frontend, the dom-widget wrapper is positioned relative to the canvas
+  // Get the dom-widget wrapper
   const domWrapper = (domEl.closest('.dom-widget') ?? domEl) as HTMLElement;
 
-  // Parse CSS value robustly:
-  // - Handles "123px", "calc(...)", pure numbers, etc.
-  // - Returns 0 for unparseable values (like "auto", "inherit", etc.)
-  function parseCssValue(val: string | undefined, fallback: number): number {
-    if (!val) return fallback;
-    // Remove calc() wrapper if present
-    let s = val.trim();
-    if (s.startsWith('calc(') && s.endsWith(')')) {
-      s = s.slice(5, -1).trim();
+  // After updateView(), ds.scale=1, ds.offset=[-bounds[0], -bounds[1]].
+  // DOM widgets use position:fixed with style.left/top set by the frontend:
+  //   style.left = (nodePos.x + ds.offset[0]) * ds.scale + canvasElRect.left
+  //   style.top  = (nodePos.y + ds.offset[1]) * ds.scale + canvasElRect.top
+  //
+  // Since ds.scale=1 after updateView():
+  //   style.left = nodePos.x - bounds[0] + canvasElRect.left
+  //   style.top  = nodePos.y - bounds[1] + canvasElRect.top
+  //
+  // These are viewport-relative CSS pixel coordinates.
+  // But we need canvas-relative logical coordinates for drawing.
+  // The canvas transform (setTransform(dpr,0,0,dpr,0,0)) maps logical coords
+  // to device pixels via scaling, so we draw in logical coordinates.
+  //
+  // To convert from viewport coords to canvas logical coords, subtract the
+  // canvas element's viewport offset:
+  //   canvasLogicalX = style.left - canvasElRect.left = nodePos.x - bounds[0]
+  //   canvasLogicalY = style.top  - canvasElRect.top  = nodePos.y - bounds[1]
+  const styleLeft = parseInt(domWrapper.style.left);
+  const styleTop = parseInt(domWrapper.style.top);
+
+  let x: number;
+  let y: number;
+
+  if (!isNaN(styleLeft) && !isNaN(styleTop)) {
+    // Convert viewport-relative CSS coordinates to canvas-relative logical coordinates
+    const canvasElRect = (window as any).app?.canvasEl?.getBoundingClientRect();
+    if (canvasElRect) {
+      x = styleLeft - canvasElRect.left;
+      y = styleTop - canvasElRect.top;
+    } else {
+      // Fallback when canvasElRect is unavailable:
+      // Derive canvas logical coords from node position and ds.offset.
+      // Formula: canvasLogicalX = nodePos.x + ds.offset[0]
+      // Since style.left = (nodePos.x + ds.offset[0]) * ds.scale + viewportOffset_left
+      // and ds.scale = 1 after updateView(), we have:
+      //   nodePos.x + ds.offset[0] = style.left - viewportOffset_left
+      // We don't know viewportOffset, but we know canvasLogicalX = nodePos.x + ds.offset[0]
+      // which equals nodePos.x - bounds[0] after updateView().
+      // So use node position + ds.offset as the best estimate.
+      const ds = (window as any).app?.canvas?.ds;
+      const dOffsetX = ds?.offset?.[0] ?? 0;
+      const dOffsetY = ds?.offset?.[1] ?? 0;
+      const nodePosX = node.pos?.[0] ?? 0;
+      const nodePosY = node.pos?.[1] ?? 0;
+      x = nodePosX + dOffsetX;
+      y = nodePosY + dOffsetY;
     }
-    // Remove "px" suffix
-    s = s.replace(/px$/i, '');
-    // Try to evaluate simple arithmetic in calc expressions
-    try {
-      // Replace CSS calc tokens with JS operators
-      const expr = s.replace(/(\d+(?:\.\d+)?)\s*%/g, (_, num) => `${parseFloat(num) / 100}`);
-      // Safety: only allow numbers, +, -, *, /, (, ), and whitespace
-      if (/^[\d\s+\-*/().]+$/.test(expr)) {
-        const result = new Function(`return (${expr})`)();
-        if (isFinite(result)) return result;
-      }
-    } catch {
-      // Fall through
-    }
-    // Fallback: try parseInt
-    const n = parseInt(s);
-    return isNaN(n) ? fallback : n;
-  }
-
-  const domLeft = parseCssValue(domWrapper.style.left, 0);
-  const domTop = parseCssValue(domWrapper.style.top, 0);
-  const domWidth = parseCssValue(domWrapper.style.width, (node.size?.[0] ?? 200) - 20);
-  const domHeight = parseCssValue(domWrapper.style.height, 100);
-
-  // Determine x, y position - prefer DOM style, fallback to getBoundingClientRect
-  let x = domLeft;
-  let y = domTop;
-  let positionFromStyle = false;
-
-  if (domLeft !== 0 || domTop !== 0) {
-    x = domLeft;
-    y = domTop;
-    positionFromStyle = true;
   } else {
-    // Fall back to getBoundingClientRect for actual rendered position
-    try {
-      const rect = domEl.getBoundingClientRect();
-      const canvasRect = (window.app?.canvasEl as HTMLCanvasElement)?.getBoundingClientRect();
-      if (canvasRect) {
-        // Convert screen coordinates to canvas coordinates (undo the DragAndScale transform)
-        const app = window.app!;
-        const ds = app.canvas.ds as any;
-        const canvasScale = ds.scale;
-        const canvasOffset = ds.offset as [number, number];
-        x = (rect.left - canvasRect.left) / canvasScale + canvasOffset[0];
-        y = (rect.top - canvasRect.top) / canvasScale + canvasOffset[1];
-      } else {
-        positionFromStyle = false;
-      }
-    } catch {
-      positionFromStyle = false;
-    }
+    // Fallback: estimate position from widget's last_y (node-relative coordinate).
+    // To convert to canvas logical coordinates, add the node position offset:
+    //   canvasLogicalX = x + node.pos[0] + ds.offset[0]
+    //   canvasLogicalY = y + node.pos[1] + ds.offset[1]
+    // After updateView(), ds.offset = [-bounds[0], -bounds[1]], so:
+    //   canvasLogicalX = 10 + node.pos[0] - bounds[0]
+    //   canvasLogicalY = (widget.last_y + 10) + node.pos[1] - bounds[1]
+    const ds = (window as any).app?.canvas?.ds;
+    const offsetX = ds?.offset?.[0] ?? 0;
+    const offsetY = ds?.offset?.[1] ?? 0;
+    const nodePosX = node.pos?.[0] ?? 0;
+    const nodePosY = node.pos?.[1] ?? 0;
+    x = 10 + nodePosX + offsetX;
+    y = (widget.last_y ?? widget.y ?? 0) + 10 + nodePosY + offsetY;
   }
 
-  // Final fallback: calculate from node position and widget y/last_y
-  if (!positionFromStyle) {
-    if (widget.y !== undefined) {
-      x = node.pos[0] + 10;
-      y = node.pos[1] + widget.y;
-    } else if (widget.last_y !== undefined) {
-      x = node.pos[0] + 10;
-      y = node.pos[1] + widget.last_y;
-    }
-  }
+  // Get widget dimensions from DOM style
+  const domWidth = parseInt(domWrapper.style.width) || (node.size?.[0] ?? 200) - 20;
 
-  // Reset transform to identity before drawing text.
-  // The positions from DOM style/left/top are already in canvas coordinates,
-  // matching the reference implementations' "resetTransform: true" approach.
-  // Using resetTransform instead of setTransform(scale,...) avoids
-  // double-scaling the coordinates.
-  ctx.save();
-  ctx.resetTransform();
+  // Line height: 12 logical pixels (the canvas transform scales to device pixels)
+  const line = 12;
+
+  // Calculate domHeight based on actual text lines to ensure the background
+  // rectangle covers all text content. The DOM element's style.height is
+  // preferred, but if unavailable, we estimate from the number of text lines.
+  const textLines = text.split('\n');
+  const domHeight = parseInt(domWrapper.style.height) || Math.max(textLines.length * line + 10, 20);
 
   // Get computed styles from the actual DOM element for proper text rendering
   let bgColor = '#222';
   let textColor = '#fff';
   let font = '12px sans-serif';
-  let lineHeight = 14;
 
   try {
     const style = window.getComputedStyle(domEl, null);
     bgColor = style.getPropertyValue('background-color') || '#222';
     textColor = style.getPropertyValue('color') || '#fff';
     font = style.getPropertyValue('font') || '12px sans-serif';
-    const fontSize = parseFloat(style.getPropertyValue('font-size')) || 12;
-    lineHeight = fontSize * 1.2;
   } catch {
     // Use defaults if getComputedStyle fails
   }
@@ -340,13 +380,12 @@ function drawDomWidgetText(
   ctx.fillStyle = textColor;
   ctx.font = font;
 
-  const lines = text.split('\n');
-  let startY = y + lineHeight;
   const maxWidth = domWidth - 8;
-
-  for (const line of lines) {
-    wrapText(ctx, line, x + 4, startY, maxWidth, lineHeight);
-    startY += lineHeight;
+  const split = text.split('\n');
+  let start = y;
+  for (const l of split) {
+    start += line;
+    wrapText(ctx, l, x + 4, start, maxWidth, line);
   }
 
   ctx.restore();
@@ -371,52 +410,51 @@ function drawCanvasWidgetValue(
   const text = String(value);
   if (!text) return;
 
-  // Calculate widget position
-  // widget.y is the y position relative to the node
-  let x: number;
-  let y: number;
+  // Position calculation: we're drawing after drawCanvas(), so the canvas
+  // transform is setTransform(dpr, 0, 0, dpr, 0, 0) — there's no per-node
+  // translation applied. Therefore we must convert node-relative coordinates
+  // to canvas logical coordinates by adding the node position and ds.offset.
+  //
+  // canvasLogicalX = nodeLocalX + node.pos[0] + ds.offset[0]
+  // canvasLogicalY = nodeLocalY + node.pos[1] + ds.offset[1]
+  //
+  // After updateView(), ds.offset = [-bounds[0], -bounds[1]], so:
+  //   canvasLogicalX = 10 + node.pos[0] - bounds[0]
+  //   canvasLogicalY = (widget.last_y + 10) + node.pos[1] - bounds[1]
+  const ds = (window as any).app?.canvas?.ds;
+  const offsetX = ds?.offset?.[0] ?? 0;
+  const offsetY = ds?.offset?.[1] ?? 0;
+  const nodePosX = node.pos?.[0] ?? 0;
+  const nodePosY = node.pos?.[1] ?? 0;
 
-  if (widget.y !== undefined) {
-    x = node.pos[0] + 10;
-    y = node.pos[1] + widget.y;
-  } else if (widget.last_y !== undefined) {
-    x = node.pos[0] + 10;
-    y = node.pos[1] + widget.last_y;
-  } else {
-    // Try getBoundingClientRect for widgets without y/last_y
-    try {
-      const widgetEl = widget.element ?? widget.inputEl;
-      if (widgetEl) {
-        const rect = widgetEl.getBoundingClientRect();
-        const canvasEl = window.app?.canvasEl as HTMLCanvasElement;
-        if (canvasEl) {
-          const canvasRect = canvasEl.getBoundingClientRect();
-          const app = window.app!;
-          const ds = app.canvas.ds as any;
-          const canvasScale = ds.scale;
-          const canvasOffset = ds.offset as [number, number];
-          x = (rect.left - canvasRect.left) / canvasScale + canvasOffset[0];
-          y = (rect.top - canvasRect.top) / canvasScale + canvasOffset[1];
-        } else {
-          return;
-        }
-      } else {
-        return;
-      }
-    } catch {
-      return;
-    }
-  }
+  const x = 10 + nodePosX + offsetX;
+  const y = (widget.last_y ?? widget.y ?? 0) + 10 + nodePosY + offsetY;
 
+  // Get widget dimensions
+  const widgetWidth =
+    parseInt(widget.element?.closest('.dom-widget')?.style?.width) || (node.size?.[0] ?? 200) - 20;
+
+  // Line height: always use 12 logical pixels since we draw under the
+  // existing scale transform (setTransform(scale,0,0,scale,0,0) from
+  // updateView), which automatically scales logical pixels to device pixels.
+  // Previously using (t.d || 1) * 12 caused double-scaling on high-DPI:
+  // when resetTransform=false, t.d is the scale factor from setTransform,
+  // so (t.d || 1) * 12 would give 24px on a 2x display, but the scale
+  // transform already handles the scaling, resulting in 48px effective spacing.
+  const line = 12;
+
+  // Calculate widgetHeight based on actual text lines to ensure the background
+  // rectangle covers all text content, same as in drawDomWidgetText.
+  const textLines = text.split('\n');
+  const widgetHeight =
+    parseInt(widget.element?.closest('.dom-widget')?.style?.height) ||
+    Math.max(textLines.length * line + 10, 20);
+
+  // Save current transform
   ctx.save();
-  // Reset transform to identity before drawing text.
-  // The positions we calculated (widget.y/last_y or getBoundingClientRect) are
-  // already in canvas coordinates, so we draw directly without additional scaling.
-  ctx.resetTransform();
-
-  // Use a consistent style that matches ComfyUI's default widget rendering
-  const widgetWidth = (node.size?.[0] ?? 200) - 20;
-  const widgetHeight = widget.computedHeight ?? 20;
+  // Do NOT resetTransform - draw under the existing scale transform,
+  // so logical coordinates are automatically scaled to canvas pixels.
+  // This matches pythongosssss PngWorkflowImage's resetTransform=false.
 
   // Draw value text for combo/string/text widgets
   if (widget.type === 'combo') {
@@ -425,16 +463,21 @@ function drawCanvasWidgetValue(
     ctx.fillRect(x, y, widgetWidth, widgetHeight);
     ctx.fillStyle = '#fff';
     ctx.font = '12px sans-serif';
-    ctx.fillText(text, x + 4, y + 14);
+    // Draw the combo value text vertically centered within the background:
+    // baseline = y + (widgetHeight + fontSize) / 2, where fontSize ≈ 12
+    // This centers the text regardless of the actual widget height.
+    const fontSize = 12;
+    const baselineY = y + (widgetHeight + fontSize) / 2;
+    ctx.fillText(text, x + 4, baselineY);
   } else if (widget.type === 'string' || widget.type === 'text') {
     // String/text widgets: draw value text directly
     ctx.fillStyle = '#fff';
     ctx.font = '12px sans-serif';
-    const lines = text.split('\n');
-    let startY = y + 14;
-    for (const line of lines) {
-      wrapText(ctx, line, x + 4, startY, widgetWidth - 8, 14);
-      startY += 14;
+    const split = text.split('\n');
+    let start = y;
+    for (const l of split) {
+      start += line;
+      wrapText(ctx, l, x + 4, start, widgetWidth - 8, line);
     }
   }
 
@@ -465,58 +508,30 @@ export function initComfyWidgetsForExport(): void {
     const w = stringWidget.apply(this, args);
 
     // Override draw for both 'customtext' (old) and 'textarea' (new) types
+    // This is a legacy path for old ComfyUI frontends that use widget.draw()
+    // to render customtext widgets. In the new React-based frontend, text
+    // widgets use DOM elements (textarea) overlaid on the canvas, and the
+    // primary text rendering mechanism is drawWidgetTextOnCanvas().
     if (w?.widget) {
       const wt = w.widget;
-      if (wt.type === 'customtext' || wt.type === 'textarea') {
+      if (wt.type === 'customtext') {
+        // Only override for 'customtext' type (old frontend)
+        // Do NOT override for 'textarea' type (new frontend) because:
+        // 1. In the new frontend, textarea widgets are DOM elements that
+        //    are not drawn via widget.draw() at all
+        // 2. Overriding draw() for textarea would interfere with the DOM
+        //    widget lifecycle and cause rendering artifacts
+        // 3. drawWidgetTextOnCanvas() handles textarea text rendering
+        //    after drawCanvas(), which is the correct approach
         const originalDraw = wt.draw?.bind(wt);
         wt.draw = function (ctx: CanvasRenderingContext2D, ...drawArgs: any[]) {
           // Call original draw first
           if (originalDraw) {
             originalDraw(ctx, ...drawArgs);
           }
-
-          const inputEl = wt.inputEl ?? wt.element;
-          if (!inputEl || inputEl.hidden) return;
-
-          // Only draw text when __sr_getDrawTextConfig is set (during export)
-          // This global is set by the old-style export flow
-          if ((window as any).__sr_getDrawTextConfig) {
-            const config = (window as any).__sr_getDrawTextConfig(ctx, wt);
-            if (!config) return;
-
-            const t = ctx.getTransform();
-            ctx.save();
-
-            if (config.resetTransform) {
-              ctx.resetTransform();
-            }
-
-            const style = window.getComputedStyle(inputEl, null);
-            const x = config.x;
-            const y = config.y;
-            const domWrapper = (inputEl.closest('.dom-widget') ?? inputEl) as HTMLElement;
-            let w = parseInt(domWrapper.style.width);
-            if (w === 0) {
-              w = (wt.node?.size?.[0] || 200) - 20;
-            }
-            const h = parseInt(domWrapper.style.height) || 100;
-
-            ctx.fillStyle = style.getPropertyValue('background-color') || '#222';
-            ctx.fillRect(x, y, w, h);
-
-            ctx.fillStyle = style.getPropertyValue('color') || '#fff';
-            ctx.font = style.getPropertyValue('font') || '12px sans-serif';
-
-            const line = (t.d || 1) * 12;
-            const split = ((inputEl as HTMLInputElement).value ?? '').split('\n');
-            let start = y;
-            for (const l of split) {
-              start += line;
-              wrapText(ctx, l, x + 4, start, w - 8, line);
-            }
-
-            ctx.restore();
-          }
+          // For 'customtext' in old frontend, the widget.draw() method
+          // is the sole renderer, so no additional action is needed here.
+          // Text rendering during export is handled by drawWidgetTextOnCanvas().
         };
       }
     }
